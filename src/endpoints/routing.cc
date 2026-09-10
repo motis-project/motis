@@ -1146,8 +1146,19 @@ api::plan_response routing::route(api::plan_params const& query,
     // requirements. Realtime and time-dependent offsets ARE covered; the two
     // guards stay in the response so a client can still see what the query
     // carried, but they no longer gate anything.
-    auto const mc_requested = algorithm == api::algorithmEnum::BMRAPP ||
-                              algorithm == api::algorithmEnum::MCRAPTOR;
+    // The multicriteria extra Pareto dimensions, selected per request. Any of
+    // them switches routing to the multicriteria engine - see the criteria
+    // dispatch below. mode_filter currently only knows AIR.
+    auto const min_non_transit = query.minimizeNonTransit_;
+    auto const min_mode_switches = query.minimizeModeSwitches_;
+    auto const min_mode_filter = !query.minimizeWithout_.empty();
+    auto const mc_criteria_on =
+        min_non_transit || min_mode_switches || min_mode_filter;
+    // An explicit BMRAPP/MCRAPTOR still runs the mc engine even with no extra
+    // criteria (arr only) - useful for benchmarking against PONG.
+    auto const mc_engine_requested = algorithm == api::algorithmEnum::BMRAPP ||
+                                     algorithm == api::algorithmEnum::MCRAPTOR;
+    auto const mc_requested = mc_engine_requested || mc_criteria_on;
     auto const mc_g_rt = rtt == nullptr || rtt->n_rt_transports() == 0U;
     auto const mc_g_td = q.td_start_.empty() && q.td_dest_.empty();
     auto const mc_g_nobikecar =
@@ -1159,6 +1170,10 @@ api::plan_response routing::route(api::plan_params const& query,
       // fall back to rRAPTOR - and say so, instead of reporting the
       // requested algorithm for a search it never ran
       algorithm = api::algorithmEnum::RAPTOR;
+    } else if (mc_applicable && !mc_engine_requested) {
+      // minimize* params opt into the mc engine even when PONG (or another
+      // algorithm) was asked for
+      algorithm = api::algorithmEnum::BMRAPP;
     }
     while (true) {
 #if defined(NIGIRI_CUDA)
@@ -1177,31 +1192,18 @@ api::plan_response routing::route(api::plan_params const& query,
         auto const mc_timeout = query.timeout_.has_value()
                                     ? std::chrono::seconds{*query.timeout_}
                                     : max_timeout;
-        // Extra pareto criteria of the multicriteria engines, selected by
-        // NIGIRI_MC_CRITERIA:
-        //   arr                 arrival only, no extra dimension - the one
-        //                       configuration BMRAPP can run its
-        //                       multicriteria phases on the GPU for
-        //                       (NIGIRI_BMRAPP_GPU_MC)
-        //   non_transit (default) minutes not on transit: offsets + footpaths
-        //   mode_filter          binary "uses an avoided vehicle class" (a
-        //                        flight by default) - keeps both the fast
-        //                        option that uses it and the best one that
-        //                        does not, instead of filtering it out
-        //   non_transit+mode_filter          both, independent pareto dims
-        //   mode_switches        number of vehicle-class switches between
-        //                        consecutive trips (bus -> subway counts,
-        //                        subway -> subway does not)
-        //   non_transit+mode_switches        minutes off transit + switches
-        //   mode_filter+mode_switches        both, independent pareto dims
-        //   non_transit+mode_filter+mode_switches   all three
-        // The dimensions compose freely (see arr_with in mcraptor.h); the
-        // list above is just which combinations are dispatched. For the
-        // two-token combinations either order is accepted.
-        static auto const* const mc_criteria = [] {
-          auto const* const v = std::getenv("NIGIRI_MC_CRITERIA");
-          return v == nullptr ? "non_transit" : v;
-        }();
+        // Extra pareto dimensions of the multicriteria engines, each toggled
+        // by its own request parameter (minimizeNonTransit / minimizeWithout /
+        // minimizeModeSwitches). They compose freely (see arr_with in
+        // mcraptor.h); the eight aliases below are just the dispatched
+        // combinations. With none set the engine runs arrival-only (only
+        // reachable via an explicit algorithm=BMRAPP/MCRAPTOR).
+        //   non_transit    minutes not on transit: offsets + transfer footpaths
+        //   mode_filter    binary "uses an avoided vehicle class" (flights) -
+        //                  keeps both the fast option that flies and the best
+        //                  one that does not, instead of filtering it out
+        //   mode_switches  number of vehicle-class switches between consecutive
+        //                  trips (bus -> subway counts, subway -> subway not)
         // BMRAPP takes the SCALAR state (its ping/pong/pruning searches),
         // like pong_search does, so it can run those on the GPU; its
         // multicriteria phases allocate their own CPU state internally.
@@ -1233,34 +1235,42 @@ api::plan_response routing::route(api::plan_params const& query,
           return run(std::type_identity<Criteria>{});
         };
         try {
-          auto const c = std::string_view{mc_criteria};
-          if (c == "arr" || c == "none") {
-            r = run_with.template operator()<n::routing::arr_criteria>();
-          } else if (c == "mode_filter") {
-            r = run_with.template
-                operator()<n::routing::arr_mode_filter_criteria>();
-          } else if (c == "non_transit+mode_filter" ||
-                     c == "mode_filter+non_transit") {
-            r = run_with.template operator()<
-                n::routing::arr_non_transit_mode_filter_criteria>();
-          } else if (c == "mode_switches") {
-            r = run_with.template
-                operator()<n::routing::arr_mode_switches_criteria>();
-          } else if (c == "non_transit+mode_switches" ||
-                     c == "mode_switches+non_transit") {
-            r = run_with.template operator()<
-                n::routing::arr_non_transit_mode_switches_criteria>();
-          } else if (c == "mode_filter+mode_switches" ||
-                     c == "mode_switches+mode_filter") {
-            r = run_with.template operator()<
-                n::routing::arr_mode_filter_mode_switches_criteria>();
-          } else if (c == "non_transit+mode_filter+mode_switches") {
-            r = run_with.template operator()<
-                n::routing::
-                    arr_non_transit_mode_filter_mode_switches_criteria>();
-          } else {
-            r = run_with.template
-                operator()<n::routing::arr_non_transit_criteria>();
+          auto const sel = (min_non_transit ? 0b100 : 0) |
+                           (min_mode_filter ? 0b010 : 0) |
+                           (min_mode_switches ? 0b001 : 0);
+          switch (sel) {
+            case 0b000:
+              r = run_with.template operator()<n::routing::arr_criteria>();
+              break;
+            case 0b001:
+              r = run_with.template
+                  operator()<n::routing::arr_mode_switches_criteria>();
+              break;
+            case 0b010:
+              r = run_with.template
+                  operator()<n::routing::arr_mode_filter_criteria>();
+              break;
+            case 0b011:
+              r = run_with.template operator()<
+                  n::routing::arr_mode_filter_mode_switches_criteria>();
+              break;
+            case 0b100:
+              r = run_with.template
+                  operator()<n::routing::arr_non_transit_criteria>();
+              break;
+            case 0b101:
+              r = run_with.template operator()<
+                  n::routing::arr_non_transit_mode_switches_criteria>();
+              break;
+            case 0b110:
+              r = run_with.template operator()<
+                  n::routing::arr_non_transit_mode_filter_criteria>();
+              break;
+            default:  // 0b111
+              r = run_with.template operator()<
+                  n::routing::
+                      arr_non_transit_mode_filter_mode_switches_criteria>();
+              break;
           }
         } catch (std::exception const& e) {
           std::cout << "MCRAPTOR EXCEPTION: " << e.what() << "\n";
@@ -1310,6 +1320,9 @@ api::plan_response routing::route(api::plan_params const& query,
         {"algorithm", static_cast<std::uint64_t>(algorithm)},
         {"mc_requested", mc_requested},
         {"mc_supported", mc_supported},
+        {"mc_min_non_transit", min_non_transit},
+        {"mc_min_mode_filter", min_mode_filter},
+        {"mc_min_mode_switches", min_mode_switches},
         {"mc_g_rt", mc_g_rt},
         {"mc_g_td", mc_g_td},
         {"mc_g_nobikecar", mc_g_nobikecar},

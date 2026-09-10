@@ -999,6 +999,53 @@ paths:
               - MCRAPTOR
               - BMRAPP
             default: PONG
+
+        - name: minimizeNonTransit
+          in: query
+          required: false
+          description: |
+            Add "minutes not on transit" (pre-/post-transit legs and transfer
+            footpaths) as an extra Pareto criterion, so the result also keeps
+            journeys that trade a little arrival time for less walking.
+
+            Setting this (or any other `minimize*` parameter) switches routing to
+            the multicriteria engine, overriding `algorithm` if it was `PONG`.
+          schema:
+            type: boolean
+            default: false
+
+        - name: minimizeModeSwitches
+          in: query
+          required: false
+          description: |
+            Add "number of vehicle-class switches between consecutive trips" as an
+            extra Pareto criterion (`BUS -> SUBWAY` counts, `SUBWAY -> SUBWAY`
+            does not), rewarding journeys that stay within one mode.
+
+            Setting this (or any other `minimize*` parameter) switches routing to
+            the multicriteria engine, overriding `algorithm` if it was `PONG`.
+          schema:
+            type: boolean
+            default: false
+
+        - name: minimizeWithout
+          in: query
+          required: false
+          description: |
+            Vehicle classes to add as an "avoid" Pareto criterion: the result
+            keeps both the fastest journey and the best one that does not use any
+            of these classes, instead of filtering them out.
+
+            Currently only `AIR` (flights) is supported.
+
+            Setting this (or any other `minimize*` parameter) switches routing to
+            the multicriteria engine, overriding `algorithm` if it was `PONG`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/VehicleClassFilter'
+            default: []
+          explode: false
       responses:
         '422':
           description: Unprocessable Entity
@@ -3820,6 +3867,14 @@ paths:
 
 components:
   schemas:
+    VehicleClassFilter:
+      description: |
+        A vehicle class that the `minimizeWithout` routing criterion prefers to
+        avoid. Currently only `AIR` (flights) is supported.
+      type: string
+      enum:
+        - AIR
+
     Mode:
       description: |
         # Street modes
