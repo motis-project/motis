@@ -37,6 +37,9 @@ nigiri::interval<nigiri::unixtime_t> shrink(
     nigiri::interval<nigiri::unixtime_t> search_interval,
     std::vector<nigiri::routing::journey>& journeys);
 
+std::pair<nigiri::routing::query, std::optional<nigiri::unixtime_t>>
+get_start_time(api::plan_params const&, nigiri::timetable const*);
+
 std::vector<nigiri::routing::offset> station_start(nigiri::location_idx_t);
 
 std::vector<nigiri::routing::via_stop> get_via_stops(
@@ -52,6 +55,10 @@ void remove_slower_than_fastest_direct(nigiri::routing::query&);
 
 struct routing {
   api::plan_response operator()(boost::urls::url_view const&) const;
+
+  api::plan_response route(api::plan_params const&,
+                           unsigned api_version,
+                           api::PlanPostBody const* post_body) const;
 
   bool is_osr_loaded() const {
     return w_ && l_ && pl_ && tt_ && loc_tree_ && matches_;
@@ -108,6 +115,35 @@ struct routing {
       double fastest_direct_factor,
       bool detailed_legs,
       unsigned api_version) const;
+
+  config const& config_;
+  osr::ways const* w_;
+  osr::lookup const* l_;
+  osr::platforms const* pl_;
+  osr::elevation_storage const* elevations_;
+  nigiri::timetable const* tt_;
+  nigiri::routing::tb::tb_data const* tbd_;
+  tag_lookup const* tags_;
+  point_rtree<nigiri::location_idx_t> const* loc_tree_;
+  flex::flex_areas const* fa_;
+  platform_matches_t const* matches_;
+  way_matches_storage const* way_matches_;
+  std::shared_ptr<rt> const& rt_;
+  nigiri::shapes_storage const* shapes_;
+  std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  adr_ext const* ae_;
+  tz_map_t const* tz_;
+  odm::bounds const* odm_bounds_;
+  odm::ride_sharing_bounds const* ride_sharing_bounds_;
+  metrics_registry* metrics_;
+#if defined(NIGIRI_CUDA)
+  gpu_search_pool* gpu_pool_{nullptr};
+#endif
+};
+
+struct routing_post {
+  api::plan_response operator()(boost::urls::url_view const&,
+                                api::PlanPostBody const&) const;
 
   config const& config_;
   osr::ways const* w_;

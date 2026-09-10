@@ -777,7 +777,7 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   std::filesystem::remove_all("test/data_leg_alts_td_footpath_blocked", ec);
 
   // Mirrors the elevator-test config from `routing_test.cc`: same OSM
-  // tile, `use_osm_stop_coordinates_ = true`, `osr_footpath_ = true`
+  // tile, `osr_footpath_ = true`
   // and `extend_missing_footpaths_ = false` so the wheelchair route
   // FFM_10 → FFM_101 is the elevator-routed footpath rather than an
   // auto-generated direct walk. Without this the elevator outage
@@ -791,7 +791,6 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
           config::timetable{
               .first_day_ = "2019-05-01",
               .num_days_ = 2,
-              .use_osm_stop_coordinates_ = true,
               .extend_missing_footpaths_ = false,
               .datasets_ = {{"test", {.path_ = std::string{kElevatorGTFS}}}}},
       .street_routing_ = true,
@@ -845,11 +844,11 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   ASSERT_FALSE(res_a.itineraries_.empty());
   EXPECT_EQ(R"(
 HIGHSPEED_RAIL ICE DA Hbf 00:35->FFM Hbf 00:45
-  alt [HIGHSPEED_RAIL ICE DA Hbf 23:35->FFM Hbf 23:45 | WALK FFM Hbf 23:45->FFM Hbf 23:51]
-  alt [HIGHSPEED_RAIL ICE DA Hbf 22:35->FFM Hbf 22:46 | WALK FFM Hbf 22:46->FFM Hbf 22:52]
+  alt [HIGHSPEED_RAIL ICE DA Hbf 23:35->FFM Hbf 23:45 | WALK FFM Hbf 23:45->FFM Hbf 23:52]
+  alt [HIGHSPEED_RAIL ICE DA Hbf 22:35->FFM Hbf 22:46 | WALK FFM Hbf 22:46->FFM Hbf 22:53]
 METRO S3 FFM Hbf 01:15->FFM Hauptwache 01:20
-  alt [WALK FFM Hbf 01:24->FFM Hbf 02:15 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
-  alt [WALK FFM Hbf 01:24->FFM Hbf 03:15 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
+  alt [WALK FFM Hbf 01:23->FFM Hbf 02:15 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
+  alt [WALK FFM Hbf 01:23->FFM Hbf 03:15 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
 )",
             to_str(res_a.itineraries_.front()));
 

@@ -48,6 +48,7 @@ server:
   web_folder: ui                    # folder with static files to serve
   n_threads: 24                     # default (if not set): number of hardware threads
   data_attribution_link: https://creativecommons.org/licenses/by/4.0/ # link to data sources or license exposed in HTTP headers and UI
+  when_unhealthy_return_error: false # return HTTP 503 from all endpoints except /api/v1/health and /metrics until rt/gbfs feed(s) have completed their first update since startup
 osm: netherlands-latest.osm.pbf     # required by tiles, street routing, geocoding and reverse-geocoding
 tiles:                              # tiles won't be available if this key is missing
   profile: tiles-profiles/full.lua  # currently `background.lua` (less details) and `full.lua` (more details) are available
@@ -72,7 +73,16 @@ timetable:                          # if not set, no timetable will be loaded
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
+      default_cars_allowed: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
       rt:
         - url: https://api.opentransportdata.swiss/gtfsrt2020
           headers:
@@ -80,7 +90,16 @@ timetable:                          # if not set, no timetable will be loaded
           protocol: gtfsrt          # specify the real time protocol (default: gtfsrt)
     nl:
       path: nl_ovapi.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
+      default_cars_allowed: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
@@ -110,6 +129,7 @@ limits:
   street_routing_max_direct_seconds: 21600 # limit for maxDirectTime API param, high values can lead to long-running, RAM-hungry queries 
   geocode_max_suggestions: 512    # maximum requestable results for /geocode
   reverse_geocode_max_results: 512 # maximum requestable results for /reverse-geocode
+  max_max_matching_distance: 250  # upper bound (meters) for the maxMatchingDistance API param, larger values are capped to this limit
 logging:
   log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
@@ -160,8 +180,25 @@ gbfs:
     # GBFS manifest / Lamassu feed:
     mobidata-bw:
       url: https://api.mobidata-bw.de/sharing/gbfs/v3/manifest.json
-  update_interval: 300
-  http_timeout: 10
+  ttl:
+    # static information - always only refresh every 6h
+    overwrite:
+      gbfs: 21600
+      manifest: 21600
+      system_information: 21600
+      vehicle_types: 21600
+      station_information: 21600
+      geofencing_zones: 21600
+
+    # dynamic information - 3min
+    default:
+      station_status: 180
+      vehicle_status: 180
+      free_bike_status: 180
+  update_interval: 60
+  http_timeout: 30
+  cache_size: 50 # cache state of n most recently used providers, speeding up queries, slowing down updates
+  proxy: # HTTP proxy used for all GBFS requests
 ```
 
 ## Provider Names, Groups + Colors

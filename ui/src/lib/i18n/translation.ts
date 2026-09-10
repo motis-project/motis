@@ -68,11 +68,24 @@ export type Translations = {
 	defaultSelectedModes: string;
 	defaultSelectedProviders: string;
 	selectElevationCosts: string;
+	hgvRoutingOptions: string;
+	vehicleHeight: string;
+	vehicleWidth: string;
+	vehicleLength: string;
+	vehicleWeight: string;
+	vehicleTopSpeed: string;
+	vehicleAxleCount: string;
+	vehicleAxleLoad: string;
+	vehicleHazmat: string;
+	vehicleHazmatWater: string;
+	vehicleTrailer: string;
+	vehicleLezAccess: string;
 	wheelchair: string;
 	useRoutedTransfers: string;
 	bikeRental: string;
 	requireBikeTransport: string;
 	requireCarTransport: string;
+	noCompulsoryReservation: string;
 	considerRentalReturnConstraints: string;
 	default: string;
 	timetableSources: string;
@@ -90,6 +103,7 @@ export type Translations = {
 	BIKE: string;
 	RENTAL: string;
 	CAR: string;
+	HGV: string;
 	CAR_DROPOFF: string;
 	CAR_PARKING: string;
 	TRANSIT: string;
@@ -128,13 +142,9 @@ export type Translations = {
 		LOW: string;
 		HIGH: string;
 	};
+	isochronesOpacity: string;
 	isochrones: {
 		title: string;
-		displayLevel: string;
-		maxComputeLevel: string;
-		canvasRects: string;
-		canvasCircles: string;
-		geojsonCircles: string;
 		styling: string;
 		noData: string;
 		requestFailed: string;
@@ -159,6 +169,7 @@ export type Translations = {
 	toll: string;
 	bikesAllowed: string;
 	wheelchairAccessible: string;
+	compulsoryReservation: string;
 	accessRestriction: string;
 	continuesAs: string;
 	earlierAlternatives: string;
@@ -191,6 +202,8 @@ export type Translations = {
 		arrivalsAt: (stop: string) => string;
 		isochronesFrom: (place: string) => string;
 	};
+	tickets: string;
+	routeInformation: string;
 };
 
 const translations: Map<string, Translations> = new Map(

@@ -72,12 +72,25 @@ const translations: Translations = {
 	selectTransitModes: 'Vyber dopravní prostředky',
 	defaultSelectedModes: 'Všechny dopravní prostředky',
 	defaultSelectedProviders: 'Všichni poskytovatelé',
-	selectElevationCosts: 'Bez prudkého stoupání.',
+	selectElevationCosts: 'Bez prudkého stoupání',
 	wheelchair: 'Pouze bezbariérová spojení',
+	hgvRoutingOptions: 'Možnosti nákladního vozidla',
+	vehicleHeight: 'Výška vozidla (m)',
+	vehicleWidth: 'Šířka vozidla (m)',
+	vehicleLength: 'Délka vozidla (m)',
+	vehicleWeight: 'Hmotnost vozidla (t)',
+	vehicleTopSpeed: 'Max. rychlost (km/h)',
+	vehicleAxleCount: 'Počet náprav',
+	vehicleAxleLoad: 'Zatížení nápravy (t)',
+	vehicleHazmat: 'Nebezpečný náklad',
+	vehicleHazmatWater: 'Nebezpečný pro vodu',
+	vehicleTrailer: 'S přívěsem',
+	vehicleLezAccess: 'Vjezd do nízkoemisních zón',
 	useRoutedTransfers: 'Počítej trasu pro přestupy',
 	bikeRental: 'Povol použití sdílených vozidel',
 	requireBikeTransport: 'Přeprava kola',
 	requireCarTransport: 'Přeprava auta',
+	noCompulsoryReservation: 'No reservation required',
 	considerRentalReturnConstraints: 'Vrať sdílené vozidla během cesty',
 	default: 'default',
 	timetableSources: 'Zdroje dát JŘ',
@@ -96,6 +109,7 @@ const translations: Translations = {
 	RENTAL: 'Sdílené prostředky',
 	RIDE_SHARING: 'Spolujízda',
 	CAR: 'Auto',
+	HGV: 'Nákladní vozidlo',
 	CAR_PARKING: 'Auto (využití parkovíšť)',
 	CAR_DROPOFF: 'Auto (pouze zastavení)',
 	TRANSIT: 'Hromadná doprava',
@@ -133,13 +147,9 @@ const translations: Translations = {
 		LOW: 'Malé odklony',
 		HIGH: 'Velké odklony'
 	},
+	isochronesOpacity: 'Krytí izochron',
 	isochrones: {
 		title: 'Izochrony',
-		displayLevel: 'Úroveň ukazování',
-		maxComputeLevel: 'Max. úroveň vypočítání',
-		canvasRects: 'Čtverce',
-		canvasCircles: 'Okruhy (zjednodušená projekce)',
-		geojsonCircles: 'Okruhy (pokročilá projekce)',
 		styling: 'Styl izochron',
 		noData: 'Žádné data',
 		requestFailed: 'Chyba žádosti'
@@ -164,6 +174,7 @@ const translations: Translations = {
 	toll: 'Pozor! Průjezd tuto trasou je placený.',
 	bikesAllowed: 'Bikes allowed',
 	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'Omezený dostup',
 	continuesAs: 'Pokračuje jako',
 	earlierAlternatives: 'Dřívější alternativy',
@@ -208,7 +219,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Odjezdy ze ${stop}`,
 		arrivalsAt: (stop) => `Příjezdy do ${stop}`,
 		isochronesFrom: (place) => `Izochrony z ${place}`
-	}
+	},
+	tickets: 'Vstupenky',
+	routeInformation: 'Další informace'
 };
 
 export default translations;

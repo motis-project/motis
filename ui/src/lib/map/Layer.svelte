@@ -140,13 +140,39 @@
 	let ctx: { map: maplibregl.Map | null } = getContext('map'); // from Map component
 	let source: { id: string | null } = getContext('source'); // from GeoJSON component
 
-	let initialized = false;
+	let initialized = $state(false);
 	let currFilter: maplibregl.FilterSpecification | undefined;
 	let currLayout: object | undefined;
 	let currPaint: object | undefined;
 	let currBefore: string | undefined;
 
+	// Pushes a changed layout / paint object onto an existing layer. Keys that
+	// disappeared are reset to their default (undefined). maplibre skips
+	// properties that are deep-equal to the current value, so re-sending the
+	// whole object on every change is cheap.
+	const applyProperties = (
+		prev: object | undefined,
+		next: object,
+		set: (key: string, value: unknown) => void
+	) => {
+		for (const [k, v] of Object.entries(next)) {
+			set(k, v);
+		}
+		for (const k of Object.keys(prev ?? {})) {
+			if (!(k in next)) {
+				set(k, undefined);
+			}
+		}
+	};
+
 	let updateLayer = () => {
+		// Read every reactive input up front: an $effect only tracks what it
+		// actually reads, so an early return below would silently drop these
+		// from the dependencies and later changes would never reach the map.
+		const nextFilter = filter;
+		const nextLayout = layout;
+		const nextPaint = paint;
+		const nextBefore = beforeLayerId;
 		const map = ctx.map;
 		const l = map?.getLayer(id);
 		if (!source.id) {
@@ -158,7 +184,7 @@
 			return;
 		}
 
-		if (l && filter == currFilter && layout == currLayout && paint == currPaint) {
+		if (l && nextFilter == currFilter && nextLayout == currLayout && nextPaint == currPaint) {
 			if (map) {
 				processPendingMoves(map);
 			}
@@ -166,41 +192,49 @@
 		}
 
 		if (!l) {
-			const before = beforeLayerId && map?.getLayer(beforeLayerId) ? beforeLayerId : undefined;
+			const before = nextBefore && map?.getLayer(nextBefore) ? nextBefore : undefined;
 			map!.addLayer(
 				// @ts-expect-error not assignable
 				{
 					source: source.id,
 					id,
 					type,
-					filter,
-					layout,
-					paint
+					filter: nextFilter,
+					layout: nextLayout,
+					paint: nextPaint
 				},
 				before
 			);
-			currFilter = filter;
-			currLayout = layout;
-			currPaint = paint;
-			currBefore = beforeLayerId;
+			currFilter = nextFilter;
+			currLayout = nextLayout;
+			currPaint = nextPaint;
+			currBefore = nextBefore;
 			layer.id = id;
-			if (beforeLayerId && !before) {
-				scheduleMoveLayer(map!, id, beforeLayerId);
+			if (nextBefore && !before) {
+				scheduleMoveLayer(map!, id, nextBefore);
 			}
 			processPendingMoves(map!);
 			return;
 		}
 
-		if (currFilter != filter) {
-			currFilter = filter;
-			map!.setFilter(id, filter);
+		if (currFilter != nextFilter) {
+			currFilter = nextFilter;
+			map!.setFilter(id, nextFilter);
 		}
-		if (currBefore !== beforeLayerId) {
-			currBefore = beforeLayerId;
-			if (beforeLayerId && map?.getLayer(beforeLayerId)) {
-				map!.moveLayer(id, beforeLayerId);
-			} else if (beforeLayerId) {
-				scheduleMoveLayer(map!, id, beforeLayerId);
+		if (currLayout != nextLayout) {
+			applyProperties(currLayout, nextLayout, (k, v) => map!.setLayoutProperty(id, k, v));
+			currLayout = nextLayout;
+		}
+		if (currPaint != nextPaint) {
+			applyProperties(currPaint, nextPaint, (k, v) => map!.setPaintProperty(id, k, v));
+			currPaint = nextPaint;
+		}
+		if (currBefore !== nextBefore) {
+			currBefore = nextBefore;
+			if (nextBefore && map?.getLayer(nextBefore)) {
+				map!.moveLayer(id, nextBefore);
+			} else if (nextBefore) {
+				scheduleMoveLayer(map!, id, nextBefore);
 			}
 		}
 		if (map) {

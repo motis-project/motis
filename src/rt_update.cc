@@ -93,10 +93,12 @@ void upload_gpu_rtt([[maybe_unused]] data const& d,
   utl::verify(d.gpu_tt_ != nullptr, "upload_gpu_rtt: gpu timetable missing");
   try {
     rtt.gpu_rtt_.ptr_ = n::routing::gpu::make_gpu_rtt(*d.tt_, rtt);
+    d.metrics_->gpu_rt_timetable_.Set(1);
   } catch (std::exception const& e) {
     n::log(n::log_lvl::error, "motis.rt", "GPU rt timetable upload failed: {}",
            e.what());
     rtt.gpu_rtt_.ptr_.reset();
+    d.metrics_->gpu_rt_timetable_.Set(0);
   }
 #endif
 }

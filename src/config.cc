@@ -209,6 +209,16 @@ void config::verify_input_files_exist() const {
           nigiri::to_clasz(c.first);
         }
       }
+      if (d.clasz_cars_allowed_.has_value()) {
+        for (auto const& c : *d.clasz_cars_allowed_) {
+          nigiri::to_clasz(c.first);
+        }
+      }
+      if (d.clasz_reservation_not_required_.has_value()) {
+        for (auto const& c : *d.clasz_reservation_not_required_) {
+          nigiri::to_clasz(c.first);
+        }
+      }
     }
 
     if (timetable_->route_shapes_) {

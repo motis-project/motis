@@ -67,7 +67,8 @@ export const closeItinerary = () => {
 			page.state.selectedStop.stopId,
 			page.state.selectedStop.time,
 			page.state.stopArriveBy ?? false,
-			true
+			true,
+			page.state.exactRadius ?? false
 		);
 		return;
 	}
@@ -80,12 +81,15 @@ export const onClickStop = (
 	stopId: string,
 	time: Date,
 	arriveBy: boolean = false,
-	replace: boolean = false
+	replace: boolean = false,
+	// only show the events of this exact stop (no parent / child / equivalent stops)
+	exactRadius: boolean = false
 ) => {
 	pushStateWithQueryString(
-		{ stopArriveBy: arriveBy, stopId, time: time.toISOString() },
+		{ stopArriveBy: arriveBy, stopId, time: time.toISOString(), exactRadius },
 		{
 			stopArriveBy: arriveBy,
+			exactRadius,
 			selectedStop: { name, stopId, time },
 			selectedItinerary: replace ? undefined : page.state.selectedItinerary,
 			tripId: replace ? undefined : page.state.tripId,

@@ -603,7 +603,7 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
                   .street_durations_ = std::vector<api::Duration>(5),
                   .transit_durations_ = {{
                       {{.duration_ = 1260.0, .transfers_ = 0}},
-                      {{.duration_ = 1620.0, .transfers_ = 0}},
+                      {{.duration_ = 1560.0, .transfers_ = 0}},
                       {{.duration_ = 1260.0, .transfers_ = 0}},
                       {{.duration_ = 1380.0, .transfers_ = 0}},
                       {{.duration_ = 1740.0, .transfers_ = 0}},
@@ -670,10 +670,10 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
   EXPECT_DOUBLE_EQ(1320.0, td.at(0).at(0).duration_);
   EXPECT_EQ(0, td.at(0).at(0).transfers_);
   ASSERT_EQ(1U, td.at(1).size());
-  EXPECT_DOUBLE_EQ(1680.0, td.at(1).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1860.0, td.at(1).at(0).duration_);
   EXPECT_EQ(0, td.at(1).at(0).transfers_);
   ASSERT_EQ(1U, td.at(2).size());
-  EXPECT_DOUBLE_EQ(1740.0, td.at(2).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1800.0, td.at(2).at(0).duration_);
   EXPECT_EQ(0, td.at(2).at(0).transfers_);
   ASSERT_EQ(1U, td.at(3).size());
   EXPECT_DOUBLE_EQ(4440.0, td.at(3).at(0).duration_);

@@ -261,15 +261,26 @@ api::rentals_response rental::operator()(
   };
 
   if (filter_point) {
-    gbfs->provider_rtree_.in_radius(
-        *point_pos, *point_radius,
-        [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
+    gbfs->car_products_rtree_.in_radius(
+        *point_pos, *point_radius, [&](gbfs::gbfs_products_ref_idx_t const r) {
+          check_provider(gbfs::from_ref_idx(r).provider_);
+        });
+    gbfs->bike_products_rtree_.in_radius(
+        *point_pos, *point_radius, [&](gbfs::gbfs_products_ref_idx_t const r) {
+          check_provider(gbfs::from_ref_idx(r).provider_);
+        });
     gbfs->provider_zone_rtree_.in_radius(
         *point_pos, *point_radius,
         [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
   } else if (filter_bbox) {
-    gbfs->provider_rtree_.find(
-        bbox, [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
+    gbfs->car_products_rtree_.find(
+        bbox, [&](gbfs::gbfs_products_ref_idx_t const r) {
+          check_provider(gbfs::from_ref_idx(r).provider_);
+        });
+    gbfs->bike_products_rtree_.find(
+        bbox, [&](gbfs::gbfs_products_ref_idx_t const r) {
+          check_provider(gbfs::from_ref_idx(r).provider_);
+        });
     gbfs->provider_zone_rtree_.find(
         bbox, [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
   } else if (filter_providers || filter_groups) {

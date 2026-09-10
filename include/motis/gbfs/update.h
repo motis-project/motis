@@ -16,6 +16,8 @@ boost::asio::awaitable<void> update(config const&,
                                     std::shared_ptr<gbfs_data>&,
                                     metrics_registry const*);
 
+void apply_canned_gbfs_update(config const&, data&);
+
 void run_gbfs_update(boost::asio::io_context&,
                      config const&,
                      osr::ways const&,

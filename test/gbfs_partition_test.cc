@@ -5,6 +5,7 @@
 #include <set>
 #include <vector>
 
+#include "motis/gbfs/data.h"
 #include "motis/gbfs/partition.h"
 
 using namespace motis::gbfs;
@@ -95,5 +96,35 @@ TEST(motis, gbfs_partition_disjoint_refinements) {
   p.refine(std::array{4, 5});
 
   auto const expected = std::vector<std::vector<T>>{{0, 1}, {2, 3}, {4, 5}};
+  EXPECT_TRUE(compare_partitions(p.get_sets(), expected));
+}
+
+TEST(motis, gbfs_partition_ignores_out_of_range_elements) {
+  using T = int;
+  auto p = partition<T>{3};
+
+  p.refine(std::array{0, 100, 200});
+
+  auto const expected = std::vector<std::vector<T>>{{0}, {1, 2}};
+  EXPECT_TRUE(compare_partitions(p.get_sets(), expected));
+}
+
+TEST(motis, gbfs_partition_ignores_only_out_of_range) {
+  using T = int;
+  auto p = partition<T>{5};
+
+  p.refine(std::array{10, 20});
+
+  EXPECT_TRUE(compare_partitions(p.get_sets(),
+                                 std::vector<std::vector<T>>{{0, 1, 2, 3, 4}}));
+}
+
+TEST(motis, gbfs_partition_ignores_invalid_vehicle_type_idx) {
+  auto p = partition<vehicle_type_idx_t>{vehicle_type_idx_t{3}};
+
+  p.refine(std::array{vehicle_type_idx_t{0}, vehicle_type_idx_t::invalid()});
+
+  auto const expected = std::vector<std::vector<vehicle_type_idx_t>>{
+      {vehicle_type_idx_t{0}}, {vehicle_type_idx_t{1}, vehicle_type_idx_t{2}}};
   EXPECT_TRUE(compare_partitions(p.get_sets(), expected));
 }

@@ -26,7 +26,8 @@
 		stopNameFromResponse = $bindable(),
 		stop = $bindable(),
 		stopMarker = $bindable(),
-		arriveBy
+		arriveBy,
+		exactRadius = false
 	}: {
 		stopId: string;
 		stopName: string;
@@ -35,12 +36,15 @@
 		stopNameFromResponse: string;
 		stop: Location | undefined;
 		stopMarker: maplibregl.Marker | undefined;
+		// only show the events of this exact stop (no parent / child / equivalent stops)
+		exactRadius?: boolean;
 	} = $props();
 
 	let query = $derived({
 		stopId,
 		time: queryTime.toISOString(),
 		arriveBy,
+		exactRadius: exactRadius ? true : undefined,
 		n: 10,
 		language: [language]
 	});
@@ -72,7 +76,7 @@
 		class="font-bold"
 		variant="outline"
 		onclick={() => {
-			onClickStop(stopName, stopId, queryTime, !arriveBy);
+			onClickStop(stopName, stopId, queryTime, !arriveBy, false, exactRadius);
 		}}
 	>
 		{#if arriveBy}

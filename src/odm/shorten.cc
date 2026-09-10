@@ -45,9 +45,12 @@ void shorten(std::vector<nr::journey>& odm_journeys,
           !stop.in_allowed(query.pedestrianProfile_ ==
                            api::PedestrianProfileEnum::WHEELCHAIR) ||
           (query.requireBikeTransport_ &&
-           !stop.bikes_allowed(n::event_type::kDep)) ||
+           !stop.is_flag_set(nigiri::kBikesAllowed, n::event_type::kDep)) ||
           (query.requireCarTransport_ &&
-           !stop.cars_allowed(n::event_type::kDep))) {
+           !stop.is_flag_set(nigiri::kCarsAllowed, n::event_type::kDep)) ||
+          (query.noCompulsoryReservation_ &&
+           !stop.is_flag_set(nigiri::kReservationNotRequired,
+                             n::event_type::kDep))) {
         continue;
       }
       for (auto const [offset, times] :
@@ -118,9 +121,12 @@ void shorten(std::vector<nr::journey>& odm_journeys,
           !stop.out_allowed(query.pedestrianProfile_ ==
                             api::PedestrianProfileEnum::WHEELCHAIR) ||
           (query.requireBikeTransport_ &&
-           !stop.bikes_allowed(n::event_type::kArr)) ||
+           !stop.is_flag_set(nigiri::kBikesAllowed, n::event_type::kArr)) ||
           (query.requireCarTransport_ &&
-           !stop.cars_allowed(n::event_type::kArr))) {
+           !stop.is_flag_set(nigiri::kCarsAllowed, n::event_type::kArr)) ||
+          (query.noCompulsoryReservation_ &&
+           !stop.is_flag_set(nigiri::kReservationNotRequired,
+                             n::event_type::kArr))) {
         continue;
       }
       for (auto const [offset, times] :

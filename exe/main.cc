@@ -182,7 +182,8 @@ int main(int ac, char** av) {
         if ((return_value = set_log_level(c))) {
           break;
         }
-        auto const bars = utl::global_progress_bars{false};
+        auto const bars =
+            utl::global_progress_bars{false, data_path / "timing.txt"};
         import(
             c, std::move(data_path),
             filter_tasks.empty() ? std::nullopt : std::optional{filter_tasks});

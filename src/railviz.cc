@@ -243,23 +243,36 @@ void add_rt_transports(n::timetable const& tt,
                        geo::box const& area,
                        std::vector<stop_pair>& runs) {
   auto const fr = n::rt::frun::from_rt(tt, &rtt, rt_t);
-  for (auto const [from, to] : utl::pairwise(fr)) {
-    auto const box = geo::make_box({from.pos(), to.pos()});
-    if (!box.overlaps(area)) {
+  // Cancelled/skipped stops are excluded from the segments below, so a
+  // segment spans from one non-cancelled stop to the next non-cancelled
+  // one (drawing a smooth line across any cancelled stop in between).
+  auto prev = std::optional<n::rt::run_stop>{};
+  for (auto const stop : fr) {
+    if (stop.is_cancelled()) {
       continue;
     }
-
-    auto const active =
-        n::interval{from.time(n::event_type::kDep),
-                    to.time(n::event_type::kArr) + n::i32_minutes{1}};
-    if (active.overlaps(time_interval)) {
-      utl::verify<net::too_many_exception>(runs.size() < kTripsLimit,
-                                           "too many trips");
-      runs.emplace_back(
-          stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
-                    .from_ = from.stop_idx_,
-                    .to_ = to.stop_idx_});
+    if (!prev.has_value()) {
+      prev = stop;
+      continue;
     }
+    auto const& from = *prev;
+    auto const& to = stop;
+
+    auto const box = geo::make_box({from.pos(), to.pos()});
+    if (box.overlaps(area)) {
+      auto const active =
+          n::interval{from.time(n::event_type::kDep),
+                      to.time(n::event_type::kArr) + n::i32_minutes{1}};
+      if (active.overlaps(time_interval)) {
+        utl::verify<net::too_many_exception>(runs.size() < kTripsLimit,
+                                             "too many trips");
+        runs.emplace_back(
+            stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
+                      .from_ = from.stop_idx_,
+                      .to_ = to.stop_idx_});
+      }
+    }
+    prev = stop;
   }
 }
 
@@ -271,10 +284,8 @@ void add_static_transports(n::timetable const& tt,
                            n::shapes_storage const* shapes_data,
                            std::vector<stop_pair>& runs) {
   auto const is_active = [&](n::transport const t) -> bool {
-    return (rtt == nullptr
-                ? tt.bitfields_[tt.transport_traffic_days_[t.t_idx_]]
-                : rtt->bitfields_[rtt->transport_traffic_days_[t.t_idx_]])
-        .test(to_idx(t.day_));
+    return rtt == nullptr ? tt.is_transport_active(t.t_idx_, t.day_)
+                          : rtt->is_transport_active(t.t_idx_, t.day_);
   };
 
   auto const seq = tt.route_location_seq_[r];

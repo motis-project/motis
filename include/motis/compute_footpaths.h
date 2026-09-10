@@ -6,6 +6,7 @@
 #include "osr/types.h"
 
 #include "motis/fwd.h"
+#include "motis/match_platforms.h"
 #include "motis/types.h"
 
 namespace motis {
@@ -28,8 +29,9 @@ elevator_footpath_map_t compute_footpaths(
     osr::lookup const&,
     osr::platforms const&,
     nigiri::timetable&,
+    platform_matches_t const&,
+    way_matches_storage const*,
     osr::elevation_storage const*,
-    bool update_coordinates,
     std::vector<routed_transfers_settings> const& settings);
 
 }  // namespace motis

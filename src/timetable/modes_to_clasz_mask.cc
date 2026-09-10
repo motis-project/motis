@@ -47,6 +47,7 @@ n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
       case api::ModeEnum::BIKE:
       case api::ModeEnum::RENTAL:
       case api::ModeEnum::CAR:
+      case api::ModeEnum::HGV:
       case api::ModeEnum::FLEX:
       case api::ModeEnum::DEBUG_BUS_ROUTE:
       case api::ModeEnum::DEBUG_RAILWAY_ROUTE:

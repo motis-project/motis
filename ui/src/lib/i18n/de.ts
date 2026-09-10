@@ -71,12 +71,25 @@ const translations: Translations = {
 	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
 	defaultSelectedProviders: 'Alle Anbieter',
-	selectElevationCosts: 'Steile Steigungen vermeiden.',
+	selectElevationCosts: 'Steile Steigungen vermeiden',
+	hgvRoutingOptions: 'Lkw-Optionen',
+	vehicleHeight: 'Fahrzeughöhe (m)',
+	vehicleWidth: 'Fahrzeugbreite (m)',
+	vehicleLength: 'Fahrzeuglänge (m)',
+	vehicleWeight: 'Fahrzeuggewicht (t)',
+	vehicleTopSpeed: 'Höchstgeschwindigkeit (km/h)',
+	vehicleAxleCount: 'Anzahl Achsen',
+	vehicleAxleLoad: 'Achslast (t)',
+	vehicleHazmat: 'Gefahrgut',
+	vehicleHazmatWater: 'Wassergefährdendes Gefahrgut',
+	vehicleTrailer: 'Mit Anhänger',
+	vehicleLezAccess: 'Zufahrt zu Umweltzonen',
 	useRoutedTransfers: 'Geroutete Umstiege verwenden',
 	wheelchair: 'Nur rollstuhlgerechte Verbindungen',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	requireBikeTransport: 'Fahrradmitnahme',
 	requireCarTransport: 'Automitnahme',
+	noCompulsoryReservation: 'Ohne Reservierungspflicht',
 	considerRentalReturnConstraints: 'Leihfahrzeuge innerhalb der Reise zurückgeben',
 	default: 'Vorgabe',
 	timetableSources: 'Fahrplandatenquellen',
@@ -95,6 +108,7 @@ const translations: Translations = {
 	RENTAL: 'Sharing',
 	RIDE_SHARING: 'Mitfahrgelegenheit',
 	CAR: 'Auto',
+	HGV: 'Lkw',
 	CAR_DROPOFF: 'Absetzen (Auto)',
 	CAR_PARKING: 'P+R Park & Ride',
 	TRANSIT: 'ÖPV',
@@ -128,13 +142,9 @@ const translations: Translations = {
 		transferTimeFactor: 'Umstiegszeitfaktor'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
+	isochronesOpacity: 'Deckkraft der Isochronen',
 	isochrones: {
 		title: 'Isochronen',
-		displayLevel: 'Darstellungsebene',
-		maxComputeLevel: 'Max. Berechnungsebene',
-		canvasRects: 'Rechtecke (Overlay)',
-		canvasCircles: 'Kreise (Overlay)',
-		geojsonCircles: 'Kreise (Geometrie)',
 		styling: 'Darstellung der Isochronen',
 		noData: 'Keine Daten',
 		requestFailed: 'Anfrage fehlgeschlagen'
@@ -159,6 +169,7 @@ const translations: Translations = {
 	toll: 'Achtung: Mautpflichtige Straße!',
 	bikesAllowed: 'Fahrräder erlaubt',
 	wheelchairAccessible: 'Rollstuhlgerecht',
+	compulsoryReservation: 'Reservierung erforderlich',
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
 	earlierAlternatives: 'Frühere Alternativen',
@@ -199,7 +210,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Abfahrten in ${stop}`,
 		arrivalsAt: (stop) => `Ankünfte in ${stop}`,
 		isochronesFrom: (place) => `Isochronen von ${place}`
-	}
+	},
+	tickets: 'Tickets',
+	routeInformation: 'Mehr Informationen'
 };
 
 export default translations;

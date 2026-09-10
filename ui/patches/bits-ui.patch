@@ -1,0 +1,17 @@
+diff --git a/dist/bits/select/select.svelte.js b/dist/bits/select/select.svelte.js
+index f7b9f9b4c4ad4ce2435d4942fe3ef63e9e9cb1ee..47e47e384f9bbc3fff3d62326fdb94f6cb2bb89f 100644
+--- a/dist/bits/select/select.svelte.js
++++ b/dist/bits/select/select.svelte.js
+@@ -235,6 +235,12 @@ class SelectInputState {
+         this.root.isUsingKeyboard = true;
+         if (e.key === kbd.ESCAPE)
+             return;
++        // MOTIS: Don't let the suggestion list in AddressTypeahead steal Home and End keypresses from the input box.
++        // We use these comboboxes as if it were an input box with additional and *optional* suggestions (like a <datalist>),
++        // so absorbing these keycodes doesn't quite make sense here.
++        // Luckily, <Select> doesn't use this function, a.k.a. this snippet shouldn't break anything else. :^)
++        if ([kbd.HOME, kbd.END].includes(e.key))
++            return;
+         // prevent arrow up/down from moving the position of the cursor in the input
+         if (e.key === kbd.ARROW_UP || e.key === kbd.ARROW_DOWN)
+             e.preventDefault();

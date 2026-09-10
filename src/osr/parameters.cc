@@ -1,5 +1,8 @@
 #include "motis/osr/parameters.h"
 
+#include <cmath>
+#include <cstdint>
+#include <limits>
 #include <optional>
 #include <type_traits>
 
@@ -11,6 +14,7 @@
 #include "osr/routing/profiles/car_parking.h"
 #include "osr/routing/profiles/car_sharing.h"
 #include "osr/routing/profiles/foot.h"
+#include "osr/routing/profiles/hgv.h"
 
 namespace motis {
 
@@ -88,12 +92,232 @@ float cycling_speed(T const& params)
 }
 
 template <typename T>
+float hgv_height(T const&) {
+  return osr_parameters::kHgvHeightMeters;
+}
+
+template <typename T>
+float hgv_height(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleHeight_ } -> std::same_as<std::optional<double> const&>;
+  }
+{
+  return params.vehicleHeight_
+      .and_then([](double const height) {
+        return height > 0.5 && height < 20.0
+                   ? std::optional{static_cast<float>(height)}
+                   : std::nullopt;
+      })
+      .value_or(osr_parameters::kHgvHeightMeters);
+}
+
+template <typename T>
+float hgv_width(T const&) {
+  return osr_parameters::kHgvWidthMeters;
+}
+
+template <typename T>
+float hgv_width(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleWidth_ } -> std::same_as<std::optional<double> const&>;
+  }
+{
+  return params.vehicleWidth_
+      .and_then([](double const width) {
+        return width > 0.5 && width < 20.0
+                   ? std::optional{static_cast<float>(width)}
+                   : std::nullopt;
+      })
+      .value_or(osr_parameters::kHgvWidthMeters);
+}
+
+template <typename T>
+float hgv_length(T const&) {
+  return osr_parameters::kHgvLengthMeters;
+}
+
+template <typename T>
+float hgv_length(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleLength_ } -> std::same_as<std::optional<double> const&>;
+  }
+{
+  return params.vehicleLength_
+      .and_then([](double const length) {
+        return length > 1.0 && length < 100.0
+                   ? std::optional{static_cast<float>(length)}
+                   : std::nullopt;
+      })
+      .value_or(osr_parameters::kHgvLengthMeters);
+}
+
+template <typename T>
+float hgv_weight(T const&) {
+  return osr_parameters::kHgvWeightTons;
+}
+
+template <typename T>
+float hgv_weight(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleWeight_ } -> std::same_as<std::optional<double> const&>;
+  }
+{
+  return params.vehicleWeight_
+      .and_then([](double const weight) {
+        return weight > 0.1 && weight < 1000.0
+                   ? std::optional{static_cast<float>(weight)}
+                   : std::nullopt;
+      })
+      .value_or(osr_parameters::kHgvWeightTons);
+}
+
+template <typename T>
+bool hgv_hazmat(T const&) {
+  return osr_parameters::kHgvHazmat;
+}
+
+template <typename T>
+bool hgv_hazmat(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleHazmat_ } -> std::same_as<std::optional<bool> const&>;
+  }
+{
+  return params.vehicleHazmat_.value_or(osr_parameters::kHgvHazmat);
+}
+
+template <typename T>
+bool hgv_hazmat_water(T const&) {
+  return osr_parameters::kHgvHazmatWater;
+}
+
+template <typename T>
+bool hgv_hazmat_water(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleHazmatWater_ } -> std::same_as<std::optional<bool> const&>;
+  }
+{
+  return params.vehicleHazmatWater_.value_or(osr_parameters::kHgvHazmatWater);
+}
+
+template <typename T>
+std::uint8_t hgv_axle_count(T const&) {
+  return osr_parameters::kHgvAxleCount;
+}
+
+template <typename T>
+std::uint8_t hgv_axle_count(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleAxleCount_ } -> std::same_as<std::optional<std::int64_t> const&>;
+  }
+{
+  return params.vehicleAxleCount_
+      .and_then([](std::int64_t const count) {
+        return count > 0 && count < 256
+                   ? std::optional{static_cast<std::uint8_t>(count)}
+                   : std::nullopt;
+      })
+      .value_or(osr_parameters::kHgvAxleCount);
+}
+
+template <typename T>
+float hgv_axle_load(T const&) {
+  return osr_parameters::kHgvAxleLoadTons;
+}
+
+template <typename T>
+float hgv_axle_load(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleAxleLoad_ } -> std::same_as<std::optional<double> const&>;
+  }
+{
+  return params.vehicleAxleLoad_
+      .and_then([](double const axle_load) {
+        return axle_load > 0.1 && axle_load < 100.0
+                   ? std::optional{static_cast<float>(axle_load)}
+                   : std::nullopt;
+      })
+      .value_or(osr_parameters::kHgvAxleLoadTons);
+}
+
+template <typename T>
+bool hgv_trailer(T const&) {
+  return osr_parameters::kHgvTrailer;
+}
+
+template <typename T>
+bool hgv_trailer(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleTrailer_ } -> std::same_as<std::optional<bool> const&>;
+  }
+{
+  return params.vehicleTrailer_.value_or(osr_parameters::kHgvTrailer);
+}
+
+template <typename T>
+std::uint8_t hgv_top_speed(T const&) {
+  return osr_parameters::kHgvTopSpeedKmh;
+}
+
+template <typename T>
+std::uint8_t hgv_top_speed(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleTopSpeed_ } -> std::same_as<std::optional<std::int64_t> const&>;
+  }
+{
+  return params.vehicleTopSpeed_
+      .and_then([](std::int64_t const top_speed) {
+        return top_speed > 0 && top_speed < 256
+                   ? std::optional{static_cast<std::uint8_t>(top_speed)}
+                   : std::nullopt;
+      })
+      .value_or(osr_parameters::kHgvTopSpeedKmh);
+}
+
+template <typename T>
+bool hgv_low_emission_zone_access(T const&) {
+  return osr_parameters::kHgvLowEmissionZoneAccess;
+}
+
+template <typename T>
+bool hgv_low_emission_zone_access(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleLezAccess_ } -> std::same_as<std::optional<bool> const&>;
+  }
+{
+  return params.vehicleLezAccess_.value_or(
+      osr_parameters::kHgvLowEmissionZoneAccess);
+}
+
+template <typename T>
 osr_parameters to_osr_parameters(T const& params) {
   return {
       .pedestrian_speed_ = pedestrian_speed(params),
       .cycling_speed_ = cycling_speed(params),
       .use_wheelchair_ = use_wheelchair(params),
+      .hgv_height_meters_ = hgv_height(params),
+      .hgv_width_meters_ = hgv_width(params),
+      .hgv_length_meters_ = hgv_length(params),
+      .hgv_weight_tons_ = hgv_weight(params),
+      .hgv_hazmat_ = hgv_hazmat(params),
+      .hgv_hazmat_water_ = hgv_hazmat_water(params),
+      .hgv_axle_count_ = hgv_axle_count(params),
+      .hgv_axle_load_tons_ = hgv_axle_load(params),
+      .hgv_trailer_ = hgv_trailer(params),
+      .hgv_top_speed_km_h_ = hgv_top_speed(params),
+      .hgv_low_emission_zone_access_ = hgv_low_emission_zone_access(params),
   };
+}
+
+std::uint16_t meters_to_centimeters(float const meters) {
+  return static_cast<std::uint16_t>(
+      std::clamp(std::lround(meters * 100.0F), 0L,
+                 static_cast<long>(std::numeric_limits<std::uint16_t>::max())));
+}
+
+std::uint16_t tons_to_100kg(float const tons) {
+  return static_cast<std::uint16_t>(
+      std::clamp(std::lround(tons * 10.0F), 0L,
+                 static_cast<long>(std::numeric_limits<std::uint16_t>::max())));
 }
 
 osr_parameters get_osr_parameters(api::plan_params const& params) {
@@ -156,6 +380,19 @@ osr::profile_parameters to_profile_parameters(osr::search_profile const p,
                        osr::kElevationHighCost>::parameters{
           .speed_meters_per_second_ = params.cycling_speed_};
     case osr::search_profile::kCar: return osr::car::parameters{};
+    case osr::search_profile::kHgv:
+      return osr::hgv::parameters{
+          .height_cm_ = meters_to_centimeters(params.hgv_height_meters_),
+          .width_cm_ = meters_to_centimeters(params.hgv_width_meters_),
+          .length_cm_ = meters_to_centimeters(params.hgv_length_meters_),
+          .weight_100kg_ = tons_to_100kg(params.hgv_weight_tons_),
+          .hazmat_ = params.hgv_hazmat_,
+          .hazmat_water_ = params.hgv_hazmat_water_,
+          .axle_count_ = params.hgv_axle_count_,
+          .axle_load_100kg_ = tons_to_100kg(params.hgv_axle_load_tons_),
+          .trailer_ = params.hgv_trailer_,
+          .top_speed_km_h_ = params.hgv_top_speed_km_h_,
+          .low_emission_zone_access_ = params.hgv_low_emission_zone_access_};
     case osr::search_profile::kCarDropOff:
       return osr::car_parking<false, false>::parameters{
           .car_ = {},

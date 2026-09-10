@@ -21,6 +21,7 @@
 #include "osr/platforms.h"
 #include "osr/ways.h"
 
+#include "nigiri/logging.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
@@ -307,8 +308,15 @@ data::data(std::filesystem::path p, config const& c)
     gpu_pool_ = std::make_unique<gpu_search_pool>(
         *gpu_tt_, c.server_ ? c.server_->gpu_states_ : 2U);
     if (rt_->rtt_ != nullptr) {
-      rt_->rtt_->gpu_rtt_.ptr_ =
-          n::routing::gpu::make_gpu_rtt(*tt_, *rt_->rtt_);
+      try {
+        rt_->rtt_->gpu_rtt_.ptr_ =
+            n::routing::gpu::make_gpu_rtt(*tt_, *rt_->rtt_);
+        metrics_->gpu_rt_timetable_.Set(1);
+      } catch (std::exception const& e) {
+        n::log(n::log_lvl::error, "motis.data",
+               "GPU rt timetable upload failed: {}", e.what());
+        metrics_->gpu_rt_timetable_.Set(0);
+      }
     }
   }
 #endif
@@ -450,6 +458,9 @@ void data::load_auser_updater(std::string_view tag,
   };
 
   for (auto const& rt : *d.rt_) {
+    if (rt.protocol_ == config::timetable::dataset::rt::protocol::gtfsrt) {
+      continue;
+    }
     auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
                         convert(rt.protocol_));
   }

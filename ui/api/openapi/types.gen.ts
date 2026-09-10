@@ -7,6 +7,7 @@
  * - `BIKE`
  * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `CAR`
+ * - `HGV` Heavy goods vehicles (only supported for direct connections)
  * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
  * - `ODM` on-demand taxis from the Prima+ÖV Project
@@ -38,7 +39,7 @@
  * - `CABLE_CAR`: deprecated
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'DEBUG_BUS_ROUTE' | 'DEBUG_RAILWAY_ROUTE' | 'DEBUG_FERRY_ROUTE' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'SUBURBAN' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO' | 'CABLE_CAR';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'HGV' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'DEBUG_BUS_ROUTE' | 'DEBUG_RAILWAY_ROUTE' | 'DEBUG_FERRY_ROUTE' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'SUBURBAN' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO' | 'CABLE_CAR';
 
 /**
  * a transit route/line serving a stop
@@ -396,6 +397,61 @@ export type PedestrianSpeed = number;
 export type CyclingSpeed = number;
 
 /**
+ * Vehicle height for HGV routing in meters
+ */
+export type VehicleHeight = number;
+
+/**
+ * Vehicle width for HGV routing in meters
+ */
+export type VehicleWidth = number;
+
+/**
+ * Vehicle length for HGV routing in meters
+ */
+export type VehicleLength = number;
+
+/**
+ * Vehicle gross weight for HGV routing in tons
+ */
+export type VehicleWeight = number;
+
+/**
+ * Whether the vehicle carries hazardous materials for HGV routing
+ */
+export type VehicleHazmat = boolean;
+
+/**
+ * Whether the vehicle carries hazardous materials dangerous to water for HGV routing
+ */
+export type VehicleHazmatWater = boolean;
+
+/**
+ * Axle count for HGV routing
+ */
+export type VehicleAxleCount = number;
+
+/**
+ * Maximum axle load for HGV routing in tons
+ */
+export type VehicleAxleLoad = number;
+
+/**
+ * Whether the vehicle has a trailer for HGV routing
+ */
+export type VehicleTrailer = boolean;
+
+/**
+ * Vehicle top speed for HGV routing in km/h
+ */
+export type VehicleTopSpeed = number;
+
+/**
+ * Whether the vehicle is allowed to use low-emission zones for HGV routing
+ */
+export type VehicleLezAccess = boolean;
+
+/**
  * - `NORMAL` - latitude / longitude coordinate or address
  * - `BIKESHARE` - bike sharing station
  * - `TRANSIT` - transit stop
@@ -409,6 +465,10 @@ export type VertexType = 'NORMAL' | 'BIKESHARE' | 'TRANSIT';
  *
  */
 export type PickupDropoffType = 'NORMAL' | 'NOT_ALLOWED';
+
+export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
+
+export type Reservation = 'NONE' | 'COMPULSORY';
 
 export type Place = {
     /**
@@ -635,6 +695,28 @@ export type StopTime = {
      */
     tripCancelled: boolean;
     /**
+     * If set, this attribute indicates that this trip has been expanded
+     * beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+     * by looping active weekdays, e.g. from calendar.txt in GTFS.
+     *
+     */
+    loopedCalendarSince?: string;
+    /**
+     * Whether bikes can be carried on this trip.
+     *
+     */
+    bikesAllowed: boolean;
+    /**
+     * Whether wheelchairs can be transported on this trip.
+     *
+     */
+    wheelchairAccessible: WheelchairAccessibility;
+    /**
+     * Information about compulsory or possible reservation.
+     *
+     */
+    reservation: Reservation;
+    /**
      * Filename and line number where this trip is from
      */
     source: string;
@@ -788,8 +870,6 @@ export type StepInstruction = {
      */
     elevationDown?: number;
 };
-
-export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
 
 export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
 
@@ -1174,6 +1254,12 @@ export type Category = {
     shortName: string;
 };
 
+export type TicketUrls = {
+    web?: string;
+    android?: string;
+    ios?: string;
+};
+
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -1254,6 +1340,7 @@ export type Leg = {
     routeType?: number;
     agencyName?: string;
     agencyUrl?: string;
+    agencyFareUrl?: string;
     agencyId?: string;
     tripId?: string;
     routeShortName?: string;
@@ -1322,6 +1409,16 @@ export type Leg = {
      *
      */
     wheelchairAccessible?: WheelchairAccessibility;
+    /**
+     * Information about compulsory or possible reservation.
+     *
+     */
+    reservation?: Reservation;
+    /**
+     * Ticket booking links for different platforms
+     *
+     */
+    ticketUrls?: TicketUrls;
     /**
      * Alternative connections that can replace this transit leg.
      * Each alternative is normally a sequence of 3 legs:
@@ -1497,6 +1594,55 @@ export type RefreshItineraryPostBody = {
     id: ItineraryId;
 };
 
+/**
+ * A client-computed first/last mile option: the given transit stop can
+ * be reached from the query coordinate (or vice versa) with the given
+ * duration and mode.
+ *
+ */
+export type PlanOffset = {
+    /**
+     * stop id of the transit stop
+     * (parent stations are expanded to their child stops)
+     *
+     */
+    stopId: string;
+    /**
+     * duration in seconds
+     */
+    duration: number;
+    /**
+     * mode used to reach the stop, used to render the first/last mile
+     * leg (supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+     *
+     */
+    mode?: Mode;
+};
+
+/**
+ * Body for the `planPost` endpoint. Carries only the optional offset
+ * lists; all routing parameters are passed as query parameters (same as
+ * the `plan` GET endpoint). An absent or empty list keeps the default
+ * behavior (offsets computed by the server) for that side, so an empty
+ * body `{}` is equivalent to the GET endpoint.
+ *
+ */
+export type PlanPostBody = {
+    /**
+     * Offsets for the `fromPlace` side: transit stops reachable from
+     * `fromPlace`, replacing the server-side first mile computation.
+     *
+     */
+    fromOffsets?: Array<PlanOffset>;
+    /**
+     * Offsets for the `toPlace` side: transit stops from which
+     * `toPlace` can be reached, replacing the server-side last mile
+     * computation.
+     *
+     */
+    toOffsets?: Array<PlanOffset>;
+};
+
 export type Itinerary = {
     /**
      * journey duration in seconds
@@ -1602,6 +1748,9 @@ export type OneToManyParams = {
     max: number;
     /**
      * maximum matching distance in meters to match geo coordinates to the street network
+     *
+     * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+     *
      */
     maxMatchingDistance: number;
     /**
@@ -1685,6 +1834,9 @@ export type OneToManyIntermodalParams = {
     maxTravelTime?: number;
     /**
      * maximum matching distance in meters to match geo coordinates to the street network
+     *
+     * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+     *
      */
     maxMatchingDistance?: number;
     /**
@@ -1763,6 +1915,17 @@ export type OneToManyIntermodalParams = {
      *
      */
     cyclingSpeed?: CyclingSpeed;
+    vehicleHeight?: VehicleHeight;
+    vehicleWidth?: VehicleWidth;
+    vehicleLength?: VehicleLength;
+    vehicleWeight?: VehicleWeight;
+    vehicleHazmat?: VehicleHazmat;
+    vehicleHazmatWater?: VehicleHazmatWater;
+    vehicleAxleCount?: VehicleAxleCount;
+    vehicleAxleLoad?: VehicleAxleLoad;
+    vehicleTrailer?: VehicleTrailer;
+    vehicleTopSpeed?: VehicleTopSpeed;
+    vehicleLezAccess?: VehicleLezAccess;
     /**
      * Optional. Default is `NONE`.
      *
@@ -1860,6 +2023,13 @@ export type OneToManyIntermodalParams = {
      *
      */
     requireCarTransport?: boolean;
+    /**
+     * Optional. Default is `false`.
+     *
+     * If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+     *
+     */
+    noCompulsoryReservation?: boolean;
 };
 
 export type ServerConfig = {
@@ -1998,7 +2168,7 @@ export type PlanData = {
         /**
          * algorithm to use
          */
-        algorithm?: 'RAPTOR' | 'PONG' | 'GPU_PONG' | 'GPU_RAPTOR' | 'TB';
+        algorithm?: 'RAPTOR' | 'PONG' | 'TB';
         /**
          * Optional. Default is `false`.
          *
@@ -2044,7 +2214,7 @@ export type PlanData = {
          *
          * Note: the output `direct` array will stay empty if the input param `maxDirectTime` makes any direct trip impossible.
          *
-         * Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
+         * Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `HGV`, `BIKE_SHARING`, etc. can be used.
          *
          */
         directModes?: Array<Mode>;
@@ -2216,6 +2386,8 @@ export type PlanData = {
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
          *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -2271,6 +2443,13 @@ export type PlanData = {
          *
          */
         minTransferTime?: number;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+         *
+         */
+        noCompulsoryReservation?: boolean;
         /**
          * The minimum number of itineraries to compute.
          * This is only relevant if `timetableView=true`.
@@ -2417,7 +2596,9 @@ export type PlanData = {
         /**
          * Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
          * When set and the place is given as coordinates, all transit stops within
-         * this radius are used as start/end points with zero pre-transit/post-transit time.
+         * this radius are used as start/end points. The pre-transit/post-transit time
+         * for each of them is estimated from the crow-fly distance to the coordinate
+         * at walking speed (1.5 m/s), rounded down to whole minutes.
          * Works without OSM/street routing data loaded.
          *
          */
@@ -2528,6 +2709,50 @@ export type PlanData = {
          */
         useRoutedTransfers?: boolean;
         /**
+         * Axle count used for `HGV` street routing.
+         */
+        vehicleAxleCount?: VehicleAxleCount;
+        /**
+         * Maximum axle load in tons used for `HGV` street routing.
+         */
+        vehicleAxleLoad?: VehicleAxleLoad;
+        /**
+         * Whether the vehicle carries hazardous materials for `HGV` street routing.
+         */
+        vehicleHazmat?: VehicleHazmat;
+        /**
+         * Whether the vehicle carries hazardous materials dangerous to water for `HGV` street routing.
+         */
+        vehicleHazmatWater?: VehicleHazmatWater;
+        /**
+         * Vehicle height in meters used for `HGV` street routing.
+         */
+        vehicleHeight?: VehicleHeight;
+        /**
+         * Vehicle length in meters used for `HGV` street routing.
+         */
+        vehicleLength?: VehicleLength;
+        /**
+         * Whether the vehicle is allowed to use low-emission zones for `HGV` street routing.
+         */
+        vehicleLezAccess?: VehicleLezAccess;
+        /**
+         * Vehicle top speed in km/h used for `HGV` street routing.
+         */
+        vehicleTopSpeed?: VehicleTopSpeed;
+        /**
+         * Whether the vehicle has a trailer for `HGV` street routing.
+         */
+        vehicleTrailer?: VehicleTrailer;
+        /**
+         * Vehicle gross weight in tons used for `HGV` street routing.
+         */
+        vehicleWeight?: VehicleWeight;
+        /**
+         * Vehicle width in meters used for `HGV` street routing.
+         */
+        vehicleWidth?: VehicleWidth;
+        /**
          * List of via stops to visit (only stop IDs, no coordinates allowed for now).
          * Also see the optional parameter `viaMinimumStay` to set a set a minimum stay duration for each via stop.
          *
@@ -2598,6 +2823,52 @@ export type PlanResponse = ({
 
 export type PlanError = (Error);
 
+export type PlanPostData = {
+    body: PlanPostBody;
+};
+
+export type PlanPostResponse = ({
+    /**
+     * the routing query
+     */
+    requestParameters: {
+        [key: string]: (string);
+    };
+    /**
+     * debug statistics
+     */
+    debugOutput: {
+        [key: string]: (number);
+    };
+    from: Place;
+    to: Place;
+    /**
+     * Direct trips by `WALK`, `BIKE`, `CAR`, etc. without time-dependency.
+     * The starting time (`arriveBy=false`) / arrival time (`arriveBy=true`) is always the queried `time` parameter (set to \"now\" if not set).
+     * But all `direct` connections are meant to be independent of absolute times.
+     *
+     */
+    direct: Array<Itinerary>;
+    /**
+     * list of itineraries
+     */
+    itineraries: Array<Itinerary>;
+    /**
+     * Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
+     * The previous page is a set of itineraries departing BEFORE the first itinerary in the result for a depart after search. When using the default sort order the previous set of itineraries is inserted before the current result.
+     *
+     */
+    previousPageCursor: string;
+    /**
+     * Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
+     * The next page is a set of itineraries departing AFTER the last itinerary in this result.
+     *
+     */
+    nextPageCursor: string;
+});
+
+export type PlanPostError = (Error);
+
 export type OneToManyData = {
     query: {
         /**
@@ -2637,6 +2908,9 @@ export type OneToManyData = {
         max: number;
         /**
          * maximum matching distance in meters to match geo coordinates to the street network
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance: number;
         /**
@@ -2648,6 +2922,17 @@ export type OneToManyData = {
          * geo location as latitude;longitude
          */
         one: string;
+        vehicleAxleCount?: VehicleAxleCount;
+        vehicleAxleLoad?: VehicleAxleLoad;
+        vehicleHazmat?: VehicleHazmat;
+        vehicleHazmatWater?: VehicleHazmatWater;
+        vehicleHeight?: VehicleHeight;
+        vehicleLength?: VehicleLength;
+        vehicleLezAccess?: VehicleLezAccess;
+        vehicleTopSpeed?: VehicleTopSpeed;
+        vehicleTrailer?: VehicleTrailer;
+        vehicleWeight?: VehicleWeight;
+        vehicleWidth?: VehicleWidth;
         /**
          * Optional. Default is `false`.
          * If true, the response includes the distance in meters
@@ -2743,6 +3028,9 @@ export type OneToManyIntermodalData = {
         maxDirectTime?: number;
         /**
          * maximum matching distance in meters to match geo coordinates to the street network
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -2795,6 +3083,13 @@ export type OneToManyIntermodalData = {
          *
          */
         minTransferTime?: number;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+         *
+         */
+        noCompulsoryReservation?: boolean;
         /**
          * geo location as latitude;longitude
          */
@@ -2871,6 +3166,17 @@ export type OneToManyIntermodalData = {
          *
          */
         useRoutedTransfers?: boolean;
+        vehicleAxleCount?: VehicleAxleCount;
+        vehicleAxleLoad?: VehicleAxleLoad;
+        vehicleHazmat?: VehicleHazmat;
+        vehicleHazmatWater?: VehicleHazmatWater;
+        vehicleHeight?: VehicleHeight;
+        vehicleLength?: VehicleLength;
+        vehicleLezAccess?: VehicleLezAccess;
+        vehicleTopSpeed?: VehicleTopSpeed;
+        vehicleTrailer?: VehicleTrailer;
+        vehicleWeight?: VehicleWeight;
+        vehicleWidth?: VehicleWidth;
         /**
          * Optional. Default is `false`.
          * If true, the response includes the distance in meters
@@ -2943,6 +3249,8 @@ export type OneToAllData = {
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
          *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -2992,6 +3300,13 @@ export type OneToAllData = {
          *
          */
         minTransferTime?: number;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+         *
+         */
+        noCompulsoryReservation?: boolean;
         /**
          * \`latitude,longitude[,level]\` tuple with
          * - latitude and longitude in degrees
@@ -3079,6 +3394,17 @@ export type OneToAllData = {
          *
          */
         useRoutedTransfers?: boolean;
+        vehicleAxleCount?: VehicleAxleCount;
+        vehicleAxleLoad?: VehicleAxleLoad;
+        vehicleHazmat?: VehicleHazmat;
+        vehicleHazmatWater?: VehicleHazmatWater;
+        vehicleHeight?: VehicleHeight;
+        vehicleLength?: VehicleLength;
+        vehicleLezAccess?: VehicleLezAccess;
+        vehicleTopSpeed?: VehicleTopSpeed;
+        vehicleTrailer?: VehicleTrailer;
+        vehicleWeight?: VehicleWeight;
+        vehicleWidth?: VehicleWidth;
     };
 };
 
@@ -3240,6 +3566,9 @@ export type RefreshItineraryData = {
         language?: Array<(string)>;
         /**
          * Maximum matching distance in meters to the street network.
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -3250,6 +3579,7 @@ export type RefreshItineraryData = {
          * Maximum time in seconds for the first (access) street leg.
          */
         maxPreTransitTime?: number;
+        noCompulsoryReservation?: boolean;
         numLegAlternatives?: number;
         pedestrianProfile?: PedestrianProfile;
         /**
