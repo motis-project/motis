@@ -1192,6 +1192,14 @@ api::plan_response routing::route(api::plan_params const& query,
         auto const mc_timeout = query.timeout_.has_value()
                                     ? std::chrono::seconds{*query.timeout_}
                                     : max_timeout;
+        // server.gpu_mc_states: 0 -> mc ping on the device, > 0 -> mc pong
+        // too (see bmrap_profile_search); only takes effect for the criteria
+        // the device mcraptor implements.
+        [[maybe_unused]] auto const gpu_mc_mode =
+            config_.server_.has_value() &&
+                    config_.server_->gpu_mc_states_ > 0U
+                ? 2
+                : 1;
         // Extra pareto dimensions of the multicriteria engines, each toggled
         // by its own request parameter (minimizeNonTransit / minimizeWithout /
         // minimizeModeSwitches). They compose freely (see arr_with in
@@ -1216,7 +1224,8 @@ api::plan_response routing::route(api::plan_params const& query,
                 auto const lease = gpu_pool_->acquire();
                 gpu_used = true;
                 return n::routing::bmrap_profile_search<Criteria>(
-                    *tt_, rtt, search_state, lease.state_, q, dir, mc_timeout);
+                    *tt_, rtt, search_state, lease.state_, q, dir, mc_timeout,
+                    gpu_mc_mode);
               } catch (std::exception const& e) {
                 std::cout << "GPU BMRAPP EXCEPTION: " << e.what() << "\n";
                 gpu_used = false;
