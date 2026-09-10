@@ -14,7 +14,7 @@
 #include "nigiri/timetable.h"
 
 #include "motis/constants.h"
-#include "motis/flex/mode_id.h"
+#include "motis/flex/mode_payload.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
@@ -25,7 +25,6 @@
 namespace n = nigiri;
 
 namespace motis {
-
 
 std::vector<api::StepInstruction> get_step_instructions(
     osr::ways const& w,
@@ -133,7 +132,6 @@ api::Itinerary dummy_itinerary(api::Place const& from,
   }
   return itinerary;
 }
-
 
 api::Itinerary street_routing(osr::ways const& w,
                               osr::lookup const& l,

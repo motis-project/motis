@@ -44,7 +44,7 @@
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
-#include "motis/flex/mode_id.h"
+#include "motis/flex/mode_payload.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/osr/mode_to_profile.h"

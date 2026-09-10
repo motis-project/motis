@@ -7,16 +7,16 @@
 
 namespace motis::flex {
 
-struct mode_id {
-  mode_id(nigiri::flex_transport_idx_t const t,
-          nigiri::stop_idx_t const stop_idx,
-          osr::direction const dir)
+struct mode_payload {
+  mode_payload(nigiri::flex_transport_idx_t const t,
+               nigiri::stop_idx_t const stop_idx,
+               osr::direction const dir)
       : transport_{t},
         dir_{dir != osr::direction::kForward},
         stop_idx_{stop_idx} {}
 
-  explicit mode_id(nigiri::routing::transport_mode_t::payload_t const x) {
-    std::memcpy(this, &x, sizeof(mode_id));
+  explicit mode_payload(nigiri::routing::transport_mode_t::payload_t const x) {
+    std::memcpy(this, &x, sizeof(mode_payload));
   }
 
   osr::direction get_dir() const {
@@ -31,8 +31,8 @@ struct mode_id {
     return nigiri::flex_transport_idx_t{transport_};
   }
 
-  nigiri::routing::transport_mode_t::payload_t to_id() const {
-    static_assert(sizeof(mode_id) ==
+  nigiri::routing::transport_mode_t::payload_t to_payload() const {
+    static_assert(sizeof(mode_payload) ==
                   sizeof(nigiri::routing::transport_mode_t::payload_t));
     auto id = nigiri::routing::transport_mode_t::payload_t{};
     std::memcpy(&id, this, sizeof(id));

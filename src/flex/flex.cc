@@ -33,7 +33,7 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
                                        osr::platforms const* pl,
                                        flex_areas const& fa,
                                        platform_matches_t const* pl_matches,
-                                       mode_id const id,
+                                       mode_payload const id,
                                        osr::direction const dir,
                                        flex_routing_data& frd) {
   auto const stop_seq =
@@ -340,7 +340,8 @@ void add_flex_td_offsets(osr::ways const& w,
       if (!dest_idx.empty()) {
         auto const idx = states->searches_.size();
         for (auto const id : transports) {
-          states->by_mode_[transport_mode(api::ModeEnum::FLEX, id.to_id())] =
+          states
+              ->by_mode_[transport_mode(api::ModeEnum::FLEX, id.to_payload())] =
               idx;
         }
         states->searches_.emplace_back(
@@ -390,7 +391,8 @@ void add_flex_td_offsets(osr::ways const& w,
 
             if (iv_at_from_stop.from_ < iv_at_from_stop.to_ &&
                 duration < n::footpath::kMaxDuration) {
-              auto const mode = transport_mode(api::ModeEnum::FLEX, id.to_id());
+              auto const mode =
+                  transport_mode(api::ModeEnum::FLEX, id.to_payload());
               auto& offsets = ret[l];
               offsets.push_back(n::routing::td_offset::make(
                   iv_at_from_stop.from_, duration, mode));

@@ -9,7 +9,7 @@
 
 #include "nigiri/routing/query.h"
 
-#include "motis/flex/mode_id.h"
+#include "motis/flex/mode_payload.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
@@ -18,7 +18,7 @@ namespace motis::flex {
 
 using flex_routings_t =
     hash_map<std::pair<nigiri::flex_stop_seq_idx_t, nigiri::stop_idx_t>,
-             std::vector<mode_id>>;
+             std::vector<mode_payload>>;
 
 osr::sharing_data prepare_sharing_data(nigiri::timetable const&,
                                        osr::ways const&,
@@ -26,7 +26,7 @@ osr::sharing_data prepare_sharing_data(nigiri::timetable const&,
                                        osr::platforms const*,
                                        flex_areas const&,
                                        platform_matches_t const*,
-                                       mode_id,
+                                       mode_payload,
                                        osr::direction,
                                        flex_routing_data&);
 

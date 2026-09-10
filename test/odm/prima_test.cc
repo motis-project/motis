@@ -18,10 +18,6 @@ namespace nr = nigiri::routing;
 using namespace motis::odm;
 using namespace std::chrono_literals;
 
-// Any id that is not the ODM one. Appears verbatim in the expected journey
-// dump below, so it cannot be changed freely.
-constexpr auto const kSomeNonOdmModeId =
-    n::routing::transport_mode_t::payload_t{1'000'000U};
 using namespace date;
 
 n::loader::mem_dir tt_files() {
@@ -81,7 +77,7 @@ leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
-  MUMO (payload=1000000, duration=120)
+  MUMO (payload=0, duration=120)
 leg 3: (C, C) [1970-01-01 13:00] -> (C, C) [1970-01-01 14:07]
   FOOTPATH (duration=67)
 leg 4: (C, C) [1970-01-01 14:07] -> (END, END) [1970-01-01 14:46]
@@ -180,7 +176,7 @@ TEST(odm, prima_update) {
                                      motis::kOdmTransportMode}},
                  {n::direction::kForward, get_loc_idx("A"), get_loc_idx("C"),
                   n::unixtime_t{11h}, n::unixtime_t{13h},
-                  nr::offset{get_loc_idx("C"), 2h, kSomeNonOdmModeId}},
+                  nr::offset{get_loc_idx("C"), 2h, kWalkTransportMode}},
                  {n::direction::kForward, get_loc_idx("C"),
                   n::get_special_station(n::special_station::kEnd),
                   n::unixtime_t{13h}, n::unixtime_t{14h},

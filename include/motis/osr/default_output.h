@@ -32,7 +32,7 @@ struct default_output final : public output {
 
   osr::ways const& w_;
   osr::search_profile profile_;
-  transport_mode_t id_;
+  transport_mode_t mode_;
 };
 
 }  // namespace motis

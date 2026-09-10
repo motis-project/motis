@@ -9,7 +9,7 @@
 #include "nigiri/footpath.h"
 #include "nigiri/td_footpath.h"
 
-#include "motis/flex/mode_id.h"
+#include "motis/flex/mode_payload.h"
 #include "motis/td_offsets.h"
 
 namespace n = nigiri;
@@ -20,12 +20,13 @@ n::unixtime_t t(int const minutes) {
   return n::unixtime_t{n::i32_minutes{minutes}};
 }
 
-n::routing::transport_mode_t::payload_t flex_id(
+n::routing::transport_mode_t::payload_t flex_payload(
     n::flex_transport_idx_t::value_t const transport,
     n::stop_idx_t const stop,
     osr::direction const dir) {
-  return motis::flex::mode_id{n::flex_transport_idx_t{transport}, stop, dir}
-      .to_id();
+  return motis::flex::mode_payload{n::flex_transport_idx_t{transport}, stop,
+                                   dir}
+      .to_payload();
 }
 
 struct offer {
@@ -76,8 +77,8 @@ std::optional<n::unixtime_t> arrival(
 }  // namespace
 
 TEST(motis, td_offsets_keep_shortest_same_window) {
-  auto const slow = flex_id(1U, 0U, osr::direction::kBackward);
-  auto const fast = flex_id(2U, 0U, osr::direction::kBackward);
+  auto const slow = flex_payload(1U, 0U, osr::direction::kBackward);
+  auto const fast = flex_payload(2U, 0U, osr::direction::kBackward);
 
   auto offsets = raw({
       {100, 200, n::duration_t{30}, slow},
@@ -90,8 +91,8 @@ TEST(motis, td_offsets_keep_shortest_same_window) {
 }
 
 TEST(motis, td_offsets_deterministic_on_equal_duration) {
-  auto const first = flex_id(1U, 0U, osr::direction::kBackward);
-  auto const second = flex_id(2U, 0U, osr::direction::kBackward);
+  auto const first = flex_payload(1U, 0U, osr::direction::kBackward);
+  auto const second = flex_payload(2U, 0U, osr::direction::kBackward);
 
   auto offsets = raw({
       {100, 200, n::duration_t{10}, first},
@@ -105,8 +106,8 @@ TEST(motis, td_offsets_deterministic_on_equal_duration) {
 }
 
 TEST(motis, td_offsets_split_overlapping_windows) {
-  auto const slow = flex_id(1U, 0U, osr::direction::kBackward);
-  auto const fast = flex_id(2U, 0U, osr::direction::kBackward);
+  auto const slow = flex_payload(1U, 0U, osr::direction::kBackward);
+  auto const fast = flex_payload(2U, 0U, osr::direction::kBackward);
 
   auto offsets = raw({
       {100, 220, n::duration_t{30}, slow},
@@ -136,9 +137,9 @@ TEST(motis, td_offsets_split_overlapping_windows) {
 }
 
 TEST(motis, td_offsets_fifo_cascade) {
-  auto const a = flex_id(1U, 0U, osr::direction::kBackward);
-  auto const b = flex_id(2U, 0U, osr::direction::kBackward);
-  auto const c = flex_id(3U, 0U, osr::direction::kBackward);
+  auto const a = flex_payload(1U, 0U, osr::direction::kBackward);
+  auto const b = flex_payload(2U, 0U, osr::direction::kBackward);
+  auto const c = flex_payload(3U, 0U, osr::direction::kBackward);
 
   // Three overlapping offers, each faster than the previous: the FIFO repair
   // cuts `a` relative to `b` (at 200 + 60 - 90 = 170) and `b` relative to `c`
@@ -168,8 +169,8 @@ TEST(motis, td_offsets_fifo_cascade) {
 }
 
 TEST(motis, td_offsets_keep_inactive_gaps) {
-  auto const first = flex_id(1U, 0U, osr::direction::kBackward);
-  auto const second = flex_id(2U, 0U, osr::direction::kBackward);
+  auto const first = flex_payload(1U, 0U, osr::direction::kBackward);
+  auto const second = flex_payload(2U, 0U, osr::direction::kBackward);
 
   auto offsets = raw({
       {100, 120, n::duration_t{10}, first},
@@ -185,8 +186,8 @@ TEST(motis, td_offsets_keep_inactive_gaps) {
 }
 
 TEST(motis, td_offsets_drop_fully_dominated_window) {
-  auto const slow = flex_id(1U, 0U, osr::direction::kBackward);
-  auto const fast = flex_id(2U, 0U, osr::direction::kBackward);
+  auto const slow = flex_payload(1U, 0U, osr::direction::kBackward);
+  auto const fast = flex_payload(2U, 0U, osr::direction::kBackward);
 
   auto offsets = raw({
       {100, 200, n::duration_t{100}, slow},
@@ -210,8 +211,8 @@ TEST(motis, td_offsets_drop_fully_dominated_window) {
 }
 
 TEST(motis, td_offsets_merge_inactive_after_cut) {
-  auto const slow = flex_id(1U, 0U, osr::direction::kBackward);
-  auto const fast = flex_id(2U, 0U, osr::direction::kBackward);
+  auto const slow = flex_payload(1U, 0U, osr::direction::kBackward);
+  auto const fast = flex_payload(2U, 0U, osr::direction::kBackward);
 
   // The slow offer is cut at 250 + 10 - 100 = 160; the envelope already has an
   // inactive gap at 200 (slow closes, fast not yet open). The cut's inactive
@@ -242,8 +243,8 @@ TEST(motis, td_offsets_merge_inactive_after_cut) {
   EXPECT_EQ(t(310), arrival(offsets, 300));
 }
 
-TEST(motis, td_offsets_preserve_mode_id) {
-  auto const backward = flex_id(42U, 3U, osr::direction::kBackward);
+TEST(motis, td_offsets_preserve_mode_payload) {
+  auto const backward = flex_payload(42U, 3U, osr::direction::kBackward);
 
   auto offsets = raw({
       {100, 200, n::duration_t{10}, backward},
@@ -252,7 +253,7 @@ TEST(motis, td_offsets_preserve_mode_id) {
 
   ASSERT_EQ(3U, offsets.size());
   auto const restored =
-      motis::flex::mode_id{offsets[1].transport_mode_payload_};
+      motis::flex::mode_payload{offsets[1].transport_mode_payload_};
   EXPECT_EQ(osr::direction::kBackward, restored.get_dir());
   EXPECT_EQ(n::flex_transport_idx_t{42U}, restored.get_flex_transport());
   EXPECT_EQ(static_cast<n::stop_idx_t>(3U), restored.get_stop());

@@ -798,7 +798,7 @@ api::Itinerary journey_to_response(
               if (to_mode(mode) == api::ModeEnum::FLEX) {
                 out = std::make_unique<flex::flex_output>(
                     *w, *l, pl, matches, ae, tz_map, tags, tt, *fl,
-                    flex::mode_id{mode.payload_},
+                    flex::mode_payload{mode.payload_},
                     precomputed.flex_additional_nodes_);
               } else if (to_mode(mode) == api::ModeEnum::RENTAL) {
                 auto const is_pre_transit = pred == nullptr;

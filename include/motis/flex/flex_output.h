@@ -3,7 +3,7 @@
 #include <optional>
 
 #include "motis/flex/flex_routing_data.h"
-#include "motis/flex/mode_id.h"
+#include "motis/flex/mode_payload.h"
 #include "motis/osr/street_routing.h"
 
 namespace motis::flex {
@@ -25,7 +25,7 @@ struct flex_output : public output {
               tag_lookup const&,
               nigiri::timetable const&,
               flex_areas const&,
-              mode_id,
+              mode_payload,
               flex_additional_nodes const* additional_nodes = nullptr);
   ~flex_output() override;
 
@@ -61,7 +61,7 @@ private:
   std::optional<flex_routing_data> own_frd_;
   flex_additional_nodes const* additional_nodes_;
   osr::sharing_data sharing_;
-  mode_id mode_id_;
+  mode_payload mode_payload_;
 };
 
 }  // namespace motis::flex
