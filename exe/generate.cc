@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <numeric>
 
 #include "conf/configuration.h"
 
@@ -34,6 +35,7 @@ namespace po = boost::program_options;
 namespace motis {
 
 constexpr auto kMinRank = 16U;
+constexpr auto kDefaultWindowDays = 14U;
 
 constexpr auto kEuropeBounds = R"({
   "type": "Polygon",
@@ -75,6 +77,60 @@ n::location_idx_t random_stop(n::timetable const& tt,
     s = rand_in(stops);
   } while (tt.location_routes_[s].empty());
   return s;
+}
+
+date::sys_days busiest_window_start(n::timetable const& tt,
+                                    unsigned const window_days,
+                                    bool const with_flex) {
+  auto const& date_range = tt.date_range_;
+  auto const tt_days =
+      static_cast<unsigned>((date_range.to_ - date_range.from_).count());
+
+  auto transports_per_bitfield =
+      std::vector<std::uint32_t>(tt.bitfields_.size(), 0U);
+  for (auto const b : tt.transport_traffic_days_) {
+    ++transports_per_bitfield[to_idx(b)];
+  }
+  if (with_flex) {
+    for (auto const b : tt.flex_transport_traffic_days_) {
+      ++transports_per_bitfield[to_idx(b)];
+    }
+  }
+
+  auto const first_day_idx = to_idx(tt.day_idx(date_range.from_));
+  auto transports_per_day = std::vector<std::uint64_t>(tt_days, 0ULL);
+  for (auto i = 0U; i != transports_per_bitfield.size(); ++i) {
+    auto const n_transports = transports_per_bitfield[i];
+    if (n_transports == 0U) {
+      continue;
+    }
+    auto const& b = tt.bitfields_[n::bitfield_idx_t{i}];
+    for (auto day = 0U; day != tt_days; ++day) {
+      if (b.test(first_day_idx + day)) {
+        transports_per_day[day] += n_transports;
+      }
+    }
+  }
+
+  auto sum = std::accumulate(transports_per_day.begin(),
+                             std::next(transports_per_day.begin(), window_days),
+                             std::uint64_t{0U});
+  auto best_sum = sum;
+  auto best_start = 0U;
+  for (auto day = window_days; day < tt_days; ++day) {
+    sum += transports_per_day[day] - transports_per_day[day - window_days];
+    if (sum > best_sum) {
+      best_sum = sum;
+      best_start = day - window_days + 1U;
+    }
+  }
+
+  fmt::println("busiest {} day window: [{}, {}) with {} active transports",
+               window_days, date_range.from_ + date::days{best_start},
+               date_range.from_ + date::days{best_start + window_days},
+               best_sum);
+
+  return date_range.from_ + date::days{best_start};
 }
 
 int generate(int ac, char** av) {
@@ -158,7 +214,8 @@ int generate(int ac, char** av) {
       ("help", "Prints this help message")  //
       ("n,n", po::value(&n)->default_value(n), "number of queries")  //
       ("first_day", po::value<std::string>()->notifier(parse_first_day),
-       "first day of query generation, format: YYYY-MM-DD")  //
+       "first day of query generation, format: YYYY-MM-DD (default: start of "
+       "the two week window with the most active transports)")  //
       ("last_day", po::value<std::string>()->notifier(parse_last_day),
        "last day of query generation, format: YYYY-MM-DD")  //
       ("time_of_day", po::value<std::uint32_t>()->notifier(parse_time_of_day),
@@ -219,13 +276,24 @@ int generate(int ac, char** av) {
   fmt::println("Timetable ---\nn_locations: {}\nn_routes: {}\nn_trips: {}\n---",
                d.tt_->n_locations(), d.tt_->n_routes(), d.tt_->n_trips());
 
-  first_day = first_day
-                  ? d.tt_->date_range_.clamp(*first_day)
-                  : std::chrono::time_point_cast<date::sys_days::duration>(
-                        d.tt_->external_interval().from_);
-  last_day = last_day ? d.tt_->date_range_.clamp(
-                            std::max(*first_day + date::days{1U}, *last_day))
-                      : d.tt_->date_range_.clamp(*first_day + date::days{14U});
+  if (!first_day && !last_day) {
+    // no date range given: use the days with the most active transports
+    auto const window_days = std::min(
+        kDefaultWindowDays,
+        static_cast<unsigned>(
+            (d.tt_->date_range_.to_ - d.tt_->date_range_.from_).count()));
+    first_day = busiest_window_start(*d.tt_, window_days, use_flex);
+    last_day = *first_day + date::days{window_days};
+  } else {
+    first_day = first_day
+                    ? d.tt_->date_range_.clamp(*first_day)
+                    : std::chrono::time_point_cast<date::sys_days::duration>(
+                          d.tt_->external_interval().from_);
+    last_day = last_day ? d.tt_->date_range_.clamp(
+                              std::max(*first_day + date::days{1U}, *last_day))
+                        : d.tt_->date_range_.clamp(
+                              *first_day + date::days{kDefaultWindowDays});
+  }
   if (*first_day == *last_day) {
     fmt::println(
         "can not generate queries: date range [{}, {}] has zero length after "
