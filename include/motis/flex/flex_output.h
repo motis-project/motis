@@ -1,7 +1,5 @@
 #pragma once
 
-#include <optional>
-
 #include "motis/flex/flex_routing_data.h"
 #include "motis/flex/mode_payload.h"
 #include "motis/osr/street_routing.h"
@@ -54,9 +52,9 @@ private:
   nigiri::timetable const& tt_;
   tag_lookup const& tags_;
   flex_areas const& fa_;
-  mode_payload mode_payload_;
   flex_additional_nodes const& additional_nodes_;
   osr::sharing_data sharing_data_;
+  mode_payload mode_payload_;
 };
 
 }  // namespace motis::flex

@@ -54,9 +54,9 @@ flex_output::flex_output(osr::ways const& w,
       tt_{tt},
       tags_{tags},
       fa_{fa},
-      mode_payload_{id},
       additional_nodes_{additional_nodes},
-      sharing_data_{std::move(sharing_data)} {}
+      sharing_data_{std::move(sharing_data)},
+      mode_payload_{id} {}
 
 flex_output::~flex_output() = default;
 
