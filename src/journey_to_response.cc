@@ -14,6 +14,7 @@
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
+#include "utl/verify.h"
 #include "utl/visit.h"
 
 #include "adr/typeahead.h"
@@ -796,10 +797,13 @@ api::Itinerary journey_to_response(
 
               auto out = std::unique_ptr<output>{};
               if (to_mode(mode) == api::ModeEnum::FLEX) {
+                utl::verify(precomputed.flex_additional_nodes_ != nullptr,
+                            "flex leg without a retained search");
                 out = std::make_unique<flex::flex_output>(
-                    *w, *l, pl, matches, ae, tz_map, tags, tt, *fl,
+                    *w, pl, matches, ae, tz_map, tags, tt, *fl,
                     flex::mode_payload{mode.payload_},
-                    precomputed.flex_additional_nodes_);
+                    *precomputed.flex_additional_nodes_,
+                    precomputed.flex_additional_nodes_->to_sharing_data());
               } else if (to_mode(mode) == api::ModeEnum::RENTAL) {
                 auto const is_pre_transit = pred == nullptr;
                 out = std::make_unique<gbfs::gbfs_output>(

@@ -322,10 +322,11 @@ api::plan_response meta_router::run() {
          ride_sharing_direct_, *tt_, rtt_, r_, e_, gbfs_rd_, from_place_,
          to_place_, query_, start_time_, api_version_);
 
-  std::erase(start_modes_, api::ModeEnum::ODM);
-  std::erase(start_modes_, api::ModeEnum::RIDE_SHARING);
-  std::erase(dest_modes_, api::ModeEnum::ODM);
-  std::erase(dest_modes_, api::ModeEnum::RIDE_SHARING);
+  for (auto* const modes : {&start_modes_, &dest_modes_}) {
+    std::erase(*modes, api::ModeEnum::ODM);
+    std::erase(*modes, api::ModeEnum::RIDE_SHARING);
+    std::erase(*modes, api::ModeEnum::FLEX);
+  }
 
   print_time(
       init_start,

@@ -36,7 +36,6 @@ std::string_view get_flex_id(n::timetable const& tt, n::flex_stop_t const& s) {
 }
 
 flex_output::flex_output(osr::ways const& w,
-                         osr::lookup const& l,
                          osr::platforms const* pl,
                          platform_matches_t const* matches,
                          adr_ext const* ae,
@@ -45,7 +44,8 @@ flex_output::flex_output(osr::ways const& w,
                          n::timetable const& tt,
                          flex_areas const& fa,
                          mode_payload const id,
-                         flex_additional_nodes const* additional_nodes)
+                         flex_additional_nodes const& additional_nodes,
+                         osr::sharing_data sharing_data)
     : w_{w},
       pl_{pl},
       matches_{matches},
@@ -54,18 +54,9 @@ flex_output::flex_output(osr::ways const& w,
       tt_{tt},
       tags_{tags},
       fa_{fa},
-      own_frd_{additional_nodes == nullptr
-                   ? std::optional<flex_routing_data>{std::in_place}
-                   : std::nullopt},
-      additional_nodes_{additional_nodes != nullptr
-                            ? additional_nodes
-                            : &own_frd_->additional_nodes_},
-      sharing_{
-          additional_nodes != nullptr
-              ? additional_nodes->to_sharing_data()
-              : flex::prepare_sharing_data(
-                    tt, w, l, pl, fa, matches, id, id.get_dir(), *own_frd_)},
-      mode_payload_(id) {}
+      mode_payload_{id},
+      additional_nodes_{additional_nodes},
+      sharing_data_{std::move(sharing_data)} {}
 
 flex_output::~flex_output() = default;
 
@@ -82,7 +73,7 @@ osr::search_profile flex_output::get_profile() const {
 }
 
 osr::sharing_data const* flex_output::get_sharing_data() const {
-  return &sharing_;
+  return &sharing_data_;
 }
 
 void flex_output::annotate_leg(n::lang_t const& lang,
@@ -104,10 +95,10 @@ void flex_output::annotate_leg(n::lang_t const& lang,
             : stop_seq.size() - i - 1U);
     auto const stop = stop_seq[stop_idx];
     if (!from_stop.has_value() &&
-        is_in_flex_stop(tt_, w_, fa_, *additional_nodes_, stop, from)) {
+        is_in_flex_stop(tt_, w_, fa_, additional_nodes_, stop, from)) {
       from_stop = stop_idx;
     } else if (!to_stop.has_value() &&
-               is_in_flex_stop(tt_, w_, fa_, *additional_nodes_, stop, to)) {
+               is_in_flex_stop(tt_, w_, fa_, additional_nodes_, stop, to)) {
       to_stop = stop_idx;
       break;
     }
@@ -125,7 +116,7 @@ void flex_output::annotate_leg(n::lang_t const& lang,
 
   auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
     if (w_.is_additional_node(n)) {
-      auto const l = additional_nodes_->get(n);
+      auto const l = additional_nodes_.get(n);
       p = to_place(&tt_, &tags_, &w_, pl_, matches_, ae_, tz_, lang,
                    tt_location{l});
     }
@@ -160,7 +151,7 @@ api::Place flex_output::get_place(n::lang_t const& lang,
                                   osr::node_idx_t const n,
                                   std::optional<std::string> const& tz) const {
   if (w_.is_additional_node(n)) {
-    auto const l = additional_nodes_->get(n);
+    auto const l = additional_nodes_.get(n);
     auto const c = tt_.locations_.coordinates_.at(l);
     return api::Place{
         .name_ = std::string{tt_.translate(lang, tt_.locations_.names_.at(l))},

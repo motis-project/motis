@@ -4,15 +4,6 @@ namespace n = nigiri;
 
 namespace motis {
 
-namespace {
-// The place a set of offsets was computed from: the journey's start or its
-// destination, which nigiri addresses as these two special stations.
-constexpr nigiri::special_station flip(nigiri::special_station const s) {
-  return s == nigiri::special_station::kStart ? nigiri::special_station::kEnd
-                                              : nigiri::special_station::kStart;
-}
-}  // namespace
-
 precomputed_route one_to_many_view::find(n::location_idx_t const leg_from,
                                          n::location_idx_t const leg_to,
                                          transport_mode_t const mode,
@@ -20,6 +11,11 @@ precomputed_route one_to_many_view::find(n::location_idx_t const leg_from,
   if (searches_ == nullptr) {
     return {};
   }
+
+  auto const flip = [](n::special_station const s) {
+    return s == n::special_station::kStart ? n::special_station::kEnd
+                                           : n::special_station::kStart;
+  };
 
   auto const* const side = [&]() -> one_to_many_side const* {
     for (auto const x :
@@ -31,6 +27,7 @@ precomputed_route one_to_many_view::find(n::location_idx_t const leg_from,
     }
     return nullptr;  // not an access/egress leg
   }();
+
   if (side == nullptr) {
     return {};
   }

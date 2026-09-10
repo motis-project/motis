@@ -646,8 +646,15 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           *tt_, *loc_tree_, time, get_location(from).pos_,
           osr::direction::kForward, max, osr_params);
       for (auto const& [_, ids] : routings) {
-        route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, ae_, tz_,
-                                             *tags_, *tt_, *fa_, ids.front()});
+        // No one-to-many search to reconstruct from here: this owns the
+        // routing data for as long as the routing runs.
+        auto frd = flex::flex_routing_data{};
+        auto sharing =
+            flex::prepare_sharing_data(*tt_, *w_, *l_, pl_, *fa_, matches_,
+                                       ids.front(), ids.front().get_dir(), frd);
+        route_with_profile(flex::flex_output{
+            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, *fa_, ids.front(),
+            frd.additional_nodes_, std::move(sharing)});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
                m == api::ModeEnum::BIKE || m == api::ModeEnum::CAR_PARKING ||
