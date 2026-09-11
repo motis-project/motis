@@ -357,9 +357,9 @@ TEST(motis, routing_leg_alternatives_intermodal_bike) {
 
   auto const expected = R"(
 BUS T1_DUP A 07:00->B 07:15
-  alt [BIKE START 06:58->A 07:00 | BUS T1 A 07:00->B 07:15 | WALK B 07:15->B 07:17]
-  alt [BIKE START 06:28->A 06:30 | BUS T1_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:48]
-  alt [BIKE START 05:58->A 06:00 | BUS T1_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:17]
+  alt [BIKE START 06:59->A 07:00 | BUS T1 A 07:00->B 07:15 | WALK B 07:15->B 07:17]
+  alt [BIKE START 06:29->A 06:30 | BUS T1_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:48]
+  alt [BIKE START 05:59->A 06:00 | BUS T1_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:17]
 BUS T2_DUP B 07:30->C 08:00
   alt [WALK B 07:28->B 07:30 | BUS T2 B 07:30->C 08:00 | WALK C 08:00->C 08:02]
   alt [WALK B 07:43->B 07:45 | BUS T2_LATE B 07:45->C 08:15 | WALK C 08:15->C 08:17]
@@ -906,11 +906,11 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   ASSERT_FALSE(res_a.itineraries_.empty());
   EXPECT_EQ(R"(
 HIGHSPEED_RAIL ICE DA Hbf 00:35->FFM Hbf 00:45
-  alt [HIGHSPEED_RAIL ICE DA Hbf 23:35->FFM Hbf 23:45 | WALK FFM Hbf 23:45->FFM Hbf 23:52]
-  alt [HIGHSPEED_RAIL ICE DA Hbf 22:35->FFM Hbf 22:46 | WALK FFM Hbf 22:46->FFM Hbf 22:53]
+  alt [HIGHSPEED_RAIL ICE DA Hbf 23:35->FFM Hbf 23:45 | WALK FFM Hbf 23:45->FFM Hbf 23:53]
+  alt [HIGHSPEED_RAIL ICE DA Hbf 22:35->FFM Hbf 22:46 | WALK FFM Hbf 22:46->FFM Hbf 22:54]
 METRO S3 FFM Hbf 01:15->FFM Hauptwache 01:20
-  alt [WALK FFM Hbf 01:23->FFM Hbf 02:15 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
-  alt [WALK FFM Hbf 01:23->FFM Hbf 03:15 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
+  alt [WALK FFM Hbf 01:22->FFM Hbf 02:15 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
+  alt [WALK FFM Hbf 01:22->FFM Hbf 03:15 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
 )",
             to_str(res_a.itineraries_.front()));
 
