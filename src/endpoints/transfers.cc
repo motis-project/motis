@@ -71,7 +71,7 @@ api::transfers_response transfers::operator()(
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
         auto& fp = footpaths[n];
-        auto const duration = std::ceil(r->cost_ / 60U);
+        auto const duration = std::ceil(r->duration_.count() / 60.0);
         if (duration < n::footpath::kMaxDuration.count()) {
           switch (mode) {
             case osr::search_profile::kFoot: fp.footRouted_ = duration; break;
