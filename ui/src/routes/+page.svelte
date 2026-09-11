@@ -35,6 +35,7 @@
 		type ServerConfig,
 		type CyclingSpeed,
 		type PedestrianSpeed,
+		type VehicleClassFilter,
 		refreshItinerary,
 		type Match
 	} from '@motis-project/motis-client';
@@ -454,6 +455,10 @@
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
 	let noCompulsoryReservation = $state(urlParams?.get('noCompulsoryReservation') == 'true');
+	let minimizeNonTransit = $state(urlParams?.get('minimizeNonTransit') == 'true');
+	let minimizeModeSwitches = $state(urlParams?.get('minimizeModeSwitches') == 'true');
+	let minimizeWithoutAir = $state(getUrlArray('minimizeWithout').includes('AIR'));
+	let minimizeWithoutCoach = $state(getUrlArray('minimizeWithout').includes('COACH'));
 	let transitModes = $state<Mode[]>(
 		getUrlArray('transitModes', defaultQuery.transitModes) as Mode[]
 	);
@@ -639,6 +644,12 @@
 						requireBikeTransport,
 						requireCarTransport,
 						noCompulsoryReservation,
+						minimizeNonTransit,
+						minimizeModeSwitches,
+						minimizeWithout: [
+							...(minimizeWithoutAir ? (['AIR'] as VehicleClassFilter[]) : []),
+							...(minimizeWithoutCoach ? (['COACH'] as VehicleClassFilter[]) : [])
+						],
 						elevationCosts,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
@@ -1098,6 +1109,10 @@
 						bind:requireCarTransport
 						bind:requireBikeTransport
 						bind:noCompulsoryReservation
+						bind:minimizeNonTransit
+						bind:minimizeModeSwitches
+						bind:minimizeWithoutAir
+						bind:minimizeWithoutCoach
 						bind:transitModes
 						bind:preTransitModes
 						bind:postTransitModes

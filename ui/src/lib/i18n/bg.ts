@@ -145,6 +145,11 @@ const translations: Translations = {
 		LOW: 'Лек наклон',
 		HIGH: 'Голям наклон'
 	},
+	minimize: {
+		title: 'Minimize',
+		nonTransitTime: 'Non-transit time',
+		modeSwitches: 'Mode switches'
+	},
 	isochronesOpacity: 'Непрозрачност на периметъра',
 	isochrones: {
 		title: 'Достъпен периметър',

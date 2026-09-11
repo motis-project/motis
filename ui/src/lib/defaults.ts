@@ -61,7 +61,10 @@ export const defaultQuery = {
 	luggage: 0,
 	slowDirect: false,
 	isochronesOpacity: 600,
-	algorithm: 'PONG'
+	algorithm: 'PONG',
+	minimizeNonTransit: false,
+	minimizeModeSwitches: false,
+	minimizeWithout: []
 };
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {

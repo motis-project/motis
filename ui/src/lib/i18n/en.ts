@@ -155,6 +155,11 @@ const translations: Translations = {
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
 	},
+	minimize: {
+		title: 'Minimize',
+		nonTransitTime: 'Non-transit time',
+		modeSwitches: 'Mode switches'
+	},
 	isochronesOpacity: 'Isochrones Opacity',
 	isochrones: {
 		title: 'Isochrones',

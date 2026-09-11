@@ -1036,7 +1036,9 @@ paths:
             keeps both the fastest journey and the best one that does not use any
             of these classes, instead of filtering them out.
 
-            Currently only `AIR` (flights) is supported.
+            Supported: `AIR` (flights) and `COACH`. Passing both avoids either -
+            the result adds the best journey that uses neither class, not one
+            trade-off per class.
 
             Setting this (or any other `minimize*` parameter) switches routing to
             the multicriteria engine, overriding `algorithm` if it was `PONG`.
@@ -3870,10 +3872,11 @@ components:
     VehicleClassFilter:
       description: |
         A vehicle class that the `minimizeWithout` routing criterion prefers to
-        avoid. Currently only `AIR` (flights) is supported.
+        avoid. Supported: `AIR` (flights) and `COACH`.
       type: string
       enum:
         - AIR
+        - COACH
 
     Mode:
       description: |

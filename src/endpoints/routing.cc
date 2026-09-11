@@ -1148,10 +1148,31 @@ api::plan_response routing::route(api::plan_params const& query,
     // carried, but they no longer gate anything.
     // The multicriteria extra Pareto dimensions, selected per request. Any of
     // them switches routing to the multicriteria engine - see the criteria
-    // dispatch below. mode_filter currently only knows AIR.
+    // dispatch below. mode_filter avoids the union of the requested classes
+    // as ONE binary criterion (AIR, COACH, or both - see mode_filter_dim).
     auto const min_non_transit = query.minimizeNonTransit_;
     auto const min_mode_switches = query.minimizeModeSwitches_;
     auto const min_mode_filter = !query.minimizeWithout_.empty();
+    auto const mode_filter_mask = [&] {
+      auto mask = n::routing::clasz_mask_t{0U};
+      for (auto const& c : query.minimizeWithout_) {
+        switch (c) {
+          case api::VehicleClassFilterEnum::AIR:
+            mask |= n::routing::to_mask(n::clasz::kAir);
+            break;
+          case api::VehicleClassFilterEnum::COACH:
+            mask |= n::routing::to_mask(n::clasz::kCoach);
+            break;
+        }
+      }
+      return mask;
+    }();
+    if (min_mode_filter) {
+      // mode_filter_dim::avoided_mask() is thread_local, not carried by the
+      // criteria TYPE - set it before the search below reads it. Safe
+      // because one request's search runs start to finish on this thread.
+      n::routing::mode_filter_dim::set_avoided(mode_filter_mask);
+    }
     auto const mc_criteria_on =
         min_non_transit || min_mode_switches || min_mode_filter;
     // An explicit BMRAPP/MCRAPTOR still runs the mc engine even with no extra
@@ -1196,8 +1217,17 @@ api::plan_response routing::route(api::plan_params const& query,
         // the CPU (only the bicriteria ping/pong run on the GPU); >= 1 runs
         // every phase on the GPU (gpu_mc_mode 2 - see bmrap_profile_search).
         // Only takes effect for the criteria the device mcraptor implements.
+        // The device mode_filter dimension still hardcodes AIR as the
+        // avoided mask (mcraptor_impl.cuh: kAvoidedMask) - a request that
+        // asks to avoid anything else (COACH, or AIR+COACH) must stay on the
+        // CPU, where the mask is a per-request value, or the GPU would
+        // silently compute the wrong criterion.
+        auto const gpu_mode_filter_ok =
+            !min_mode_filter ||
+            mode_filter_mask == n::routing::to_mask(n::clasz::kAir);
         [[maybe_unused]] auto const gpu_mc_mode =
-            config_.server_.has_value() && config_.server_->gpu_mc_states_ >= 1U
+            config_.server_.has_value() && config_.server_->gpu_mc_states_ >= 1U &&
+                    gpu_mode_filter_ok
                 ? 2
                 : 0;
         // Extra pareto dimensions of the multicriteria engines, each toggled

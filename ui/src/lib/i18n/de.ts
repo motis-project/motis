@@ -142,6 +142,11 @@ const translations: Translations = {
 		transferTimeFactor: 'Umstiegszeitfaktor'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
+	minimize: {
+		title: 'Minimieren',
+		nonTransitTime: 'Nicht-ÖV-Zeit',
+		modeSwitches: 'Verkehrsmittelwechsel'
+	},
 	isochronesOpacity: 'Deckkraft der Isochronen',
 	isochrones: {
 		title: 'Isochronen',

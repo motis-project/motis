@@ -142,6 +142,11 @@ export type Translations = {
 		LOW: string;
 		HIGH: string;
 	};
+	minimize: {
+		title: string;
+		nonTransitTime: string;
+		modeSwitches: string;
+	};
 	isochronesOpacity: string;
 	isochrones: {
 		title: string;

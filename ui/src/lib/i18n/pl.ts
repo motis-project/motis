@@ -147,6 +147,11 @@ const translations: Translations = {
 		LOW: 'Małe odchylenia od trasy',
 		HIGH: 'Duże odchylenia od trasy'
 	},
+	minimize: {
+		title: 'Minimize',
+		nonTransitTime: 'Non-transit time',
+		modeSwitches: 'Mode switches'
+	},
 	isochronesOpacity: 'Krycie izochron',
 	isochrones: {
 		title: 'Izochrony',

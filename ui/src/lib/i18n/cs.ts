@@ -147,6 +147,11 @@ const translations: Translations = {
 		LOW: 'Malé odklony',
 		HIGH: 'Velké odklony'
 	},
+	minimize: {
+		title: 'Minimize',
+		nonTransitTime: 'Non-transit time',
+		modeSwitches: 'Mode switches'
+	},
 	isochronesOpacity: 'Krytí izochron',
 	isochrones: {
 		title: 'Izochrony',
