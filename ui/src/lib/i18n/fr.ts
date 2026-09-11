@@ -215,7 +215,9 @@ const translations: Translations = {
 		isochronesFrom: (place) => `Isochrones depuis ${place}`
 	},
 	tickets: 'Billets',
-	routeInformation: "Plus d'informations"
+	routeInformation: "Plus d'informations",
+	history: 'Historique',
+	clearHistory: "Effacer l'historique"
 };
 
 export default translations;
