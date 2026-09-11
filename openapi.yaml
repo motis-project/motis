@@ -4828,7 +4828,7 @@ components:
           type: integer
           description: decline in meters across this path segment
 
-    HeightProfile:
+    ElevationProfile:
       type: object
       required:
         - points
@@ -5438,9 +5438,9 @@ components:
             If detailed leg output is disabled, this is returned as an empty
             polyline.
           $ref: '#/components/schemas/EncodedPolyline'
-        heightProfile:
+        elevationProfile:
           description: Elevation profile for leg. Only for footpath legs.
-          $ref: '#/components/schemas/HeightProfile'
+          $ref: '#/components/schemas/ElevationProfile'
         steps:
           description: |
             A series of turn by turn instructions

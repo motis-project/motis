@@ -177,7 +177,7 @@ std::vector<api::StepInstruction> get_step_instructions(
   return steps;
 }
 
-api::HeightProfile get_height_profile(
+api::HeightProfile get_elevation_profile(
     osr::ways const& w,
     std::span<osr::path::segment const> segments,
     double distance,
@@ -380,8 +380,8 @@ api::Itinerary street_routing(osr::ways const& w,
                                              api_version);
 
           if (elevation_samples != 0) {
-            leg.heightProfile_ =
-                get_height_profile(w, range, dist, elevation_samples);
+            leg.elevationProfile_ =
+                get_elevation_profile(w, range, dist, elevation_samples);
           }
         }
 
