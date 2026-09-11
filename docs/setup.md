@@ -73,6 +73,10 @@ timetable:                          # if not set, no timetable will be loaded
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
+      url: https://opentransportdata.swiss/.../gtfs.zip # optional: (re-)download the static feed from this URL before every scheduled reload (see `reload_cron`)
+      download_headers:               # optional: HTTP headers sent with the `url` download
+        Authorization: MY_API_KEY
+      reload_cron: "0 30 3 * * *"    # optional: croncpp expression (sec min hour dom month dow); when set, motis periodically re-downloads (if `url` is set) and rebuilds the static timetable in the background and hot-swaps it in without restarting or dropping requests, see "Static Timetable Hot-Reload" below
       extend_calendar: false
       default_bikes_allowed: false
       default_cars_allowed: false
@@ -136,6 +140,57 @@ osr_footpath: true                # enable routing footpaths instead of using tr
 geocoding: true                   # enable geocoding for place/stop name autocompletion
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses
 ```
+
+# Static Timetable Hot-Reload
+
+By default, MOTIS loads its static GTFS timetable once at startup; picking up
+a new export of a dataset (e.g. a feed that gets republished daily with a new
+`trip_id` scheme) requires restarting the process. Setting `reload_cron` on a
+dataset (`timetable.datasets.<tag>.reload_cron`) instead makes MOTIS reload
+the static timetable **without restarting and without interrupting requests
+that are currently in flight**:
+
+```yml
+timetable:
+  datasets:
+    idfm:
+      path: idfm.gtfs.zip
+      url: https://.../idfm-gtfs.zip   # optional; omit to just re-read `path` (e.g. if some other process, such as a cron job, already refreshes the file)
+      reload_cron: "0 30 3 * * *"      # daily at 03:30
+```
+
+What happens on every scheduled reload:
+
+1. If `url` is set, the file is downloaded to a temporary file and only then
+   atomically moved over `path` (a failed download never touches the
+   previously working file).
+2. The complete static timetable is rebuilt from all configured datasets,
+   nigiri merges every dataset into a single timetable, so changing one
+   dataset requires rebuilding all of them together (already-unchanged
+   datasets are not re-parsed, same incremental behavior as the `motis
+   import` CLI command).
+3. Only once the rebuild has fully succeeded, the new timetable (and a
+   freshly built osr/adr/etc. snapshot) is swapped in atomically. Requests
+   that were already being processed against the previous timetable keep
+   running against it until they finish; every new request is routed to the
+   reloaded data. The previous timetable is freed once the last such request
+   completes.
+4. Real-time (GTFS-RT/SIRI/VDV) updates for the reloaded dataset(s) resume
+   with the next regular `update_interval` poll after the swap, for up to
+   that long, the reloaded dataset serves schedule-only (no live delays)
+   data.
+
+If a step fails (download error, malformed feed, ...) the error is logged,
+nothing is swapped, and the previously loaded timetable keeps being served
+unaffected; the reload is retried at the next scheduled time (with a minimum
+5 minute backoff between attempts, to avoid hammering a misbehaving source).
+
+Since a reload keeps two generations of the static timetable (and everything
+derived from it: osr way/platform matches, address search, shapes, ...) in
+memory for as long as it takes in-flight requests to drain, expect a
+temporary memory usage increase roughly equal to one dataset's runtime
+footprint during/shortly after a reload, scheduling `reload_cron` for a
+low-traffic time of day (as in the example above) is recommended.
 
 # Scenario with Elevators
 

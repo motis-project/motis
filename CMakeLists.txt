@@ -143,6 +143,8 @@ add_library(motislib ${motislib-files})
 target_include_directories(motislib PUBLIC include)
 target_include_directories(
     motislib PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated/itinerary_id)
+target_include_directories(motislib SYSTEM PRIVATE
+    $<TARGET_PROPERTY:croncpp,INTERFACE_INCLUDE_DIRECTORIES>)
 target_compile_features(motislib PUBLIC cxx_std_23)
 target_compile_options(motislib PRIVATE ${motis-compile-options})
 target_link_libraries(motislib

@@ -28,6 +28,7 @@ struct config {
   void verify_input_files_exist() const;
 
   bool requires_rt_timetable_updates() const;
+  bool requires_static_reload() const;
   bool shapes_debug_api_enabled() const;
   bool has_gbfs_feeds() const;
   bool has_prima() const;
@@ -82,6 +83,9 @@ struct config {
       bool operator==(dataset const&) const = default;
 
       std::string path_;
+      std::optional<std::string> url_{};
+      std::optional<headers_t> download_headers_{};
+      std::optional<std::string> reload_cron_{};
       std::optional<std::string> script_{};
       bool extend_calendar_{false};
       bool default_bikes_allowed_{false};

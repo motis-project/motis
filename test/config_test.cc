@@ -210,3 +210,56 @@ street_routing: {}
 )"s));
   }
 }
+
+TEST(motis, config_static_reload) {
+  auto const c = config::read(R"(
+osm: europe-latest.osm.pbf
+timetable:
+  datasets:
+    idfm:
+      path: idfm.gtfs.zip
+      url: https://example.com/idfm.gtfs.zip
+      download_headers:
+        Authorization: test
+      reload_cron: "0 30 3 * * *"
+)"s);
+
+  ASSERT_TRUE(c.timetable_.has_value());
+  auto const& d = c.timetable_->datasets_.at("idfm");
+  EXPECT_EQ("https://example.com/idfm.gtfs.zip", d.url_);
+  ASSERT_TRUE(d.download_headers_.has_value());
+  EXPECT_EQ("test", d.download_headers_->at("Authorization"));
+  EXPECT_EQ("0 30 3 * * *", d.reload_cron_);
+  EXPECT_TRUE(c.requires_static_reload());
+
+  // a dataset without reload_cron does not require static reload
+  EXPECT_FALSE(config::read(R"(
+osm: europe-latest.osm.pbf
+timetable:
+  datasets:
+    de:
+      path: de.gtfs.zip
+)"s)
+                   .requires_static_reload());
+
+  // invalid cron expressions are rejected at config verification time
+  EXPECT_ANY_THROW(config::read(R"(
+osm: europe-latest.osm.pbf
+timetable:
+  datasets:
+    idfm:
+      path: idfm.gtfs.zip
+      url: https://example.com/idfm.gtfs.zip
+      reload_cron: "not a cron expression"
+)"s));
+
+  // an invalid url is rejected as well
+  EXPECT_ANY_THROW(config::read(R"(
+osm: europe-latest.osm.pbf
+timetable:
+  datasets:
+    idfm:
+      path: idfm.gtfs.zip
+      url: "://not a url"
+)"s));
+}

@@ -17,6 +17,8 @@
 #include "rfl.hpp"
 #include "rfl/yaml.hpp"
 
+#include "croncpp.h"
+
 namespace fs = std::filesystem;
 
 namespace motis {
@@ -174,6 +176,21 @@ void config::verify() const {
                       "VDV AUS requires incremental RT update scheme");
         }
       }
+      if (d.url_.has_value()) {
+        try {
+          boost::urls::url{*d.url_};
+        } catch (std::exception const& e) {
+          throw utl::fail("{} is not a valid url: {}", *d.url_, e.what());
+        }
+      }
+      if (d.reload_cron_.has_value()) {
+        try {
+          cron::make_cron(*d.reload_cron_);
+        } catch (std::exception const& e) {
+          throw utl::fail("dataset {}: invalid reload_cron \"{}\": {}", id,
+                          *d.reload_cron_, e.what());
+        }
+      }
     }
   }
 }
@@ -235,6 +252,13 @@ bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
          ((has_elevators() && get_elevators()->url_.has_value()) ||
           has_rt_feeds());
+}
+
+bool config::requires_static_reload() const {
+  return timetable_.has_value() &&
+         utl::any_of(timetable_->datasets_, [](auto&& d) {
+           return d.second.reload_cron_.has_value();
+         });
 }
 
 bool config::shapes_debug_api_enabled() const {

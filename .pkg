@@ -10,6 +10,10 @@
   url=git@github.com:felixguendling/cista.git
   branch=master
   commit=427f0a873be43f1de94289bd53d5678e07cd243f
+[croncpp]
+  url=git@github.com:mariusbancila/croncpp.git
+  branch=master
+  commit=f047a8ad06d252c0b2036ac74b60ebea014c4714
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
