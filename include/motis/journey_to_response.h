@@ -17,16 +17,13 @@
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
+#include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/parameters.h"
 #include "motis/osr/street_routing.h"
 #include "motis/place.h"
 #include "motis/types.h"
 
 namespace motis {
-
-api::ModeEnum to_mode(nigiri::transport_mode_id_t);
-
-api::ModeEnum to_mode(osr::search_profile);
 
 std::optional<double> get_level(osr::ways const*,
                                 osr::platforms const*,
@@ -40,8 +37,9 @@ std::optional<std::vector<api::Alert>> get_alerts(
     std::optional<std::vector<std::string>> const& language);
 
 struct query_alternatives {
-  nigiri::routing::query const& query;
-  std::size_t num_alternatives;
+  nigiri::routing::query const& query_;
+  std::size_t num_alternatives_;
+  bool arrive_by_;
 };
 using alternatives_context = std::variant<
     // no alternatives
@@ -88,6 +86,7 @@ api::Itinerary journey_to_response(
     std::optional<std::vector<std::string>> const& language,
     bool const set_itinerary_id_field = true,
     alternatives_context const& alternatives = {},
-    std::chrono::nanoseconds* fares_time = nullptr);
+    std::chrono::nanoseconds* fares_time = nullptr,
+    one_to_many_view states = {});
 
 }  // namespace motis

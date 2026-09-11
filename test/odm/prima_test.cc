@@ -9,7 +9,7 @@
 
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 #include "motis-api/motis-api.h"
 
@@ -17,6 +17,7 @@ namespace n = nigiri;
 namespace nr = nigiri::routing;
 using namespace motis::odm;
 using namespace std::chrono_literals;
+
 using namespace date;
 
 n::loader::mem_dir tt_files() {
@@ -61,26 +62,26 @@ TRANSFERS: 0
      FROM: (START, START) [1970-01-01 09:57]
        TO: (END, END) [1970-01-01 12:00]
 leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
-  MUMO (id=17, duration=58)
+  MUMO (mode=7, payload=6, duration=58)
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (END, END) [1970-01-01 12:00]
-  MUMO (id=0, duration=60)
+  MUMO (payload=0, duration=60)
 
 [1970-01-01 09:57, 1970-01-01 14:46]
 TRANSFERS: 0
      FROM: (START, START) [1970-01-01 09:57]
        TO: (END, END) [1970-01-01 14:46]
 leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
-  MUMO (id=17, duration=58)
+  MUMO (mode=7, payload=6, duration=58)
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
-  MUMO (id=1000000, duration=120)
+  MUMO (payload=0, duration=120)
 leg 3: (C, C) [1970-01-01 13:00] -> (C, C) [1970-01-01 14:07]
   FOOTPATH (duration=67)
 leg 4: (C, C) [1970-01-01 14:07] -> (END, END) [1970-01-01 14:46]
-  MUMO (id=17, duration=39)
+  MUMO (mode=7, payload=6, duration=39)
 
 )";
 
@@ -103,11 +104,11 @@ TEST(odm, prima_update) {
   p.fixed_ = n::event_type::kDep;
   p.cap_ = {.wheelchairs_ = 1, .bikes_ = 0, .passengers_ = 1, .luggage_ = 0};
   p.first_mile_taxi_ = {
-      {get_loc_idx("A"), n::duration_t{60min}, motis::kOdmTransportModeId},
-      {get_loc_idx("B"), n::duration_t{60min}, motis::kOdmTransportModeId}};
+      {get_loc_idx("A"), n::duration_t{60min}, motis::kOdmTransportMode},
+      {get_loc_idx("B"), n::duration_t{60min}, motis::kOdmTransportMode}};
   p.last_mile_taxi_ = {
-      {get_loc_idx("C"), n::duration_t{60min}, motis::kOdmTransportModeId},
-      {get_loc_idx("D"), n::duration_t{60min}, motis::kOdmTransportModeId}};
+      {get_loc_idx("C"), n::duration_t{60min}, motis::kOdmTransportMode},
+      {get_loc_idx("D"), n::duration_t{60min}, motis::kOdmTransportMode}};
 
   EXPECT_EQ(p.make_blacklist_taxi_request(
                 tt, {n::unixtime_t{0h}, n::unixtime_t{48h}}),
@@ -145,11 +146,11 @@ TEST(odm, prima_update) {
       {.legs_ = {{n::direction::kForward,
                   n::get_special_station(n::special_station::kStart),
                   get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
-                  nr::offset{get_loc_idx("A"), 1h, motis::kOdmTransportModeId}},
+                  nr::offset{get_loc_idx("A"), 1h, motis::kOdmTransportMode}},
                  {n::direction::kForward, get_loc_idx("A"),
                   n::get_special_station(n::special_station::kEnd),
                   n::unixtime_t{11h}, n::unixtime_t{12h},
-                  nr::offset{get_loc_idx("A"), 1h, kWalkTransportModeId}}},
+                  nr::offset{get_loc_idx("A"), 1h, kWalkTransportMode}}},
        .start_time_ = n::unixtime_t{10h},
        .dest_time_ = n::unixtime_t{12h},
        .dest_ = n::get_special_station(n::special_station::kEnd)});
@@ -158,11 +159,11 @@ TEST(odm, prima_update) {
       {.legs_ = {{n::direction::kForward,
                   n::get_special_station(n::special_station::kStart),
                   get_loc_idx("B"), n::unixtime_t{11h}, n::unixtime_t{12h},
-                  nr::offset{get_loc_idx("B"), 1h, motis::kOdmTransportModeId}},
+                  nr::offset{get_loc_idx("B"), 1h, motis::kOdmTransportMode}},
                  {n::direction::kForward, get_loc_idx("B"),
                   n::get_special_station(n::special_station::kEnd),
                   n::unixtime_t{12h}, n::unixtime_t{13h},
-                  nr::offset{get_loc_idx("B"), 1h, kWalkTransportModeId}}},
+                  nr::offset{get_loc_idx("B"), 1h, kWalkTransportMode}}},
        .start_time_ = n::unixtime_t{11h},
        .dest_time_ = n::unixtime_t{13h},
        .dest_ = n::get_special_station(n::special_station::kEnd)});
@@ -172,15 +173,14 @@ TEST(odm, prima_update) {
                   n::get_special_station(n::special_station::kStart),
                   get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
                   n::routing::offset{get_loc_idx("A"), 1h,
-                                     motis::kOdmTransportModeId}},
+                                     motis::kOdmTransportMode}},
                  {n::direction::kForward, get_loc_idx("A"), get_loc_idx("C"),
                   n::unixtime_t{11h}, n::unixtime_t{13h},
-                  nr::offset{get_loc_idx("C"), 2h, motis::kFlexModeIdOffset}},
+                  nr::offset{get_loc_idx("C"), 2h, kWalkTransportMode}},
                  {n::direction::kForward, get_loc_idx("C"),
                   n::get_special_station(n::special_station::kEnd),
                   n::unixtime_t{13h}, n::unixtime_t{14h},
-                  nr::offset{get_loc_idx("C"), 1h,
-                             motis::kOdmTransportModeId}}},
+                  nr::offset{get_loc_idx("C"), 1h, motis::kOdmTransportMode}}},
        .start_time_ = n::unixtime_t{10h},
        .dest_time_ = n::unixtime_t{14h},
        .dest_ = n::get_special_station(n::special_station::kEnd)});

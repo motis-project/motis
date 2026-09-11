@@ -144,7 +144,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto reachable = nigiri::bitvec{tt_.n_locations()};
   for (auto i = 0U; i != tt_.n_locations(); ++i) {
-    if (state.get_best<0>()[i][0] != unreachable) {
+    if (state.template get_best<0>()[i][0] != unreachable) {
       reachable.set(i);
     }
   }

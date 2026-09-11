@@ -12,6 +12,7 @@
 
 #include "motis/fwd.h"
 #include "motis/place.h"
+#include "motis/transport_mode.h"
 
 namespace motis::ep {
 struct routing;
@@ -142,13 +143,13 @@ void fix_first_mile_duration(
     std::vector<nigiri::routing::journey>& journeys,
     std::vector<nigiri::routing::start> const& first_mile,
     std::vector<nigiri::routing::start> const& prev_first_mile,
-    nigiri::transport_mode_id_t mode);
+    transport_mode_t mode);
 
 void fix_last_mile_duration(
     std::vector<nigiri::routing::journey>& journeys,
     std::vector<nigiri::routing::start> const& last_mile,
     std::vector<nigiri::routing::start> const& prev_last_mile,
-    nigiri::transport_mode_id_t mode);
+    transport_mode_t mode);
 
 std::int64_t to_millis(nigiri::unixtime_t);
 
@@ -171,6 +172,6 @@ void add_direct_odm(std::vector<direct_ride> const&,
                     place_t const& from,
                     place_t const& to,
                     bool arrive_by,
-                    nigiri::transport_mode_id_t);
+                    transport_mode_t);
 
 }  // namespace motis::odm

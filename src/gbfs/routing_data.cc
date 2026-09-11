@@ -12,7 +12,7 @@
 #include "motis/constants.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/osr_mapping.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 namespace motis::gbfs {
 
@@ -63,20 +63,21 @@ provider_products const& gbfs_routing_data::get_products(
       ->products_.at(prod_ref.products_);
 }
 
-nigiri::transport_mode_id_t gbfs_routing_data::get_transport_mode(
+nigiri::routing::transport_mode_t gbfs_routing_data::get_transport_mode(
     gbfs_products_ref const prod_ref) {
-  return utl::get_or_create(products_ref_to_transport_mode_, prod_ref, [&]() {
-    auto const id = static_cast<nigiri::transport_mode_id_t>(
-        kGbfsTransportModeIdOffset + products_refs_.size());
-    products_refs_.emplace_back(prod_ref);
-    return id;
-  });
+  return transport_mode(
+      api::ModeEnum::RENTAL,
+      utl::get_or_create(products_ref_to_payload_, prod_ref, [&]() {
+        auto const payload =
+            static_cast<transport_mode_t::payload_t>(products_refs_.size());
+        products_refs_.emplace_back(prod_ref);
+        return payload;
+      }));
 }
 
 gbfs_products_ref gbfs_routing_data::get_products_ref(
-    nigiri::transport_mode_id_t const id) const {
-  return products_refs_.at(
-      static_cast<std::size_t>(id - kGbfsTransportModeIdOffset));
+    nigiri::routing::transport_mode_t::payload_t const payload) const {
+  return products_refs_.at(static_cast<std::size_t>(payload));
 }
 
 }  // namespace motis::gbfs

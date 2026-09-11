@@ -131,6 +131,22 @@
       }
     },
     {
+      "name": "cuda-pascal",
+      "displayName": "Linux CUDA RelWithDebInfo (Pascal, sm_61)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cuda-pascal",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "NIGIRI_CUDA": "ON",
+        "CMAKE_CUDA_ARCHITECTURES": "61",
+        "CMAKE_C_COMPILER": "gcc-14",
+        "CMAKE_CXX_COMPILER": "g++-14",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda-12.9/bin/nvcc",
+        "CMAKE_CUDA_HOST_COMPILER": "g++-14",
+        "CMAKE_CUDA_FLAGS": "-isystem ${sourceDir}/deps/nigiri/cmake/cuda-glibc-compat"
+      }
+    },
+    {
       "name": "cpu",
       "displayName": "Linux CPU RelWithDebInfo (NIGIRI_CUDA=Off)",
       "generator": "Ninja",
@@ -206,6 +222,10 @@
     {
       "name": "cuda",
       "configurePreset": "cuda"
+    },
+    {
+      "name": "cuda-pascal",
+      "configurePreset": "cuda-pascal"
     },
     {
       "name": "cpu",
