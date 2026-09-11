@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <variant>
@@ -187,12 +188,13 @@ struct geofencing_restrictions {
 
 struct zone {
   zone() = default;
-  zone(tg_geom* geom, std::vector<rule>&& rules, std::string&& name)
+  zone(tg_geom* geom,
+       std::vector<rule>&& rules,
+       std::string&& name,
+       bool respect_winding = false)
       : geom_{geom, tg_geom_deleter{}},
         rules_{std::move(rules)},
-        clockwise_{geom_ && tg_geom_num_polys(geom_.get()) > 0
-                       ? tg_poly_clockwise(tg_geom_poly_at(geom_.get(), 0))
-                       : true},
+        respect_winding_{respect_winding},
         name_{std::move(name)} {}
 
   geo::box bounding_box() const {
@@ -206,15 +208,18 @@ struct zone {
         rules_, [](rule const& r) { return r.allows_rental_operation(); });
   }
 
+  bool contains(geo::latlng const&) const;
+  bool has_exterior() const;
+
   bool is_global() const {
     auto const bb = bounding_box();
-    return bb.max_.lat() >= 90 && bb.max_.lng() >= 180 &&
+    return !respect_winding_ && bb.max_.lat() >= 90 && bb.max_.lng() >= 180 &&
            bb.min_.lat() <= -90 && bb.min_.lng() <= -180;
   }
 
   std::shared_ptr<tg_geom> geom_;
   std::vector<rule> rules_;
-  bool clockwise_{true};
+  bool respect_winding_{false};
   std::string name_;
 };
 
@@ -224,9 +229,9 @@ struct geofencing_zones {
 
   void clear();
   geofencing_restrictions get_restrictions(
-      geo::latlng const& pos,
-      vehicle_type_idx_t,
-      geofencing_restrictions const& default_restrictions) const;
+      std::vector<vehicle_type_idx_t> const&,
+      geofencing_restrictions,
+      std::span<std::size_t const> zone_indices) const;
 };
 
 struct additional_node {
@@ -408,6 +413,7 @@ struct gbfs_provider {
   hash_map<std::string, temp_vehicle_type> temp_vehicle_types_{};
   std::vector<vehicle_status> vehicle_status_{};
   geofencing_zones geofencing_zones_{};
+  bool respect_geofencing_winding_{false};
   geofencing_restrictions default_restrictions_{};
   std::optional<return_constraint> default_return_constraint_{};
 
@@ -456,6 +462,7 @@ struct provider_feed {
   std::optional<std::string> config_name_{};
   std::optional<std::string> config_color_{};
   bool ignore_geofencing_{false};
+  bool respect_geofencing_winding_{false};
   std::shared_ptr<oauth_state> oauth_{};
   std::map<std::string, unsigned> default_ttl_{};
   std::map<std::string, unsigned> overwrite_ttl_{};

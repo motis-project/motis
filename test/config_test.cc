@@ -210,3 +210,31 @@ street_routing: {}
 )"s));
   }
 }
+
+TEST(motis, config_gbfs_respect_geofencing_winding) {
+  auto const c = config::read(R"(
+osm: test/resources/test_case.osm.pbf
+street_routing: true
+gbfs:
+  feeds:
+    ordinary:
+      url: ordinary
+    opted_in:
+      url: opted_in
+      respect_geofencing_winding: true
+    aggregator:
+      url: aggregator
+      respect_geofencing_winding:
+        enabled: true
+        disabled: false
+)"s);
+  auto const& feeds = c.gbfs_->feeds_;
+  EXPECT_FALSE(feeds.at("ordinary").respect_geofencing_winding_.has_value());
+  EXPECT_TRUE(
+      std::get<bool>(*feeds.at("opted_in").respect_geofencing_winding_));
+  auto const& children = std::get<std::map<std::string, bool>>(
+      *feeds.at("aggregator").respect_geofencing_winding_);
+  EXPECT_TRUE(children.at("enabled"));
+  EXPECT_FALSE(children.at("disabled"));
+  EXPECT_EQ(c, config::read((std::stringstream{} << c).str()));
+}

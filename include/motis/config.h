@@ -200,6 +200,8 @@ struct config {
           color_{};
       std::optional<std::variant<bool, std::map<std::string, bool>>>
           ignore_geofencing_{};
+      std::optional<std::variant<bool, std::map<std::string, bool>>>
+          respect_geofencing_winding_{};
       std::optional<ttl> ttl_{};
     };
 

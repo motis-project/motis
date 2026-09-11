@@ -50,87 +50,63 @@ struct osr_mapping {
       return bv;
     };
 
-    auto global_rules = std::vector<rule>{};
+    auto const& zones = provider_.geofencing_zones_;
+    auto exterior_indices = std::vector<std::size_t>{};
     auto zone_rtree = box_rtree<std::size_t>{};
-    for (auto const [i, z] :
-         utl::enumerate(provider_.geofencing_zones_.zones_)) {
-      zone_rtree.add(z.bounding_box(), i);
-      if (z.is_global() && provider_.geofencing_zones_.zones_.size() != 1) {
-        global_rules.insert(global_rules.begin(), z.rules_.begin(),
-                            z.rules_.end());
+    for (auto const [i, z] : utl::enumerate(zones.zones_)) {
+      if (z.is_global() && zones.zones_.size() != 1U) {
+        continue;
+      }
+      if (z.has_exterior()) {
+        exterior_indices.push_back(i);
+      } else {
+        zone_rtree.add(z.bounding_box(), i);
       }
     }
-    global_rules.insert(global_rules.end(),
-                        provider_.geofencing_zones_.global_rules_.begin(),
-                        provider_.geofencing_zones_.global_rules_.end());
 
-    for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
-      auto default_restrictions =
-          get_default_restrictions(provider_, prod, global_rules);
+    auto const defaults =
+        utl::to_vec(provider_.products_, [&](auto const& prod) {
+          return get_default_restrictions(provider_, prod);
+        });
+    for (auto [prod, rd, def] :
+         utl::zip(provider_.products_, products_data_, defaults)) {
+      // Away from every polygon, only exterior rules apply. Near polygons
+      // we recompute from the original defaults, preserving rule precedence.
+      auto const restrictions =
+          zones.get_restrictions(prod.vehicle_types_, def, exterior_indices);
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
       rd.through_allowed_ = make_loc_bitvec();
-
-      if (default_restrictions.ride_end_allowed_ &&
-          !default_restrictions.station_parking_.value_or(false)) {
+      if (restrictions.ride_end_allowed_ &&
+          !restrictions.station_parking_.value_or(false)) {
         rd.end_allowed_.one_out();
       }
-      if (default_restrictions.ride_through_allowed_) {
+      if (restrictions.ride_through_allowed_) {
         rd.through_allowed_.one_out();
       }
-
-      rd.station_parking_ =
-          default_restrictions.station_parking_.value_or(false);
+      rd.station_parking_ = def.station_parking_.value_or(false);
     }
 
     auto done = make_loc_bitvec();
-
     auto zone_indices = std::vector<std::size_t>{};
-    zone_indices.reserve(provider_.geofencing_zones_.zones_.size());
+    zone_indices.reserve(zones.zones_.size());
     auto const handle_point = [&](osr::node_idx_t const n,
                                   geo::latlng const& pos) {
-      // zones have to be checked in the order they are defined
-      zone_indices.clear();
-      zone_rtree.find(pos, [&](std::size_t const zone_idx) {
-        auto const& z = provider_.geofencing_zones_.zones_[zone_idx];
-        if (multipoly_contains_point(z.geom_.get(), pos)) {
-          zone_indices.push_back(zone_idx);
-        }
+      zone_indices = exterior_indices;
+      zone_rtree.find(
+          pos, [&](std::size_t const idx) { zone_indices.push_back(idx); });
+      std::erase_if(zone_indices, [&](auto const idx) {
+        return !zones.zones_[idx].contains(pos);
       });
-      if (zone_indices.empty()) {
-        return;
-      }
       utl::sort(zone_indices);
-
-      for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
-        auto start_allowed = std::optional<bool>{};
-        auto end_allowed = std::optional<bool>{};
-        auto through_allowed = std::optional<bool>{};
-        auto station_parking = rd.station_parking_;
-        for (auto const zone_idx : zone_indices) {
-          auto const& z = provider_.geofencing_zones_.zones_[zone_idx];
-          for (auto const& r : z.rules_) {
-            if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
-              continue;
-            }
-            if (r.station_parking_.has_value()) {
-              station_parking = r.station_parking_.value();
-            }
-            start_allowed = r.ride_start_allowed_;
-            end_allowed = r.ride_end_allowed_ && !station_parking;
-            through_allowed = r.ride_through_allowed_;
-            break;
-          }
-          if (start_allowed.has_value()) {
-            break;  // for now
-          }
-        }
-        if (end_allowed.has_value()) {
-          rd.end_allowed_.set(n, *end_allowed);
-        }
-        if (through_allowed.has_value()) {
-          rd.through_allowed_.set(n, *through_allowed);
-        }
+      for (auto [prod, rd, def] :
+           utl::zip(provider_.products_, products_data_, defaults)) {
+        auto const restrictions =
+            zones.get_restrictions(prod.vehicle_types_, def, zone_indices);
+        rd.end_allowed_.set(n,
+                            restrictions.ride_end_allowed_ &&
+                                !restrictions.station_parking_.value_or(false));
+        rd.through_allowed_.set(n, restrictions.ride_through_allowed_);
       }
     };
 
@@ -262,8 +238,9 @@ struct osr_mapping {
           continue;
         }
 
-        auto const additional_node_id = add_node(
-            rd, additional_node{additional_node::station{id}}, st.info_.pos_);
+        auto const additional_node_id =
+            add_node(rd, prod, additional_node{additional_node::station{id}},
+                     st.info_.pos_);
         if (is_renting) {
           rd.start_allowed_.set(additional_node_id, true);
         }
@@ -320,9 +297,9 @@ struct osr_mapping {
           continue;
         }
 
-        auto const additional_node_id =
-            add_node(rd, additional_node{additional_node::vehicle{vehicle_idx}},
-                     vs.pos_);
+        auto const additional_node_id = add_node(
+            rd, prod, additional_node{additional_node::vehicle{vehicle_idx}},
+            vs.pos_);
         rd.start_allowed_.set(additional_node_id, true);
 
         for (auto const& m : matches) {
@@ -347,6 +324,7 @@ struct osr_mapping {
   }
 
   osr::node_idx_t add_node(routing_data& rd,
+                           provider_products const& prod,
                            additional_node&& an,
                            geo::latlng const& pos) const {
     auto const node_id = static_cast<osr::node_idx_t>(
@@ -356,6 +334,8 @@ struct osr_mapping {
     assert(rd.start_allowed_.size() >=
            static_cast<typename osr::bitvec<osr::node_idx_t>::size_type>(
                node_id + 1));
+    rd.through_allowed_.set(
+        node_id, get_restrictions(provider_, prod, pos).ride_through_allowed_);
     return node_id;
   }
 
