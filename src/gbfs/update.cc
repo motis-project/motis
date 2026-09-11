@@ -562,6 +562,8 @@ struct gbfs_update {
                   .config_name_ = lookup_name("", id),
                   .config_color_ = lookup_color("", id),
                   .ignore_geofencing_ = lookup_ignore_geofencing("", id),
+                  .respect_geofencing_winding_ =
+                      lookup_respect_geofencing_winding("", id),
                   .oauth_ = std::move(oauth),
                   .default_ttl_ = default_ttl,
                   .overwrite_ttl_ = overwrite_ttl}))
@@ -607,6 +609,7 @@ struct gbfs_update {
       provider.id_ = pf.id_;
       provider.idx_ = idx;
       provider.default_restrictions_ = pf.default_restrictions_;
+      provider.respect_geofencing_winding_ = pf.respect_geofencing_winding_;
       provider.default_return_constraint_ = pf.default_return_constraint_;
       provider.color_ = pf.config_color_;
       if (pf.config_group_) {
@@ -1187,6 +1190,8 @@ struct gbfs_update {
               .config_name_ = lookup_name(af.id_, system_id),
               .config_color_ = lookup_color(af.id_, system_id),
               .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
+              .respect_geofencing_winding_ =
+                  lookup_respect_geofencing_winding(af.id_, system_id),
               .oauth_ = af.oauth_,
               .default_ttl_ = af.default_ttl_,
               .overwrite_ttl_ = af.overwrite_ttl_});
@@ -1225,6 +1230,8 @@ struct gbfs_update {
               .config_name_ = lookup_name(af.id_, system_id),
               .config_color_ = lookup_color(af.id_, system_id),
               .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
+              .respect_geofencing_winding_ =
+                  lookup_respect_geofencing_winding(af.id_, system_id),
               .oauth_ = af.oauth_,
               .default_ttl_ = af.default_ttl_,
               .overwrite_ttl_ = af.overwrite_ttl_});
@@ -1305,8 +1312,14 @@ struct gbfs_update {
     if (auto const it = j_root.find("last_updated"); it != j_root.end()) {
       last_updated = parse_timestamp(it->value());
     }
+    auto hash = hash_gbfs_data(content);
+    if (name == "geofencing_zones") {
+      // A version-only update can change whether winding has meaning.
+      hash = cista::hash_combine(hash,
+                                 cista::hash(optional_str(j_root, "version")));
+    }
     co_return gbfs_file{.json_ = std::move(j),
-                        .hash_ = hash_gbfs_data(content),
+                        .hash_ = hash,
                         .next_refresh_ = next_refresh,
                         .last_updated_ = last_updated};
   }
@@ -1521,6 +1534,14 @@ struct gbfs_update {
     return lookup_mapping<bool>(
                af_id, system_id,
                [](auto const& cfg) { return cfg.ignore_geofencing_; })
+        .value_or(false);
+  }
+
+  bool lookup_respect_geofencing_winding(std::string const& af_id,
+                                         std::string const& system_id) {
+    return lookup_mapping<bool>(
+               af_id, system_id,
+               [](auto const& cfg) { return cfg.respect_geofencing_winding_; })
         .value_or(false);
   }
 

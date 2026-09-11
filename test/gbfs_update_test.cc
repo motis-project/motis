@@ -1046,3 +1046,191 @@ TEST(motis, gbfs_update_handles_v1_feed_without_vehicle_types) {
   EXPECT_TRUE(p.has_vehicles_to_rent_);
   EXPECT_GT(additional_node_count(*gbfs, p), 0U);
 }
+
+namespace {
+
+void write_winding_operating_area(fs::path const& dir,
+                                  std::string_view const version = "2.3") {
+  auto feed = json::parse(R"({
+    "last_updated": 60,
+    "ttl": 0,
+    "data": {
+      "geofencing_zones": {
+        "type": "FeatureCollection",
+        "features": [{
+          "type": "Feature",
+          "properties": {"rules": [{
+            "ride_allowed": false,
+            "ride_through_allowed": false
+          }]},
+          "geometry": {
+            "type": "MultiPolygon",
+            "coordinates": [[[
+              [8.62, 49.87], [8.64, 49.87], [8.64, 49.88],
+              [8.62, 49.88], [8.62, 49.87]
+            ]]]
+          }
+        }]
+      }
+    }
+  })");
+  feed.as_object()["version"] = version;
+  write_file(dir / "geofencing_zones.json", json::serialize(feed));
+}
+
+bool in_operating_area(geo::latlng const& pos) {
+  return pos.lng_ >= 8.62 && pos.lng_ <= 8.64 && pos.lat_ >= 49.87 &&
+         pos.lat_ <= 49.88;
+}
+
+void check_winding_street_permissions(gbfs_data& gbfs,
+                                      gbfs_provider const& provider,
+                                      bool const exterior) {
+  auto const& w = *street_data().w_;
+  auto const rd = gbfs.get_products_routing_data(
+      w, *street_data().l_, {provider.idx_, gbfs_products_idx_t{0}});
+  auto inside_count = 0U;
+  auto outside_count = 0U;
+  for (auto i = std::size_t{0}; i != w.n_nodes(); ++i) {
+    auto const n = osr::node_idx_t{static_cast<std::uint32_t>(i)};
+    if (w.r_->node_ways_[n].empty()) {
+      continue;
+    }
+    auto const inside = in_operating_area(w.get_node_pos(n).as_latlng());
+    if (inside) {
+      ++inside_count;
+    } else {
+      ++outside_count;
+    }
+    auto const allowed = exterior == inside;
+    EXPECT_EQ(allowed, rd->through_allowed_.test(n)) << i;
+    EXPECT_EQ(allowed, rd->end_allowed_.test(n)) << i;
+  }
+  EXPECT_GT(inside_count, 0U);
+  EXPECT_GT(outside_count, 0U);
+  auto const& nodes = rd->provider_routing_data_->products_.front();
+  for (auto i = std::size_t{0}; i != nodes.additional_nodes_.size(); ++i) {
+    auto const n = osr::node_idx_t{static_cast<std::uint32_t>(w.n_nodes() + i)};
+    EXPECT_EQ(
+        exterior == in_operating_area(nodes.additional_node_coordinates_[i]),
+        rd->through_allowed_.test(n));
+  }
+}
+
+}  // namespace
+
+TEST(motis, gbfs_update_winding_maps_exterior_and_survives_version_upgrade) {
+  auto const dir = make_temp_dir("winding-streets");
+  write_default_feed(dir);
+  write_winding_operating_area(dir);
+  auto c = make_gbfs_config(dir);
+  c.gbfs_->feeds_.at("test").respect_geofencing_winding_ = true;
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(c, gbfs);
+  auto const& provider = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  ASSERT_TRUE(provider.respect_geofencing_winding_);
+  ASSERT_EQ(1U, provider.geofencing_zones_.zones_.size());
+  EXPECT_TRUE(provider.geofencing_zones_.zones_.front().has_exterior());
+  EXPECT_GT(count_additional_vehicle_nodes(routing_data_for(*gbfs, provider)),
+            0U);
+  check_winding_street_permissions(*gbfs, provider, true);
+
+  write_winding_operating_area(dir, "3.0");
+  run_update(c, gbfs);
+  auto const& upgraded = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  EXPECT_TRUE(upgraded.respect_geofencing_winding_);
+  EXPECT_FALSE(upgraded.geofencing_zones_.zones_.front().has_exterior());
+  EXPECT_EQ(0U,
+            count_additional_vehicle_nodes(routing_data_for(*gbfs, upgraded)));
+  check_winding_street_permissions(*gbfs, upgraded, false);
+}
+
+TEST(motis, gbfs_update_winding_disabled_preserves_interior_behavior) {
+  auto const dir = make_temp_dir("winding-disabled");
+  write_default_feed(dir);
+  write_winding_operating_area(dir);
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(make_gbfs_config(dir), gbfs);
+  auto const& provider = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  EXPECT_FALSE(provider.respect_geofencing_winding_);
+  EXPECT_EQ(0U,
+            count_additional_vehicle_nodes(routing_data_for(*gbfs, provider)));
+  check_winding_street_permissions(*gbfs, provider, false);
+}
+
+TEST(motis, gbfs_update_winding_suppresses_pickup_outside_polygon_bounds) {
+  auto const dir = make_temp_dir("winding-outside-pickup");
+  write_default_feed(dir);
+  write_winding_operating_area(dir);
+  write_free_bike_status(dir, "outside", 49.875309, 8.65);
+  auto c = make_gbfs_config(dir);
+  c.gbfs_->feeds_.at("test").respect_geofencing_winding_ = true;
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(c, gbfs);
+  auto const& provider = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  ASSERT_EQ(1U, provider.vehicle_status_.size());
+  EXPECT_EQ(0U,
+            count_additional_vehicle_nodes(routing_data_for(*gbfs, provider)));
+  EXPECT_FALSE(rtree_contains(*gbfs, provider.vehicle_status_.front().pos_,
+                              provider.idx_));
+}
+
+TEST(motis, gbfs_update_winding_aggregator_boolean_and_child_mapping) {
+  auto const dir = make_temp_dir("winding-aggregators");
+  for (auto const child : {"enabled", "disabled", "omitted"}) {
+    write_default_feed(dir / child);
+    write_winding_operating_area(dir / child);
+  }
+  for (auto const lamassu : {false, true}) {
+    if (lamassu) {
+      auto const manifest = json::serialize(json::value{
+          {"systems",
+           json::array{json::value{{"id", "enabled"}, {"url", "enabled"}},
+                       json::value{{"id", "disabled"}, {"url", "disabled"}},
+                       json::value{{"id", "omitted"}, {"url", "omitted"}}}}});
+      write_file(dir / "gbfs.json", manifest);
+      write_file(dir / "manifest.json", manifest);
+    } else {
+      write_manifest(dir, {"enabled", "disabled", "omitted"});
+    }
+    for (auto const all_children : {false, true}) {
+      SCOPED_TRACE(lamassu);
+      SCOPED_TRACE(all_children);
+      auto c = make_gbfs_config(dir, "agg");
+      if (all_children) {
+        c.gbfs_->feeds_.at("agg").respect_geofencing_winding_ = true;
+      } else {
+        c.gbfs_->feeds_.at("agg").respect_geofencing_winding_ =
+            std::map<std::string, bool>{{"enabled", true}, {"disabled", false}};
+      }
+      auto gbfs = std::shared_ptr<gbfs_data>{};
+      run_update(c, gbfs);
+      for (auto const child : {"enabled", "disabled", "omitted"}) {
+        auto const& provider = *gbfs->providers_.at(
+            gbfs->provider_by_id_.at(std::string{"agg:"} + child));
+        auto const enabled =
+            all_children || std::string_view{child} == "enabled";
+        EXPECT_EQ(enabled, provider.respect_geofencing_winding_);
+        EXPECT_EQ(enabled,
+                  provider.geofencing_zones_.zones_.front().has_exterior());
+        EXPECT_EQ(enabled, count_additional_vehicle_nodes(
+                               routing_data_for(*gbfs, provider)) != 0U);
+      }
+    }
+  }
+}
+
+TEST(motis, gbfs_update_ignore_geofencing_takes_precedence_over_winding) {
+  auto const dir = make_temp_dir("winding-ignored");
+  write_default_feed(dir);
+  write_winding_operating_area(dir);
+  auto c = make_gbfs_config(dir);
+  c.gbfs_->feeds_.at("test").respect_geofencing_winding_ = true;
+  c.gbfs_->feeds_.at("test").ignore_geofencing_ = true;
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(c, gbfs);
+  auto const& provider = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  EXPECT_TRUE(provider.geofencing_zones_.zones_.empty());
+  EXPECT_GT(count_additional_vehicle_nodes(routing_data_for(*gbfs, provider)),
+            0U);
+}
