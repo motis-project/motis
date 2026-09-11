@@ -177,7 +177,7 @@ std::vector<api::StepInstruction> get_step_instructions(
   return steps;
 }
 
-api::HeightProfile get_elevation_profile(
+api::ElevationProfile get_elevation_profile(
     osr::ways const& w,
     std::span<osr::path::segment const> segments,
     double distance,
