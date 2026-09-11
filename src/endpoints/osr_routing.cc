@@ -46,7 +46,7 @@ json::value osr_routing::operator()(json::value const& query) const {
   return p.has_value()
              ? json::value{{"type", "FeatureCollection"},
                            {"metadata",
-                            {{"duration", p->cost_},
+                            {{"duration", p->duration_.count()},
                              {"distance", p->dist_},
                              {"uses_elevator", p->uses_elevator_}}},
                            {"features",

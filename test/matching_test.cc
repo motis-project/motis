@@ -146,7 +146,7 @@ TEST(motis, get_way_candidates) {
     auto without_preprocessing = osr::match_result{};
     for (auto const& query : locs) {
       d.l_->match(motis::to_profile_parameters(profile, {}), query, true,
-                  osr::direction::kForward, 250, nullptr, profile, {},
+                  osr::direction::kForward, 250, nullptr, false, profile, {},
                   without_preprocessing);
     }
 
@@ -222,10 +222,10 @@ TEST(motis, get_way_candidates) {
       auto const params = motis::to_profile_parameters(profile, {});
       auto with = osr::match_result{};
       d.l_->match(params, remote_station, true, osr::direction::kForward, dist,
-                  nullptr, profile, raw, with);
+                  nullptr, false, profile, raw, with);
       auto without = osr::match_result{};
       d.l_->match(params, remote_station, true, osr::direction::kForward, dist,
-                  nullptr, profile, {}, without);
+                  nullptr, false, profile, {}, without);
       EXPECT_NE(0, raw.size());
       EXPECT_EQ(with[osr::match_idx_t{0U}].size(),
                 without[osr::match_idx_t{0U}].size());

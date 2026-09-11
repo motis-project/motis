@@ -1,5 +1,6 @@
 #include "motis/gbfs/gbfs_output.h"
 
+#include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
 #include "motis/gbfs/routing_data.h"
@@ -19,6 +20,7 @@ gbfs_output::gbfs_output(osr::ways const& w,
       prod_rd_{gbfs_rd_.get_products_routing_data(prod_ref)},
       sharing_data_{prod_rd_->get_sharing_data(
           w_.n_nodes(), ignore_rental_return_constraints)},
+      ignore_rental_return_constraints_{ignore_rental_return_constraints},
       rental_{
           .providerId_ = provider_.id_,
           .providerGroupId_ = provider_.group_id_,
@@ -45,6 +47,12 @@ osr::search_profile gbfs_output::get_profile() const {
 
 osr::sharing_data const* gbfs_output::get_sharing_data() const {
   return &sharing_data_;
+}
+
+bool gbfs_output::allows_free_floating_return_at(
+    osr::location const& location) const {
+  return gbfs::allows_free_floating_return_at(
+      provider_, products_, location.pos_, ignore_rental_return_constraints_);
 }
 
 void gbfs_output::annotate_leg(nigiri::lang_t const&,

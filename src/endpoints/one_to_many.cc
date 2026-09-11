@@ -72,7 +72,7 @@ api::oneToMany_response one_to_many_direct(
   return utl::to_vec(paths, [&](std::optional<osr::path> const& p) {
     return p
         .transform([&](osr::path const& x) {
-          return api::Duration{.duration_ = x.cost_,
+          return api::Duration{.duration_ = x.duration_.count(),
                                .distance_ = with_distance
                                                 ? std::optional{x.dist_}
                                                 : std::nullopt};
