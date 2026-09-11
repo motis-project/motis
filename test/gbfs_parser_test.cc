@@ -3,6 +3,7 @@
 #include <chrono>
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include "boost/json.hpp"
 
@@ -834,4 +835,168 @@ TEST(motis, gbfs_parser_structurally_invalid_feeds_throw) {
   EXPECT_ANY_THROW(load_geofencing_zones(provider, json::parse(R"({
     "data": {"geofencing_zones": "not-an-object"}
   })")));
+}
+
+namespace {
+
+json::value winding_zone(std::string_view const coordinates,
+                         bool const allowed = false) {
+  return json::value{
+      {"type", "Feature"},
+      {"geometry",
+       {{"type", "MultiPolygon"}, {"coordinates", json::parse(coordinates)}}},
+      {"properties",
+       {{"rules",
+         json::array{json::value{{"ride_allowed", allowed},
+                                 {"ride_through_allowed", allowed}}}}}}};
+}
+
+json::value winding_feed(json::array features,
+                         std::string_view const version = "2.3") {
+  return json::value{
+      {"version", version},
+      {"data",
+       {{"geofencing_zones",
+         {{"type", "FeatureCollection"}, {"features", std::move(features)}}}}}};
+}
+
+constexpr auto kOperatingArea = R"([[[[0,0], [4,0], [4,4], [0,4], [0,0]]]])";
+constexpr auto kNoGoArea = R"([[[[1,1], [1,2], [2,2], [2,1], [1,1]]]])";
+
+provider_products winding_product() {
+  return provider_products{
+      .vehicle_types_ = {vehicle_type_idx_t{0U}},
+      .return_constraint_ = return_constraint::kFreeFloating,
+      .known_return_constraint_ = true};
+}
+
+}  // namespace
+
+TEST(motis, gbfs_winding_is_opt_in_and_uses_geofencing_version) {
+  auto const product = winding_product();
+  auto const inside = geo::latlng{3, 3};
+  auto const outside = geo::latlng{5, 5};
+  for (auto const enabled : {false, true}) {
+    for (auto const version : {"2.1", "2.2", "2.3", "3.0", "3.1", ""}) {
+      SCOPED_TRACE(version);
+      SCOPED_TRACE(enabled);
+      auto provider = gbfs_provider{.id_ = "provider",
+                                    .respect_geofencing_winding_ = enabled};
+      auto feed = winding_feed({winding_zone(kOperatingArea)}, version);
+      if (std::string_view{version}.empty()) {
+        feed.as_object().erase("version");
+      }
+      load_geofencing_zones(provider, feed);
+      auto const exterior =
+          enabled && std::string_view{version}.starts_with("2.");
+      EXPECT_EQ(
+          exterior,
+          get_restrictions(provider, product, inside).ride_through_allowed_);
+      EXPECT_EQ(
+          !exterior,
+          get_restrictions(provider, product, outside).ride_through_allowed_);
+      EXPECT_EQ(exterior,
+                allows_free_floating_return_at(provider, product, inside));
+      EXPECT_EQ(!exterior,
+                allows_free_floating_return_at(provider, product, outside));
+      EXPECT_EQ(exterior,
+                vehicle_is_rentable(
+                    provider, product,
+                    vehicle_status{.id_ = "inside",
+                                   .pos_ = inside,
+                                   .vehicle_type_idx_ = vehicle_type_idx_t{0U},
+                                   .station_id_ = {},
+                                   .home_station_id_ = {}}));
+      EXPECT_EQ(!exterior,
+                vehicle_is_rentable(
+                    provider, product,
+                    vehicle_status{.id_ = "outside",
+                                   .pos_ = outside,
+                                   .vehicle_type_idx_ = vehicle_type_idx_t{0U},
+                                   .station_id_ = {},
+                                   .home_station_id_ = {}}));
+    }
+  }
+}
+
+TEST(motis, gbfs_winding_interior_no_go_and_exterior_precedence) {
+  auto provider =
+      gbfs_provider{.id_ = "provider", .respect_geofencing_winding_ = true};
+  auto const product = winding_product();
+  load_geofencing_zones(provider, winding_feed({winding_zone(kOperatingArea),
+                                                winding_zone(kNoGoArea)}));
+  EXPECT_TRUE(
+      get_restrictions(provider, product, {3, 3}).ride_through_allowed_);
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {1.5, 1.5}).ride_through_allowed_);
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {5, 5}).ride_through_allowed_);
+
+  auto const outside_allowance =
+      winding_zone(R"([[[[5,5], [5,7], [7,7], [7,5], [5,5]]]])", true);
+  load_geofencing_zones(provider, winding_feed({winding_zone(kOperatingArea),
+                                                outside_allowance}));
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {6, 6}).ride_through_allowed_);
+  load_geofencing_zones(provider, winding_feed({outside_allowance,
+                                                winding_zone(kOperatingArea)}));
+  EXPECT_TRUE(
+      get_restrictions(provider, product, {6, 6}).ride_through_allowed_);
+}
+
+TEST(motis, gbfs_winding_multipolygon_union_holes_and_mixed_winding) {
+  auto provider =
+      gbfs_provider{.id_ = "provider", .respect_geofencing_winding_ = true};
+  auto const product = winding_product();
+  load_geofencing_zones(provider, winding_feed({winding_zone(R"([
+    [[[0,0], [4,0], [4,4], [0,4], [0,0]],
+     [[1,1], [1,2], [2,2], [2,1], [1,1]]],
+    [[[6,0], [10,0], [10,4], [6,4], [6,0]]]
+  ])")}));
+  EXPECT_TRUE(
+      get_restrictions(provider, product, {3, 3}).ride_through_allowed_);
+  EXPECT_TRUE(
+      get_restrictions(provider, product, {3, 8}).ride_through_allowed_);
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {1.5, 1.5}).ride_through_allowed_);
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {3, 5}).ride_through_allowed_);
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {20, 20}).ride_through_allowed_);
+
+  // A clockwise component must not hide a later counterclockwise component.
+  load_geofencing_zones(provider, winding_feed({winding_zone(R"([
+    [[[1,1], [1,2], [2,2], [2,1], [1,1]]],
+    [[[0,0], [4,0], [4,4], [0,4], [0,0]]]
+  ])")}));
+  EXPECT_TRUE(provider.geofencing_zones_.zones_.front().has_exterior());
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {1.5, 1.5}).ride_through_allowed_);
+  EXPECT_TRUE(
+      get_restrictions(provider, product, {3, 3}).ride_through_allowed_);
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {5, 5}).ride_through_allowed_);
+}
+
+TEST(motis, gbfs_winding_preserves_defaults_and_vehicle_type_filtering) {
+  auto provider =
+      gbfs_provider{.id_ = "provider", .respect_geofencing_winding_ = true};
+  auto const product = winding_product();
+  load_geofencing_zones(provider,
+                        winding_feed({winding_zone(kOperatingArea, true)}));
+  provider.default_restrictions_ = {.ride_start_allowed_ = false,
+                                    .ride_end_allowed_ = false,
+                                    .ride_through_allowed_ = false,
+                                    .station_parking_ = true};
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {3, 3}).ride_through_allowed_);
+  EXPECT_TRUE(
+      get_restrictions(provider, product, {5, 5}).ride_through_allowed_);
+  EXPECT_FALSE(allows_free_floating_return_at(provider, product, {5, 5}));
+  auto& rule = provider.geofencing_zones_.zones_.front().rules_.front();
+  rule.station_parking_ = false;
+  EXPECT_TRUE(allows_free_floating_return_at(provider, product, {5, 5}));
+  rule.vehicle_type_idxs_ = {vehicle_type_idx_t{1U}};
+  EXPECT_FALSE(
+      get_restrictions(provider, product, {5, 5}).ride_through_allowed_);
 }

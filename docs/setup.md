@@ -299,6 +299,47 @@ gbfs:
         auth_method: client_secret_basic # default, or client_secret_post
 ```
 
+## GBFS 2.x Geofencing Winding
+
+By default, MOTIS applies geofencing rules to polygon interiors regardless of
+winding. Many feeds use this convention even when declaring GBFS 2.x.
+
+For providers that follow the [GBFS 2.3 winding semantics](https://github.com/MobilityData/gbfs/blob/v2.3/gbfs.md#geofencing_zonesjson),
+opt in using `respect_geofencing_winding`:
+
+```yaml
+gbfs:
+  feeds:
+    example:
+      url: https://example.org/gbfs.json
+      respect_geofencing_winding: true
+    aggregator:
+      url: https://example.org/manifest.json
+      respect_geofencing_winding:
+        child_using_correct_winding: true
+```
+
+This option accepts a boolean for the whole configured feed or aggregator, or a
+map of child IDs for a manifest or Lamassu aggregator. Omitted children default
+to `false`. Map keys are the IDs from the aggregator, without the aggregator
+prefix. `ignore_geofencing: true` still disables all geofencing.
+
+When enabled, geofencing files declaring version `2.1`, `2.2`, or `2.3` apply
+clockwise polygons' rules internally and counterclockwise polygons' rules
+externally. Multiple counterclockwise components in a MultiPolygon describe the
+exterior of their union, so separate operating areas do not prohibit each other;
+holes belong to that exterior. Clockwise components add their interiors. Polygon
+boundaries count as part of the interior. Rules retain their original feed order,
+including precedence between exterior and interior rules.
+
+The version is taken from `geofencing_zones.json`. Files with a missing or other
+version, including GBFS 3.x, retain interior semantics even if the option is set.
+Thus providers can upgrade to GBFS 3.x without removing the option. This flag
+does not change the defaults for locations without an applicable rule; use
+`default_restrictions` below to customize those. Verify the provider's geometry
+and rules before opting in: incorrect winding can prohibit rides across most of
+the map.
+
 ## Default Restrictions
 
 A GBFS feed can define geofencing zones and rules, that apply to areas within these zones.

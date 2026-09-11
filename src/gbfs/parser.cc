@@ -749,6 +749,10 @@ void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
   utl::verify(optional_str(zones_obj, "type") == "FeatureCollection",
               "geofencing_zones is not a FeatureCollection");
 
+  auto const version = optional_str(root.as_object(), "version");
+  auto const respect_winding =
+      provider.respect_geofencing_winding_ &&
+      (version == "2.1" || version == "2.2" || version == "2.3");
   auto zones = std::vector<zone>{};
   auto const features_it = zones_obj.find("features");
   utl::verify(features_it != zones_obj.end() && features_it->value().is_array(),
@@ -789,7 +793,8 @@ void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
 
       auto name = optional_localized_str(props, "name");
 
-      zones.emplace_back(geom, std::move(rules), std::move(name));
+      zones.emplace_back(geom, std::move(rules), std::move(name),
+                         respect_winding);
     } catch (std::exception const& ex) {
       ++provider.skipped_geofencing_zones_;
       std::cerr << "[GBFS] (" << provider.id_
