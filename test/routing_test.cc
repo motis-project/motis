@@ -24,8 +24,14 @@
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
+#include "motis/gbfs/gbfs_output.h"
+#include "motis/gbfs/routing_data.h"
 #include "motis/gbfs/update.h"
 #include "motis/import.h"
+#include "motis/osr/one_to_many_searches.h"
+#include "motis/place.h"
+#include "motis/tag_lookup.h"
+#include "motis/transport_mode.h"
 
 #include "./util.h"
 
@@ -1044,5 +1050,122 @@ TEST(motis, routing) {
     (from=test_WCH_B1 [track=-, scheduled_track=-, level=0], to=test_WCH_C [track=-, scheduled_track=-, level=0], start=2019-05-01 10:00, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 11:00)
 ])",
         to_str(res.itineraries_));
+  }
+}
+
+// Offsets are produced by a one-to-many search; the leg for such an offset is
+// reconstructed from that retained search. Without it the leg is routed again
+// with a budget derived from the offset duration, which does not cover the
+// routing penalties the cost carries - so the same leg comes back cancelled.
+TEST(motis, rental_offset_reconstructs_from_retained_search) {
+  auto const path = std::filesystem::path{"test/data_rental_offset_retained"};
+  auto ec = std::error_code{};
+  std::filesystem::remove_all(path, ec);
+  auto const c = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ = config::timetable{.first_day_ = "2019-05-01",
+                                      .num_days_ = 2,
+                                      .extend_missing_footpaths_ = false,
+                                      .datasets_ = {{"test", {.path_ = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,DB,https://example.com,Europe/Berlin
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+A,A,49.875258,8.62775
+B,B,49.87249,8.628198
+# routes.txt
+route_id,agency_id,route_short_name,route_type
+R,DB,R,3
+# trips.txt
+route_id,service_id,trip_id
+R,S,T
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+T,12:00:00,12:00:00,A,1
+T,12:01:00,12:01:00,B,2
+# calendar_dates.txt
+service_id,date,exception_type
+S,20190501,1
+)"}}}},
+      .gbfs_ = {{.feeds_ = {{"CAB", {.url_ = "./test/resources/gbfs"}}}}},
+      .street_routing_ = true};
+  import(c, path);
+  auto d = data{path, c};
+  auto ioc = boost::asio::io_context{};
+  boost::asio::co_spawn(
+      ioc,
+      [&]() -> boost::asio::awaitable<void> {
+        co_await gbfs::update(c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
+      },
+      boost::asio::detached);
+  ioc.run();
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto gbfs_rd = gbfs::gbfs_routing_data{d.w_.get(), d.l_.get(), d.gbfs_};
+  auto blocked_mem = osr::bitvec<osr::node_idx_t>{d.w_->n_nodes()};
+
+  for (auto const dir : {osr::direction::kForward, osr::direction::kBackward}) {
+    SCOPED_TRACE(osr::to_str(dir));
+    auto const forward = dir == osr::direction::kForward;
+    auto const pos = forward
+                         ? osr::location{{49.875258, 8.62775}, osr::kNoLevel}
+                         : osr::location{{49.87249, 8.628198}, osr::kNoLevel};
+    auto const stop =
+        d.tags_->get_location(*d.tt_, forward ? "test_B" : "test_A");
+    auto const stop_pos = get_location(d.tt_.get(), d.w_.get(), d.pl_.get(),
+                                       d.matches_.get(), tt_location{stop});
+
+    auto otm = one_to_many_searches{};
+    auto stats = ep::stats_map_t{};
+    auto const offsets = routing.get_offsets(
+        d.rt_->rtt_.get(), pos, dir, {api::ModeEnum::RENTAL},
+        rental_options{.ignore_return_constraints_ = true}, {},
+        api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE, 3600s,
+        250.0, gbfs_rd, stats, &otm[n::special_station::kStart]);
+    auto const offset =
+        std::find_if(begin(offsets), end(offsets), [&](auto const& o) {
+          return o.target() == stop &&
+                 to_mode(o.mode()) == api::ModeEnum::RENTAL;
+        });
+    ASSERT_NE(end(offsets), offset);
+
+    auto const precomputed = one_to_many_view{&otm}.find(
+        n::get_special_station(n::special_station::kStart), stop, offset->mode(),
+        offset->target());
+    ASSERT_NE(nullptr, precomputed.state_);
+
+    auto const from = forward ? pos : stop_pos;
+    auto const to = forward ? stop_pos : pos;
+    auto const out = gbfs::gbfs_output{
+        *d.w_, gbfs_rd, gbfs_rd.get_products_ref(offset->mode().payload_),
+        true};
+    auto const start = n::unixtime_t{date::sys_days{2019_y / May / 1}};
+    // A budget this small cannot produce the leg on its own.
+    auto const reconstruct = [&](precomputed_route const& p) {
+      auto cache = street_routing_cache_t{};
+      return street_routing(*d.w_, *d.l_, nullptr, nullptr, {},
+                            to_place(from, "", {}), to_place(to, "", {}), out,
+                            start, start + offset->duration(), 250.0, {}, cache,
+                            blocked_mem, 6U, true, 1s, p);
+    };
+
+    auto const restored = reconstruct(precomputed);
+    ASSERT_FALSE(restored.legs_.empty());
+    auto has_rental = false;
+    for (auto const& leg : restored.legs_) {
+      EXPECT_FALSE(leg.cancelled_.value_or(false));
+      EXPECT_FALSE(leg.legGeometry_.points_.empty());
+      if (leg.mode_ == api::ModeEnum::RENTAL) {
+        ASSERT_TRUE(leg.rental_.has_value());
+        EXPECT_EQ("CAB", leg.rental_->providerId_);
+        has_rental = true;
+      }
+    }
+    EXPECT_TRUE(has_rental);
+
+    auto const routed_again = reconstruct({});
+    ASSERT_EQ(1U, routed_again.legs_.size());
+    EXPECT_TRUE(routed_again.legs_.front().cancelled_.value_or(false));
+    EXPECT_TRUE(routed_again.legs_.front().legGeometry_.points_.empty());
   }
 }
