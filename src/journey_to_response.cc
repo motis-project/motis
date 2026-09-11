@@ -781,17 +781,17 @@ api::Itinerary journey_to_response(
                                            api_version));
             },
             [&](n::routing::offset const x) {
-              if (w == nullptr || l == nullptr) {
-                // no OSM data loaded (e.g. `radius` offsets) -> crow-fly leg
-                append(dummy_itinerary(from, to, to_mode(x.mode()),
-                                       j_leg.dep_time_, j_leg.arr_time_,
-                                       api_version));
+              auto const mode = x.mode();
+              if (w == nullptr || l == nullptr || is_client_offset(mode)) {
+                // no OSM data loaded (e.g. `radius` offsets) or client-provided
+                // offset (duration only, no path) -> crow-fly leg
+                append(dummy_itinerary(from, to, to_mode(mode), j_leg.dep_time_,
+                                       j_leg.arr_time_, api_version));
                 return;
               }
 
               // Offsets came from a one-to-many search from the start/dest
               // place -> reconstruct from it instead of routing again.
-              auto const mode = x.mode();
               auto const precomputed =
                   states.find(j_leg.from_, j_leg.to_, mode, x.target());
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits>
+
 #include "osr/routing/profile.h"
 
 #include "nigiri/routing/query.h"
@@ -32,6 +34,17 @@ constexpr api::ModeEnum to_mode(transport_mode_t const m) {
 
 constexpr osr::search_profile profile_of(transport_mode_t const m) {
   return static_cast<osr::search_profile>(m.payload_);
+}
+
+constexpr auto const kClientOffsetPayload =
+    std::numeric_limits<transport_mode_t::payload_t>::max();
+
+constexpr transport_mode_t client_transport_mode(api::ModeEnum const m) {
+  return transport_mode(m, kClientOffsetPayload);
+}
+
+constexpr bool is_client_offset(transport_mode_t const m) {
+  return m.payload_ == kClientOffsetPayload;
 }
 
 // Routed as car, but rendered as themselves.

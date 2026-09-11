@@ -108,9 +108,7 @@ std::vector<n::routing::offset> radius_offsets(
 std::vector<n::routing::offset> client_offsets(
     std::vector<api::PlanOffset> const& offsets,
     tag_lookup const& tags,
-    n::timetable const& tt,
-    api::PedestrianProfileEnum const pedestrian_profile,
-    api::ElevationCostsEnum const elevation_costs) {
+    n::timetable const& tt) {
   auto ret = std::vector<n::routing::offset>{};
   for (auto const& x : offsets) {
     utl::verify<net::bad_request_exception>(
@@ -124,8 +122,7 @@ std::vector<n::routing::offset> client_offsets(
         "Invalid offset duration {}", x.duration_);
     auto const duration = std::chrono::duration_cast<n::duration_t>(
         std::chrono::seconds{x.duration_});
-    auto const mode = transport_mode(
-        to_profile(x.mode_, pedestrian_profile, elevation_costs));
+    auto const mode = client_transport_mode(x.mode_);
     // parent stations have no departures - expand them to their child stops
     // (a child stop expands to just itself)
     n::routing::for_each_meta(
@@ -1032,9 +1029,7 @@ api::plan_response routing::route(api::plan_params const& query,
             start_client == nullptr && !use_radius_start && !is_osr_loaded(),
         .start_ =
             start_client != nullptr
-                ? client_offsets(*start_client, *tags_, *tt_,
-                                 query.pedestrianProfile_,
-                                 query.elevationCosts_)
+                ? client_offsets(*start_client, *tags_, *tt_)
             : use_radius_start
                 ? radius_offsets(*loc_tree_,
                                  std::get<osr::location>(start).pos_,
@@ -1053,9 +1048,7 @@ api::plan_response routing::route(api::plan_params const& query,
                       query.arriveBy_ ? post_transit_time : pre_transit_time,
                       max_matching_distance, gbfs_rd, prepare_stats, otm_start),
         .destination_ =
-            dest_client != nullptr ? client_offsets(*dest_client, *tags_, *tt_,
-                                                    query.pedestrianProfile_,
-                                                    query.elevationCosts_)
+            dest_client != nullptr ? client_offsets(*dest_client, *tags_, *tt_)
             : use_radius_dest
                 ? radius_offsets(*loc_tree_, std::get<osr::location>(dest).pos_,
                                  *query.radius_)
