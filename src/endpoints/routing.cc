@@ -54,6 +54,7 @@
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/gbfs_output.h"
+#include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
 #include "motis/get_stops_with_traffic.h"
@@ -325,11 +326,12 @@ std::vector<n::routing::offset> get_offsets(
 
     auto const route = [&](osr::search_profile const p,
                            osr::sharing_data const* sharing,
-                           transport_mode_t const mode) {
+                           transport_mode_t const mode,
+                           bool const exact_return_at_from = false) {
       auto const params = to_profile_parameters(p, osr_params);
       auto pos_match = osr::match_result{};
-      r.l_->match(params, pos, false, dir, max_matching_distance, nullptr, p,
-                  {}, pos_match);
+      r.l_->match(params, pos, false, dir, max_matching_distance, nullptr,
+                  exact_return_at_from, p, {}, pos_match);
 
       auto cached_near_stop_matches =
           utl::find_if(near_stop_match_cache, [&](auto const& entry) {
@@ -347,7 +349,8 @@ std::vector<n::routing::offset> get_offsets(
           params, *r.w_, *r.l_, p, pos, near_stop_locations,
           pos_match[osr::match_idx_t{0U}], cached_near_stop_matches->matches_,
           static_cast<osr::cost_t>(max.count()), dir, nullptr, sharing,
-          elevations);
+          elevations, [](osr::path const&) { return false; }, std::nullopt,
+          osr::route_options{.exact_return_at_from_ = exact_return_at_from});
       auto const& paths = state->results();
 
       if (states != nullptr) {
@@ -431,16 +434,23 @@ std::vector<n::routing::offset> get_offsets(
             auto const sharing = prod_rd->get_sharing_data(
                 r.w_->n_nodes(), ignore_rental_return_constraints);
 
+            auto const exact_return_at_from =
+                dir == osr::direction::kBackward &&
+                gbfs::allows_free_floating_return_at(
+                    *provider, prod, pos.pos_,
+                    ignore_rental_return_constraints);
+
             auto const mode = gbfs_rd.get_transport_mode(prod_ref);
-            auto const paths =
-                route(gbfs::get_osr_profile(prod.form_factor_), &sharing, mode);
+            auto const paths = route(gbfs::get_osr_profile(prod.form_factor_),
+                                     &sharing, mode, exact_return_at_from);
             ignore_walk = true;
             for (auto const [p, l] : utl::zip(paths, near_stops)) {
               if (p.has_value()) {
-                offsets.emplace_back(l,
-                                     n::duration_t{static_cast<unsigned>(
-                                         std::ceil(p->cost_ / 60.0))},
-                                     mode);
+                offsets.emplace_back(
+                    l,
+                    n::duration_t{static_cast<unsigned>(
+                        std::ceil(p->duration_.count() / 60.0))},
+                    mode);
               }
             }
           }
@@ -461,10 +471,10 @@ std::vector<n::routing::offset> get_offsets(
       auto const paths = route(profile, nullptr, mode);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
-          offsets.emplace_back(
-              l,
-              n::duration_t{static_cast<unsigned>(std::ceil(p->cost_ / 60.0))},
-              mode);
+          offsets.emplace_back(l,
+                               n::duration_t{static_cast<unsigned>(
+                                   std::ceil(p->duration_.count() / 60.0))},
+                               mode);
         }
       }
     }
