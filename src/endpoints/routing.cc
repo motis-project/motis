@@ -1108,6 +1108,7 @@ api::plan_response routing::route(api::plan_params const& query,
     auto r = n::routing::routing_result{};
     auto algorithm = query.algorithm_;
     auto search_state = n::routing::search_state{};
+    static thread_local auto raptor_state = n::routing::raptor_state{};
 #if defined(NIGIRI_CUDA)
     auto gpu_used = false;
     auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
@@ -1151,7 +1152,6 @@ api::plan_response routing::route(api::plan_params const& query,
 
       if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
         try {
-          auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
               *tt_, rtt, search_state, raptor_state, q,
               query.arriveBy_ ? n::direction::kBackward
@@ -1171,7 +1171,6 @@ api::plan_response routing::route(api::plan_params const& query,
                  !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
                  q.require_bike_transport_ || q.require_car_transport_ ||
                  q.no_compulsory_reservation_) {
-        auto raptor_state = n::routing::raptor_state{};
         r = n::routing::raptor_search(
             *tt_, rtt, search_state, raptor_state, q,
             query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
