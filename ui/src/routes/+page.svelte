@@ -1333,6 +1333,8 @@
 		bind:bearing
 		class="h-dvh pt-2 overflow-clip"
 		style={showMap ? style : undefined}
+		shieldFill={theme === 'dark' ? 'hsl(0, 0%, 16%)' : 'hsl(0, 0%, 98%)'}
+		shieldStroke={theme === 'dark' ? 'hsl(0, 0%, 30%)' : 'hsl(0, 0%, 75%)'}
 		attribution={false}
 	>
 		{#if hasDebug}
