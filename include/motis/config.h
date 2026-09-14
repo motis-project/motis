@@ -144,6 +144,7 @@ struct config {
     bool extend_missing_footpaths_{false};
     std::uint16_t max_footpath_length_{15};
     std::uint16_t default_transfer_time_{2};
+    bool transfer_rule_hubs_{true};
     double max_matching_distance_{25.0};
     double preprocess_max_matching_distance_{250.0};
     std::optional<std::string> default_timezone_{};

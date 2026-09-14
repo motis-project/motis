@@ -198,8 +198,8 @@ void import(config const& c,
         h, t.first_day_, t.num_days_, t.with_shapes_, t.adjust_footpaths_,
         t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
         t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
-        t.max_footpath_length_, t.default_transfer_time_, t.default_timezone_,
-        t.assistance_times_);
+        t.max_footpath_length_, t.default_transfer_time_, t.transfer_rule_hubs_,
+        t.default_timezone_, t.assistance_times_);
   }
 
   auto osm_hash = std::pair{"osm"s, cista::BASE_HASH};
@@ -379,6 +379,7 @@ void import(config const& c,
                            dc.default_reservation_not_required_,
                            dc.clasz_reservation_not_required_),
                        .extend_calendar_ = dc.extend_calendar_,
+                       .transfer_rule_hubs_ = t.transfer_rule_hubs_,
                        .user_script_ =
                            dc.script_
                                .and_then([](std::string const& path) {
