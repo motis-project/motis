@@ -1,0 +1,63 @@
+# syntax=docker/dockerfile:1.7
+#
+# ROCm/HIP variant of the benchmark image (nigiri with NIGIRI_HIP, see
+# motis-project/nigiri#402): same layout as Dockerfile, different toolchain.
+#
+#   DOCKERFILE=Dockerfile.rocm docker/bench/build.sh <image:tag> [--push]
+#
+# The build stage is AMD's dev image (hipcc + HIP SDK); the runtime stage is
+# plain Ubuntu plus the HIP runtime from AMD's apt repo (~1 GB instead of the
+# 7 GB "complete" image). The host only needs the amdgpu kernel driver; run
+# with --device=/dev/kfd --device=/dev/dri --group-add video --group-add render.
+ARG ROCM=7.2.4
+ARG BASE_DEVEL=rocm/dev-ubuntu-24.04:${ROCM}
+ARG BASE_RUNTIME=ubuntu:24.04
+
+FROM ${BASE_DEVEL} AS build
+ARG GCC=14
+ARG HIP_ARCHS=gfx1201
+ARG JOBS=
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      g++-${GCC} cmake ninja-build git python3 ca-certificates rocthrust-dev \
+ && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /opt/pkg && printf '#!/bin/sh\nexit 0\n' > /opt/pkg/pkg \
+ && chmod +x /opt/pkg/pkg
+# host code compiles with g++ (ROCm's clang 20 rejects some of nigiri's C++23);
+# hip-link.cmake hands only the executables' link step to the HIP toolchain,
+# which is what hip::device's propagated --hip-link needs
+COPY --from=bench hip-link.cmake /opt/hip-link.cmake
+WORKDIR /src
+COPY . .
+RUN cmake -G Ninja -S . -B build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER=gcc-${GCC} \
+      -DCMAKE_CXX_COMPILER=g++-${GCC} \
+      -DCMAKE_PROJECT_INCLUDE=/opt/hip-link.cmake \
+      -DCMAKE_PREFIX_PATH=/opt/rocm \
+      -DNIGIRI_HIP=ON \
+      -DCMAKE_HIP_ARCHITECTURES=${HIP_ARCHS} \
+      -DCMAKE_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ \
+ && cmake --build build -j ${JOBS:-$(nproc)} --target motis nigiri-benchmark
+
+FROM ${BASE_RUNTIME}
+ARG ROCM=7.2.4
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      wget gnupg ca-certificates openssh-server curl python3 python3-yaml libnuma1 \
+ && mkdir -p /etc/apt/keyrings \
+ && wget -qO- https://repo.radeon.com/rocm/rocm.gpg.key | gpg --dearmor -o /etc/apt/keyrings/rocm.gpg \
+ && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/${ROCM} noble main" \
+      > /etc/apt/sources.list.d/rocm.list \
+ && printf 'Package: *\nPin: release o=repo.radeon.com\nPin-Priority: 600\n' > /etc/apt/preferences.d/rocm-pin-600 \
+ && apt-get update && apt-get install -y --no-install-recommends hip-runtime-amd rocminfo \
+ && mkdir -p /run/sshd && rm -rf /var/lib/apt/lists/*
+COPY --from=build /src/build/motis /src/build/deps/nigiri/nigiri-benchmark /opt/motis/
+COPY --from=bench fetch-data.sh entrypoint.sh strip-config.py bake-data.sh part-tar.py /opt/motis/
+ENV LD_LIBRARY_PATH=/opt/rocm/lib \
+    DATA_URL=https://api.transitous.org/gtfs/data \
+    DATA_DIR=/data \
+    PATH=/opt/motis:/opt/rocm/bin:$PATH
+WORKDIR /data
+ENTRYPOINT ["/opt/motis/entrypoint.sh"]
+CMD ["bash"]

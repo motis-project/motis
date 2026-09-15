@@ -208,7 +208,9 @@ int generate(int ac, char** av) {
        "the source in terms of geographical distance, overrides lb_rank")  //
       ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
        "randomize locations within bounds, format: GeoJSON"
-       "(shorthand for Europe \"-b europe\")");
+       "(shorthand for Europe \"-b europe\")")  //
+      ("src", po::value<std::string>(),
+       "restrict from/to stops to the ones of this dataset tag");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -316,10 +318,18 @@ int generate(int ac, char** av) {
     fmt::println("station-to-station");
   }
 
+  auto const src_filter =
+      vm.count("src") ? std::optional{d.tags_->get_src(vm["src"].as<std::string>())}
+                      : std::nullopt;
+  utl::verify(!src_filter || *src_filter != n::source_idx_t::invalid(),
+              "unknown dataset tag {}", vm.count("src") ? vm["src"].as<std::string>() : "");
   auto const master_stops = [&] {
     auto v = std::vector<n::location_idx_t>{};
     for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
+      if (src_filter && d.tt_->locations_.src_[l] != *src_filter) {
+        continue;
+      }
 
       if (!in_bounds(d.tt_->locations_.coordinates_[l]) ||
           (use_odm_bounds &&
@@ -336,8 +346,8 @@ int generate(int ac, char** av) {
     return v;
   }();
 
-  if (bounds != nullptr) {
-    fmt::println("in bounds: {}/{} stops", master_stops.size(),
+  if (bounds != nullptr || src_filter) {
+    fmt::println("eligible: {}/{} stops", master_stops.size(),
                  d.tt_->n_locations());
   }
 
