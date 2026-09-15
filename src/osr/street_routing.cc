@@ -1,14 +1,17 @@
 #include "motis/osr/street_routing.h"
-#include <boost/filesystem/path.hpp>
+
 #include <cstddef>
 #include <optional>
 
-#include "osr/routing/path.h"
 #include "utl/concat.h"
 #include "utl/get_or_create.h"
+#include "utl/verify.h"
+
+#include "cista/strong.h"
 
 #include "osr/routing/algorithms.h"
 #include "osr/routing/elevation_profile.h"
+#include "osr/routing/path.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
 
@@ -17,7 +20,6 @@
 #include "motis/polyline.h"
 #include "motis/transport_mode_ids.h"
 #include "motis/update_rtt_td_footpaths.h"
-#include "utl/verify.h"
 
 namespace n = nigiri;
 
@@ -186,16 +188,16 @@ api::ElevationProfile get_elevation_profile(
       w, segments,
       distance / (steps < segments.size() ? steps : segments.size())};
   auto points = std::vector<double>{};
-  auto acc = static_cast<double>(to_idx(profile.baseline_));
+  points.resize(profile.elevation_.size() * 3);
   for (auto i = std::size_t{0}; i < profile.elevation_.size(); ++i) {
-    acc += to_idx(profile.elevation_[i]);
-    points.push_back(profile.points_[i * 2].lat());
-    points.push_back(profile.points_[i * 2 + 1].lng());
-    points.push_back(acc);
+    points[i * 3] = profile.points_[i].lat();
+    points[i * 3 + 1] = profile.points_[i].lng();
+    points[i * 3 + 2] = to_idx(profile.elevation_[i]);
   }
+
   return {.points_ = points,
-          .size_ = static_cast<int64_t>(points.size()),
-          .resolution_ = 0.0,
+          .size_ = static_cast<int64_t>(profile.elevation_.size()),
+          .resolution_ = profile.resolution_,
           .median_ = to_idx(profile.median()),
           .min_ = to_idx(profile.min_),
           .max_ = to_idx(profile.max_),
