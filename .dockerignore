@@ -1,7 +1,0 @@
-**/.git
-docker
-build
-cmake-build-*
-deps/nigiri/build
-**/node_modules
-*.pbf
