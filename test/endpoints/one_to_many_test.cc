@@ -696,21 +696,50 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
   EXPECT_NEAR(1100.6, sd.at(2).distance_.value(), 0.1);
   EXPECT_EQ(api::Duration{}, sd.at(3));
 
+  // Routed transfers are physical walking times: the transfers.txt rows of
+  // the fixture belong to the default profile alone and leave them untouched.
   ASSERT_EQ(4U, td.size());
   ASSERT_EQ(1U, td.at(0).size());
   EXPECT_DOUBLE_EQ(1320.0, td.at(0).at(0).duration_);
   EXPECT_EQ(0, td.at(0).at(0).transfers_);
   ASSERT_EQ(1U, td.at(1).size());
-  // transfers.txt states 4 min for the FFM/DA station transfers, which is
-  // shorter than the routed walk - and a rule wins over the walking time
-  EXPECT_DOUBLE_EQ(1320.0, td.at(1).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1860.0, td.at(1).at(0).duration_);
   EXPECT_EQ(0, td.at(1).at(0).transfers_);
   ASSERT_EQ(1U, td.at(2).size());
-  EXPECT_DOUBLE_EQ(1500.0, td.at(2).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1800.0, td.at(2).at(0).duration_);
   EXPECT_EQ(0, td.at(2).at(0).transfers_);
   ASSERT_EQ(1U, td.at(3).size());
   EXPECT_DOUBLE_EQ(4440.0, td.at(3).at(0).duration_);
   EXPECT_EQ(2, td.at(3).at(0).transfers_);
+
+  // The default profile honours the rows: 4 min between the FFM platforms
+  // and the FFM_B/FFM_C stops, 5 to 9 min around DA - shorter than the
+  // walks, and a rule wins over the walking time.
+  auto const default_durations =
+      one_to_many_post(d)(api::OneToManyIntermodalParams{
+          .one_ = "49.8722160,8.6282315",
+          .many_ = {"49.875292,8.6277460", "49.874995,8.6313925",
+                    "49.871561,8.6320181", "50.111900,8.675208"},
+          .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+          .maxMatchingDistance_ = 25,
+          .useRoutedTransfers_ = false,
+          .withDistance_ = true});
+  auto const& dd = default_durations.transit_durations_.value();
+  ASSERT_EQ(4U, dd.size());
+  ASSERT_EQ(1U, dd.at(0).size());
+  EXPECT_DOUBLE_EQ(1140.0, dd.at(0).at(0).duration_);
+  EXPECT_EQ(0, dd.at(0).at(0).transfers_);
+  ASSERT_EQ(1U, dd.at(1).size());
+  EXPECT_DOUBLE_EQ(1320.0, dd.at(1).at(0).duration_);
+  EXPECT_EQ(0, dd.at(1).at(0).transfers_);
+  ASSERT_EQ(2U, dd.at(2).size());
+  EXPECT_DOUBLE_EQ(1500.0, dd.at(2).at(0).duration_);
+  EXPECT_EQ(0, dd.at(2).at(0).transfers_);
+  EXPECT_DOUBLE_EQ(1440.0, dd.at(2).at(1).duration_);
+  EXPECT_EQ(1, dd.at(2).at(1).transfers_);
+  ASSERT_EQ(1U, dd.at(3).size());
+  EXPECT_DOUBLE_EQ(4440.0, dd.at(3).at(0).duration_);
+  EXPECT_EQ(2, dd.at(3).at(0).transfers_);
 }
 
 TEST(one_to_many, pareto_sets_with_multiple_entries) {

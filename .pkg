@@ -37,7 +37,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=t2t
-  commit=023f58f151a2df5662b6265755319a87fbb13d0c
+  commit=62aace29e7139df46272fd1e5a13385781a54730
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
