@@ -182,6 +182,10 @@ n::routing::td_offsets_t get_td_offsets(
       continue;  // handled by get_offsets
     }
 
+    if (blocked.get() == nullptr) {
+      blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
+    }
+
     utl::equal_ranges_linear(
         get_td_footpaths(*r.w_, *r.l_, *r.pl_, *r.tt_, rtt, *r.loc_tree_, *e,
                          *r.matches_, n::location_idx_t::invalid(), pos, dir,
