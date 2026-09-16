@@ -56,6 +56,7 @@ struct config;
 struct railviz_static_index;
 struct railviz_rt_index;
 struct elevators;
+struct osm_rt_data;
 struct metrics_registry;
 struct way_matches_storage;
 struct data;

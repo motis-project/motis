@@ -41,6 +41,7 @@
 #include "motis/endpoints/update_elevator.h"
 #include "motis/gbfs/update.h"
 #include "motis/metrics_registry.h"
+#include "motis/osm_rt/osm_rt.h"
 #include "motis/rt_update.h"
 
 namespace motis {
@@ -211,20 +212,29 @@ struct motis_instance {
                         run_rt_update(ioc, c, d);
                       }};
     }
+
+    if (d.w_ && d.l_ && c.has_osm_rt_feeds()) {
+      osm_rt_ = io_thread{"motis osm-rt update",
+                          [&](boost::asio::io_context& ioc) {
+                            run_osm_rt_update(ioc, c, d);
+                          }};
+    }
   }
 
   void stop() {
     rt_.stop();
     gbfs_.stop();
+    osm_rt_.stop();
   }
 
   void join() {
     rt_.join();
     gbfs_.join();
+    osm_rt_.join();
   }
 
   net::query_router<Executor> qr_{};
-  io_thread rt_, gbfs_;
+  io_thread rt_, gbfs_, osm_rt_;
 };
 
 }  // namespace motis

@@ -13,6 +13,7 @@ struct osr_routing {
   osr::ways const& w_;
   osr::lookup const& l_;
   std::shared_ptr<rt> const& rt_;
+  std::shared_ptr<osm_rt_data> const& osm_rt_;
 };
 
 }  // namespace motis::ep

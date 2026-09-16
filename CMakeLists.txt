@@ -137,12 +137,34 @@ target_compile_features(itinerary-id-proto PUBLIC cxx_std_23)
 target_link_libraries(itinerary-id-proto protobuf::libprotobuf)
 
 
+# --- OSM-RT PROTOBUF ---
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/osm_rt/osm-rt.pb.h
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/osm_rt/osm-rt.pb.cc
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/osm_rt
+    COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:protoc>
+    --cpp_out=${CMAKE_CURRENT_BINARY_DIR}/generated/osm_rt
+    --proto_path=${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/osm-rt.proto
+    DEPENDS protoc
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/osm-rt.proto
+    COMMENT "Generating OSM-RT protocol buffers C++ code"
+)
+add_library(osm-rt-proto
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/osm_rt/osm-rt.pb.cc)
+target_compile_features(osm-rt-proto PUBLIC cxx_std_23)
+target_link_libraries(osm-rt-proto protobuf::libprotobuf)
+
+
 # --- LIB ---
 file(GLOB_RECURSE motislib-files src/*.cc)
 add_library(motislib ${motislib-files})
 target_include_directories(motislib PUBLIC include)
 target_include_directories(
     motislib PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated/itinerary_id)
+target_include_directories(
+    motislib PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated/osm_rt)
 target_compile_features(motislib PUBLIC cxx_std_23)
 target_compile_options(motislib PRIVATE ${motis-compile-options})
 target_link_libraries(motislib
@@ -153,6 +175,7 @@ target_link_libraries(motislib
     boost-json
     motis-api
     itinerary-id-proto
+    osm-rt-proto
     reflectcpp
     web-server
     tiles

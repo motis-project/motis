@@ -1,0 +1,90 @@
+syntax = "proto2";
+
+option java_package = "org.motisproject.osmrt";
+package osm_rt;
+
+/* OSM-RT Binary format
+
+The purpose of this format is to enable a set of
+real-time layers of additional data on top of OSM data.
+This dynamic data can't or shouldn't be in static OSM data, e.g.:
+- The data might be too dynamic like floating car data (FCD),
+  temporary construction sites, dynamic traffic management, etc.
+- The data might be coming from another data source that is
+  incompatible with OSM (e.g. coming from another system)
+
+Similar to other data standards like CIFS (by Waze) or DATEX II,
+OSM-RT uses the of geometry to reference entities so other systems
+do not have to match their data to OSM entities.
+It's the task of OSM-RT consumers to match this the geometry to OSM data.
+
+OSM-RT is not a delta update stream. A OSM-RT feed update will overwrite
+all preceding realtime information for the feed. Thus each update is
+expected to provide a full snapshot of all known realtime information.
+
+OSM-RT is additive to the baseline OSM file. Every tag previously
+attached to the matched OSM entity will stay valid unless it is
+explicitely overwritten by a tag in the update message.
+This avoids that data producing systems would have to know
+all existing tags in the specific OSM snapshot the consuming system uses.
+
+A data consumer (like a routing engine) can consume to multiple
+OSM-RT endpoints and internally combine the consumed updates.
+
+*/
+
+message FeedMessage {
+  // Metadata about this feed and feed message.
+  required FeedHeader header = 1;
+
+  // Shared string table between all entities.
+  required StringTable stringtable = 3;
+
+  // Contents of the feed.
+  repeated FeedEntity entity = 2;
+}
+
+// Metadata about a feed, included in feed messages.
+message FeedHeader {
+  // Version of the feed specification this message was produced with.
+  // The current version is 1.
+  required uint32 version = 1;
+
+  // Oldest feed specification version this message is still compatible with.
+  // Consumers implementing any version >= compat_version can read this
+  // message. The current value is 1.
+  required uint32 compat_version = 4;
+
+  // This timestamp identifies the moment when the content of this feed has been
+  // created (in server time). In POSIX time (i.e., number of seconds since
+  // January 1st 1970 00:00:00 UTC).
+  optional uint64 timestamp = 3;
+
+  extensions 1000 to 1999;
+}
+
+// String table, contains the common strings in each block.
+//
+// Note that we reserve index '0' as a delimiter, so the entry at that
+// index in the table is ALWAYS blank and unused.
+message StringTable {
+   repeated bytes s = 1;
+}
+
+// Main Update:
+// Reference nodes (single lat/lon pair) or ways (multiple lat/lon pairs).
+// This is a instruction to the data consumer to:
+// - match the geometry to a OSM object
+// - overwrite the tags of the matched OSM object for overlapping tags
+// - extend the tags of the matched OSM object for non-overlapping tags
+message FeedEntity {
+   required int64 id = 1;
+
+   // OSM tagging, references shared string table entries
+   repeated uint32 keys = 2 [packed = true];
+   repeated uint32 vals = 3 [packed = true];
+
+   // Geometry
+   repeated sint64 lat = 8 [packed = true]; // DELTA coded
+   repeated sint64 lon = 9 [packed = true]; // DELTA coded
+}

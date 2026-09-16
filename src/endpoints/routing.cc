@@ -62,6 +62,7 @@
 #include "motis/odm/meta_router.h"
 #include "motis/osr/max_distance.h"
 #include "motis/osr/mode_to_profile.h"
+#include "motis/osm_rt/osm_rt.h"
 #include "motis/osr/street_routing.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
@@ -623,6 +624,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
   }
 
+  auto const osm_rt = std::atomic_load(&osm_rt_);
+  auto const closed = osm_rt == nullptr ? nullptr : &osm_rt->blocked_;
   auto fastest_direct = kInfinityDuration;
   auto cache = street_routing_cache_t{};
   auto itineraries = std::vector<api::Itinerary>{};
@@ -632,7 +635,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         *w_, *l_, e, elevations_, lang, from, to, out,
         arrive_by ? std::nullopt : std::optional{time},
         arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
-        osr_params, cache, *blocked, api_version, detailed_legs, max);
+        osr_params, cache, *blocked, api_version, detailed_legs, max, closed);
     if (itinerary.legs_.empty()) {
       return false;
     }
@@ -829,6 +832,8 @@ api::plan_response routing::route(api::plan_params const& query,
                                   ? nullptr
                                   : rt->rtt_.get();
   auto const e = rt->e_.get();
+  auto const osm_rt = std::atomic_load(&osm_rt_);
+  auto const closed = osm_rt == nullptr ? nullptr : &osm_rt->blocked_;
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
   auto otm_states = one_to_many_states{};
   // Benchmark switch: MOTIS_NO_OTM_STATE=1 routes offset legs again instead
@@ -1266,7 +1271,7 @@ api::plan_response routing::route(api::plan_params const& query,
           return journey_to_response(
               w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
               elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
-              blocked.get(),
+              blocked.get(), closed,
               query.requireCarTransport_ && query.useRoutedTransfers_,
               osr_params, query.pedestrianProfile_, query.elevationCosts_,
               query.joinInterlinedLegs_, detailed_transfers,
@@ -1327,6 +1332,7 @@ api::plan_response routing_post::operator()(
                          .rt_ = rt_,
                          .shapes_ = shapes_,
                          .gbfs_ = gbfs_,
+                         .osm_rt_ = osm_rt_,
                          .ae_ = ae_,
                          .tz_ = tz_,
                          .odm_bounds_ = odm_bounds_,

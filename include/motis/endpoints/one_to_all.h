@@ -26,6 +26,7 @@ struct one_to_all {
   tz_map_t const* tz_;
   way_matches_storage const* way_matches_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  std::shared_ptr<osm_rt_data> const& osm_rt_;
   metrics_registry* metrics_;
 };
 

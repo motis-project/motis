@@ -245,11 +245,24 @@ struct config {
   std::variant<bool, std::optional<elevators>> elevators_{false};
 
   struct street_routing {
+    // OSM-RT feed: a full snapshot of realtime tag overrides on OSM
+    // geometry (e.g. road closures), fetched periodically. Matched entities
+    // with access-blocking tags are mapped to blocked routing nodes.
+    struct osm_rt {
+      bool operator==(osm_rt const&) const = default;
+      std::string url_;
+      std::optional<headers_t> headers_{};
+    };
+
     bool operator==(street_routing const&) const = default;
     std::optional<std::filesystem::path> elevation_data_dir_;
+    std::map<std::string, osm_rt> osm_rt_{};
+    unsigned osm_rt_update_interval_{60};
+    unsigned osm_rt_http_timeout_{30};
   };
 
   std::optional<street_routing> get_street_routing() const;
+  bool has_osm_rt_feeds() const;
 
   std::variant<bool, std::optional<street_routing>> street_routing_{false};
 

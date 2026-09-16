@@ -290,6 +290,11 @@ std::optional<config::street_routing> config::get_street_routing() const {
       street_routing_);
 }
 
+bool config::has_osm_rt_feeds() const {
+  auto const sr = get_street_routing();
+  return sr.has_value() && !sr->osm_rt_.empty();
+}
+
 bool config::use_street_routing() const {
   return std::visit(
       utl::overloaded{

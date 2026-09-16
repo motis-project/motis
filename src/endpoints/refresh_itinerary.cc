@@ -56,6 +56,7 @@ ep::routing make_routing(Endpoint const& ep) {
                      .rt_ = ep.rt_,
                      .shapes_ = ep.shapes_,
                      .gbfs_ = ep.gbfs_,
+                     .osm_rt_ = ep.osm_rt_,
                      .ae_ = ep.ae_,
                      .tz_ = ep.tz_,
                      .odm_bounds_ = ep.odm_bounds_,

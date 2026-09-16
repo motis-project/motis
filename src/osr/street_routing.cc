@@ -232,6 +232,7 @@ api::Itinerary street_routing(osr::ways const& w,
                               unsigned const api_version,
                               bool const detailed_leg,
                               std::chrono::seconds const max,
+                              osr::bitvec<osr::node_idx_t> const* closed,
                               precomputed_route const& precomputed) {
   utl::verify(start_time.has_value() || end_time.has_value(),
               "either start_time or end_time must be set");
@@ -260,14 +261,26 @@ api::Itinerary street_routing(osr::ways const& w,
     if (precomputed.state_ != nullptr) {
       return precomputed.state_->reconstruct(w, l, precomputed.dest_idx_);
     }
-    auto const& [e_nodes, e_states] = *s;
     auto const profile = out.get_profile();
+    auto blocked = static_cast<osr::bitvec<osr::node_idx_t> const*>(nullptr);
+    if (s.has_value() || closed != nullptr) {
+      if (s.has_value()) {
+        auto const& [e_nodes, e_states] = *s;
+        set_blocked(e_nodes, e_states, blocked_mem);
+      } else {
+        blocked_mem.zero_out();
+      }
+      if (closed != nullptr) {
+        closed->for_each_set_bit(
+            [&](osr::node_idx_t const n) { blocked_mem.set(n, true); });
+      }
+      blocked = &blocked_mem;
+    }
     return osr::route(
         to_profile_parameters(profile, osr_params), w, l, profile, from, to,
         static_cast<osr::cost_t>(max.count()), osr_dir, max_matching_distance,
-        s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-        out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi,
-        osr_start_time);
+        blocked, out.get_sharing_data(), elevations,
+        osr::routing_algorithm::kAStarBi, osr_start_time);
   });
 
   if (!path.has_value()) {

@@ -42,6 +42,7 @@
 
 #include "motis/constants.h"
 #include "motis/data.h"
+#include "motis/osm_rt/osm_rt.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/flex/mode_id.h"
@@ -723,6 +724,8 @@ api::Itinerary reconstruct_itinerary(
   if (routing.is_osr_loaded()) {
     blocked.resize(stop_times_ep.w_->n_nodes());
   }
+  auto const osm_rt = std::atomic_load(&routing.osm_rt_);
+  auto const closed = osm_rt == nullptr ? nullptr : &osm_rt->blocked_;
 
   // === Helpers ===
   auto const is_transit = [](leg const& l) {
@@ -778,7 +781,8 @@ api::Itinerary reconstruct_itinerary(
                 .dest_time_ = l.arr_time_,
                 .dest_ = l.to_,
                 .transfers_ = 0},
-               from_place, to_place, cache, &blocked, prf_idx == n::kCarProfile,
+               from_place, to_place, cache, &blocked, closed,
+               prf_idx == n::kCarProfile,
                flm.osr_params_, flm.pedestrian_profile_, flm.elevation_costs_,
                join_interlined_legs, detailed_transfers, detailed_legs,
                /*with_fares=*/false, with_scheduled_skipped_stops,

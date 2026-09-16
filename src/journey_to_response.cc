@@ -342,6 +342,7 @@ api::Itinerary journey_to_response(
     place_t const& dest,
     street_routing_cache_t& cache,
     osr::bitvec<osr::node_idx_t>* blocked_mem,
+    osr::bitvec<osr::node_idx_t> const* closed,
     bool const car_transfers,
     osr_parameters const& osr_params,
     api::PedestrianProfileEnum const pedestrian_profile,
@@ -537,7 +538,7 @@ api::Itinerary journey_to_response(
                      n::is_special(alt_to_loc)
                          ? alt_dest
                          : place_t{tt_location{alt_to_loc}},
-                     cache, blocked_mem, car_transfers, osr_params,
+                     cache, blocked_mem, closed, car_transfers, osr_params,
                      pedestrian_profile, elevation_costs, join_interlined_legs,
                      detailed_transfers, detailed_legs, with_fares,
                      with_scheduled_skipped_stops,
@@ -818,7 +819,8 @@ api::Itinerary journey_to_response(
                                true,
                                std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_) +
-                                   std::chrono::minutes{10})
+                                   std::chrono::minutes{10},
+                               closed)
                          : dummy_itinerary(from, to, api::ModeEnum::WALK,
                                            j_leg.dep_time_, j_leg.arr_time_,
                                            api_version));
@@ -887,7 +889,7 @@ api::Itinerary journey_to_response(
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +
                       std::chrono::minutes{5},
-                  precomputed));
+                  closed, precomputed));
             }},
         j_leg.uses_);
   }

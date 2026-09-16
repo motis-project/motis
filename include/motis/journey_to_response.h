@@ -74,6 +74,7 @@ api::Itinerary journey_to_response(
     place_t const& dest,
     street_routing_cache_t&,
     osr::bitvec<osr::node_idx_t>* blocked_mem,
+    osr::bitvec<osr::node_idx_t> const* closed,
     bool car_transfers,
     osr_parameters const&,
     api::PedestrianProfileEnum,

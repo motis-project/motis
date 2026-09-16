@@ -134,6 +134,7 @@ struct routing {
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  std::shared_ptr<osm_rt_data> const& osm_rt_;
   adr_ext const* ae_;
   tz_map_t const* tz_;
   odm::bounds const* odm_bounds_;
@@ -163,6 +164,7 @@ struct routing_post {
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  std::shared_ptr<osm_rt_data> const& osm_rt_;
   adr_ext const* ae_;
   tz_map_t const* tz_;
   odm::bounds const* odm_bounds_;

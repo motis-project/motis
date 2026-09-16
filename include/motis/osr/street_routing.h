@@ -116,6 +116,8 @@ api::Itinerary street_routing(osr::ways const&,
                               bool detailed_leg = true,
                               std::chrono::seconds max =
                                   std::chrono::seconds{3600},
+                              osr::bitvec<osr::node_idx_t> const* closed =
+                                  nullptr,
                               precomputed_route const& precomputed = {});
 
 }  // namespace motis

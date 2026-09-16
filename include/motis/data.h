@@ -102,7 +102,7 @@ struct data {
                     w_, pl_, l_, elevations_, tt_, tbd_, tags_, location_rtree_,
                     elevator_nodes_, elevator_osm_mapping_, shapes_,
                     railviz_static_, matches_, way_matches_, rt_, gbfs_,
-                    odm_bounds_, ride_sharing_bounds_, flex_areas_, metrics_,
+                    osm_rt_, odm_bounds_, ride_sharing_bounds_, flex_areas_, metrics_,
                     auser_
 #if defined(NIGIRI_CUDA)
                     ,
@@ -139,6 +139,7 @@ struct data {
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
+  std::shared_ptr<osm_rt_data> osm_rt_{};
   ptr<odm::bounds> odm_bounds_;
   ptr<odm::ride_sharing_bounds> ride_sharing_bounds_;
   ptr<flex::flex_areas> flex_areas_;

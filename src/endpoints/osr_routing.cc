@@ -6,6 +6,7 @@
 #include "osr/routing/route.h"
 
 #include "motis/data.h"
+#include "motis/osm_rt/osm_rt.h"
 #include "motis/osr/parameters.h"
 
 namespace json = boost::json;
@@ -23,6 +24,7 @@ osr::location parse_location(json::value const& v) {
 json::value osr_routing::operator()(json::value const& query) const {
   auto const rt = std::atomic_load(&rt_);
   auto const e = rt->e_.get();
+  auto const osm_rt = std::atomic_load(&osm_rt_);
 
   auto const& q = query.as_object();
   auto const profile_it = q.find("profile");
@@ -40,9 +42,21 @@ json::value osr_routing::operator()(json::value const& query) const {
   auto const max_it = q.find("max");
   auto const max = static_cast<osr::cost_t>(
       max_it == q.end() ? 3600 : max_it->value().as_int64());
+  auto merged = osr::bitvec<osr::node_idx_t>{};
+  auto blocked = static_cast<osr::bitvec<osr::node_idx_t> const*>(nullptr);
+  if (e != nullptr && osm_rt != nullptr) {
+    merged = e->blocked_;
+    osm_rt->blocked_.for_each_set_bit(
+        [&](osr::node_idx_t const n) { merged.set(n, true); });
+    blocked = &merged;
+  } else if (e != nullptr) {
+    blocked = &e->blocked_;
+  } else if (osm_rt != nullptr) {
+    blocked = &osm_rt->blocked_;
+  }
   auto const p =
       route(to_profile_parameters(profile, {}), w_, l_, profile, from, to, max,
-            dir, 8, e == nullptr ? nullptr : &e->blocked_);
+            dir, 8, blocked);
   return p.has_value()
              ? json::value{{"type", "FeatureCollection"},
                            {"metadata",
