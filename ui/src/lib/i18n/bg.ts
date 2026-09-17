@@ -215,7 +215,9 @@ const translations: Translations = {
 		isochronesFrom: (place) => `Достъпен периметър от ${place}`
 	},
 	tickets: 'Билети',
-	routeInformation: 'Допълнителна информация'
+	routeInformation: 'Допълнителна информация',
+	history: 'История',
+	clearHistory: 'Изчистване на историята'
 };
 
 export default translations;

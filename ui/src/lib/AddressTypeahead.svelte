@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
 	import { geocode, type LocationType, type Match, type Mode } from '@motis-project/motis-client';
-	import { MapPinHouse as House, MapPin as Place } from '@lucide/svelte';
+	import { MapPinHouse as House, MapPin as Place, Trash2 } from '@lucide/svelte';
 	import { parseCoordinatesToLocation, type Location } from './Location';
-	import { language } from './i18n/translation';
+	import { language, t } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';
 	import { getModeStyle, type LegLike } from './modeStyle';
+	import { clearHistoryLocations, getHistoryLocations, recordHistoryLocation } from './history';
 
 	let {
 		items = $bindable([]),
@@ -29,6 +30,30 @@
 
 	let inputValue = $state('');
 	let match = $state('');
+	let open = $state(false);
+
+	let inputWasNotEmpty = $state(false);
+	let favTimer: ReturnType<typeof setTimeout>;
+
+	const historyForType = () => {
+		const locations = getHistoryLocations();
+		return type ? locations.filter((l) => l.match?.type === type) : locations;
+	};
+
+	$effect(() => {
+		clearTimeout(favTimer);
+		if (inputValue) {
+			return;
+		}
+		if (inputWasNotEmpty) {
+			items = historyForType();
+		}
+		favTimer = setTimeout(() => {
+			items = historyForType();
+		}, 200);
+	});
+
+	const showHistoryHint = $derived(!inputValue && items.length > 0);
 
 	const getDisplayArea = (match: Match | undefined) => {
 		if (match) {
@@ -65,6 +90,7 @@
 	const updateGuesses = async () => {
 		const coord = parseCoordinatesToLocation(inputValue);
 		if (coord) {
+			clearTimeout(favTimer);
 			selected = coord;
 			items = [];
 			onChange(selected);
@@ -144,10 +170,13 @@
 	type="single"
 	allowDeselect={false}
 	value={match}
+	bind:open
 	onValueChange={(e: string) => {
 		if (e) {
+			clearTimeout(favTimer);
 			selected = deserialize(e);
 			inputValue = selected.label!;
+			recordHistoryLocation(selected);
 			onChange(selected);
 		}
 	}}
@@ -159,6 +188,12 @@
 		class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 		autocomplete="off"
 		oninput={(e: Event) => (inputValue = (e.currentTarget as HTMLInputElement).value)}
+		onfocus={() => {
+			if (!inputValue) {
+				items = historyForType();
+				open = true;
+			}
+		}}
 		aria-label={placeholder}
 		data-combobox-input={inputValue}
 	/>
@@ -168,6 +203,23 @@
 				align="start"
 				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-50 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
 			>
+				{#if showHistoryHint}
+					<div class="flex items-center justify-between border-b px-4 py-2 text-sm text-foreground">
+						<span>{t.history}</span>
+
+						<button
+							class="rounded p-1 hover:bg-accent"
+							onclick={() => {
+								clearHistoryLocations();
+								items = historyForType();
+							}}
+							aria-label="Clear history"
+						>
+							<Trash2 class="size-4" />
+						</button>
+					</div>
+				{/if}
+
 				{#each items as item (item.match)}
 					<Combobox.Item
 						class="flex w-full cursor-default select-none rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
