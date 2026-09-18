@@ -199,8 +199,7 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     n::source_idx_t src,
     tag_lookup const& tags,
     n::rt::run_stop const& enter_stop,
-    n::rt::run_stop const& exit_stop,
-    n::interval<n::stop_idx_t> const trip_range) {
+    n::rt::run_stop const& exit_stop) {
   if (!enter_stop.fr_->is_scheduled()) {
     return std::nullopt;
   }
@@ -264,14 +263,14 @@ std::optional<api::TicketUrls> get_ticketing_urls(
                              n::event_type const ev) -> std::string {
       auto const trip = s.get_trip_idx(ev);
       auto first = s.stop_idx_;
-      while (first > trip_range.from_ &&
+      while (first > 0U &&
              (*s.fr_)[static_cast<n::stop_idx_t>(first - 1U)].get_trip_idx(
                  n::event_type::kDep) == trip) {
         --first;
       }
       auto const seq_nums = nigiri::loader::gtfs::stop_seq_number_range{
           {tt.trip_stop_seq_numbers_[trip]},
-          static_cast<nigiri::stop_idx_t>(trip_range.size())};
+          s.fr_->size()};
       return std::to_string(
           *(seq_nums.begin() + static_cast<unsigned>(s.stop_idx_ - first)));
     };
@@ -720,7 +719,7 @@ api::Itinerary journey_to_response(
 
                     .ticketUrls_ =
                         get_ticketing_urls(tt, fr.id().src_, tags, enter_stop,
-                                           exit_stop, subrange)});
+                                           exit_stop)});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop

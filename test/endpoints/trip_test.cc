@@ -13,6 +13,7 @@
 
 #include "motis/config.h"
 #include "motis/data.h"
+#include "motis/endpoints/routing.h"
 #include "motis/endpoints/trip.h"
 #include "motis/import.h"
 #include "motis/rt/auser.h"
@@ -330,6 +331,41 @@ TEST(motis, trip_ticketing_interlined_joined) {
         std::string::npos,
         leg.ticketUrls_->web_->find("to_ticketing_stop_time_id=%5B%223%22%5D"));
   }
+}
+
+// Boarding in the middle of T1 (S3) and leaving in the middle of T2 (S6) makes
+// the leg's stop range start mid-trip. The stop_time ids must still be the
+// stop_sequence numbers of the stops within their own trips (3 and 2), not
+// offsets relative to the start of the leg.
+TEST(motis, trip_ticketing_interlined_mid_trip_plan) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+
+  auto const routing_ep = utl::init_from<ep::routing>(d).value();
+
+  auto const res = routing_ep(
+      "?fromPlace=test_S3&toPlace=test_S6&time=2019-05-01T08:00Z"
+      "&joinInterlinedLegs=true");
+  ASSERT_EQ(1, res.itineraries_.size());
+
+  auto const& legs = res.itineraries_.front().legs_;
+  ASSERT_EQ(1, legs.size());
+  ASSERT_TRUE(legs[0].ticketUrls_.has_value());
+  EXPECT_NE(std::string::npos,
+            legs[0].ticketUrls_->web_->find(
+                "from_ticketing_stop_time_id=%5B%223%22%5D"));
+  EXPECT_NE(std::string::npos, legs[0].ticketUrls_->web_->find(
+                                   "to_ticketing_stop_time_id=%5B%222%22%5D"));
 }
 
 constexpr auto kNetex = R"(
