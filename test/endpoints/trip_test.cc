@@ -299,6 +299,39 @@ TEST(motis, trip_ticketing_interlined) {
   }
 }
 
+TEST(motis, trip_ticketing_interlined_joined) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+
+  auto const trip_ep = utl::init_from<ep::trip>(d).value();
+
+  for (auto const* const trip_id :
+       {"20190501_10%3A00_test_T1", "20190501_10%3A45_test_T2"}) {
+    auto const res =
+        trip_ep(fmt::format("?tripId={}&joinInterlinedLegs=true", trip_id));
+    ASSERT_EQ(1, res.legs_.size());
+
+    auto const& leg = res.legs_[0];
+    ASSERT_TRUE(leg.ticketUrls_.has_value());
+    EXPECT_NE(std::string::npos,
+              leg.ticketUrls_->web_->find(
+                  "from_ticketing_stop_time_id=%5B%221%22%5D"));
+    EXPECT_NE(
+        std::string::npos,
+        leg.ticketUrls_->web_->find("to_ticketing_stop_time_id=%5B%223%22%5D"));
+  }
+}
+
 constexpr auto kNetex = R"(
 # netex.xml
 <?xml version="1.0" encoding="UTF-8"?>
