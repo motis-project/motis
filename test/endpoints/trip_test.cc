@@ -333,10 +333,6 @@ TEST(motis, trip_ticketing_interlined_joined) {
   }
 }
 
-// Boarding in the middle of T1 (S3) and leaving in the middle of T2 (S6) makes
-// the leg's stop range start mid-trip. The stop_time ids must still be the
-// stop_sequence numbers of the stops within their own trips (3 and 2), not
-// offsets relative to the start of the leg.
 TEST(motis, trip_ticketing_interlined_mid_trip_plan) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
