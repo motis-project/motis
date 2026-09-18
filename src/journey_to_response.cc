@@ -14,6 +14,7 @@
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
+#include "utl/verify.h"
 #include "utl/visit.h"
 
 #include "adr/typeahead.h"
@@ -262,17 +263,20 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     auto const seq_num = [&](n::rt::run_stop const& s,
                              n::event_type const ev) -> std::string {
       auto const trip = s.get_trip_idx(ev);
-      auto first = s.stop_idx_;
-      while (first > 0U &&
-             (*s.fr_)[static_cast<n::stop_idx_t>(first - 1U)].get_trip_idx(
-                 n::event_type::kDep) == trip) {
-        --first;
-      }
+      auto const trip_stops = [&]() {
+        for (auto const& [t, stops] : tt.trip_transport_ranges_[trip]) {
+          if (t == s.fr_->t_.t_idx_) {
+            return stops;
+          }
+        }
+        throw utl::fail("trip not part of transport");
+      }();
       auto const seq_nums = nigiri::loader::gtfs::stop_seq_number_range{
           {tt.trip_stop_seq_numbers_[trip]},
-          s.fr_->size()};
+          static_cast<n::stop_idx_t>(trip_stops.size())};
       return std::to_string(
-          *(seq_nums.begin() + static_cast<unsigned>(s.stop_idx_ - first)));
+          *(seq_nums.begin() +
+            static_cast<unsigned>(s.stop_idx_ - trip_stops.from_)));
     };
 
     auto const from = from_id.has_value()
@@ -717,9 +721,8 @@ api::Itinerary journey_to_response(
                             ? api::ReservationEnum::NONE
                             : api::ReservationEnum::COMPULSORY,
 
-                    .ticketUrls_ =
-                        get_ticketing_urls(tt, fr.id().src_, tags, enter_stop,
-                                           exit_stop)});
+                    .ticketUrls_ = get_ticketing_urls(tt, fr.id().src_, tags,
+                                                      enter_stop, exit_stop)});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
