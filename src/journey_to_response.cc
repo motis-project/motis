@@ -115,11 +115,19 @@ std::optional<std::vector<api::Alert>> get_alerts(
       s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs) {
          return std::optional{rs.first.get_location_idx()};
        }).value_or(n::location_idx_t::invalid());
+  // Stop event for a stop, first departure to last arrival for a leg: nigiri
+  // drops alerts whose impact period does not overlap this span.
+  auto const from = s.has_value() ? s->first.time(s->second)
+                                  : fr[0].time(n::event_type::kDep);
+  auto const to =
+      s.has_value() ? from : fr[fr.size() - 1U].time(n::event_type::kArr);
+  auto const time = n::interval{from, to + n::duration_t{1}};
+
   auto alerts = std::vector<api::Alert>{};
   for (auto const& t : tt.trip_ids_[x]) {
     auto const src = tt.trip_id_src_[t];
     for (auto const& a :
-         rtt->alerts_.get_alerts(tt, src, x, fr.rt_, l, fuzzy_stop)) {
+         rtt->alerts_.get_alerts(tt, src, x, fr.rt_, l, fuzzy_stop, time)) {
       alerts.emplace_back(call_to_alert(a));
     }
   }
