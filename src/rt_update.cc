@@ -1,6 +1,9 @@
 #include "motis/rt_update.h"
 
+#include <algorithm>
 #include <filesystem>
+#include <map>
+#include <variant>
 
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
@@ -348,10 +351,40 @@ awaitable<void> update_rt(config const& c,
   d.metrics_->last_update_rt_.SetToCurrentTime();
 }
 
+// The day a canned dump was written: the most common day among the GTFS-RT
+// feed header timestamps. Event times are stored relative to the base day of
+// the rt timetable and clamped, so a dump replayed weeks later must not be
+// based on the wall clock - its updates would all be clamped away.
+date::sys_days get_canned_day(endpoints_t const& endpoints) {
+  auto days = std::map<date::sys_days, unsigned>{};
+  for (auto const& ep : endpoints) {
+    if (!std::holds_alternative<gtfs_rt_endpoint>(ep)) {
+      continue;
+    }
+    auto const body =
+        utl::read_file(get_dump_path(std::get<gtfs_rt_endpoint>(ep)).c_str());
+    auto msg = transit_realtime::FeedMessage{};
+    if (body.has_value() &&
+        msg.ParseFromArray(body->data(), static_cast<int>(body->size())) &&
+        msg.header().timestamp() != 0U) {
+      ++days[std::chrono::time_point_cast<date::days>(std::chrono::sys_seconds{
+          std::chrono::seconds{msg.header().timestamp()}})];
+    }
+  }
+  if (days.empty()) {
+    return std::chrono::time_point_cast<date::days>(
+        std::chrono::system_clock::now());
+  }
+  return std::max_element(
+             begin(days), end(days),
+             [](auto const& a, auto const& b) { return a.second < b.second; })
+      ->first;
+}
+
 void apply_canned_rt_update(config const& c, data& d) {
   auto const endpoints = make_endpoints(c, d);
-  auto const today = std::chrono::time_point_cast<date::days>(
-      std::chrono::system_clock::now());
+  auto const today = get_canned_day(endpoints);
+  fmt::println("canned rt: base day {}", today);
   auto rtt = std::make_unique<n::rt_timetable>(
       n::rt::create_rt_timetable(*d.tt_, today));
   apply_canned(d, endpoints, *rtt);
