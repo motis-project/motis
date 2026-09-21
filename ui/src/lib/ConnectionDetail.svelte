@@ -162,9 +162,7 @@
 							{p.name}
 						</Button>
 
-						{#if isStartOrEnd != 0}
-							<Alerts alerts={p.alerts} tz={p.tz} variant="icon" />
-						{/if}
+						<Alerts alerts={p.alerts} tz={p.tz} variant="icon" />
 					</div>
 					{#if p.track && !hidePlatform}
 						{@const fullName =
