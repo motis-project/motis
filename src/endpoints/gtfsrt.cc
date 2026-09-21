@@ -85,8 +85,11 @@ void add_trip_updates(n::timetable const& tt,
           return;
         }
         stu = tu->add_stop_time_update();
-        stu->set_stop_id(
-            tt.locations_.ids_[s.get_stop().location_idx()].view());
+        // a virtual location (transfers.txt rules) has no id: it is its stop
+        stu->set_stop_id(tt.locations_
+                             .ids_[tt.locations_.get_attribute_idx(
+                                 s.get_stop().location_idx())]
+                             .view());
         stu->set_stop_sequence(*seq_it);
       };
 

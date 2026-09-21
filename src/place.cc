@@ -136,6 +136,8 @@ api::Place to_place(n::timetable const* tt,
               }
               l = std::get<tt_location>(dest).l_;
             }
+            // a virtual location (transfers.txt rules) is its stop
+            l = tt->locations_.get_attribute_idx(l);
             auto const get_track = [&](n::location_idx_t const x) {
               auto const p =
                   tt->translate(lang, tt->locations_.platform_codes_.at(
