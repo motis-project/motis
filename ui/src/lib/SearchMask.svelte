@@ -140,7 +140,6 @@
 		placeholder={t.from}
 		bind:selected={from}
 		bind:items={fromItems}
-		{transitModes}
 	/>
 	<AddressTypeahead
 		place={geocodingBiasPlace}
@@ -148,7 +147,6 @@
 		placeholder={t.to}
 		bind:selected={to}
 		bind:items={toItems}
-		{transitModes}
 	/>
 	<Button
 		variant="ghost"
