@@ -1,6 +1,8 @@
 #pragma once
 
 #include <optional>
+#include <string_view>
+#include <vector>
 
 #include "osr/location.h"
 
@@ -82,6 +84,15 @@ osr::location get_location(nigiri::timetable const*,
 place_t get_place(nigiri::timetable const*,
                   tag_lookup const*,
                   std::string_view user_input);
+
+// Checks all codes with the tag_lookup and throws a single
+// net::not_found_exception listing every unknown code in its "unknownCodes"
+// payload instead of failing at the first unknown one. Inputs in
+// `may_be_coords` may alternatively be "lat,lng[,level]" coordinates.
+void verify_locations_exist(nigiri::timetable const*,
+                            tag_lookup const*,
+                            std::vector<std::string_view> const& may_be_coords,
+                            std::vector<std::string_view> const& codes);
 
 api::Place bwd_compat_lvl_adjust(api::Place&& pl, unsigned api_version);
 
