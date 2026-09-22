@@ -1,5 +1,7 @@
 import type {
+	ExpressionSpecification,
 	HillshadeLayerSpecification,
+	LayerSpecification,
 	RasterDEMSourceSpecification,
 	StyleSpecification
 } from 'maplibre-gl';
@@ -79,9 +81,7 @@ export const colors = {
 		text: '#333333',
 		textHalo: 'rgba(255, 255, 255, 0.8)',
 		citiesText: 'hsl(0, 0%, 20%)',
-		citiesTextHalo: 'rgba(255, 255, 255, 0.8)',
-
-		shield: 'shield'
+		citiesTextHalo: 'rgba(255, 255, 255, 0.8)'
 	},
 	dark: {
 		background: '#292929',
@@ -157,11 +157,40 @@ export const colors = {
 		townText: '#bebebe',
 		townTextHalo: 'rgba(0, 0, 0, 0.8)',
 		citiesText: '#bebebe',
-		citiesTextHalo: 'rgba(0, 0, 0, 0.8)',
-
-		shield: 'shield-dark'
+		citiesTextHalo: 'rgba(0, 0, 0, 0.8)'
 	}
 };
+
+function landuseLayer(id: string, color: string, kind: string[]): LayerSpecification {
+	return {
+		id: id,
+		type: 'fill',
+		source: 'osm',
+		'source-layer': 'land',
+		filter: ['in', 'kind', ...kind],
+		paint: {
+			'fill-color': color,
+			// soft fade-in like VersaTiles land layers
+			'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+		}
+	};
+}
+
+const roadWidthInterpolation: ExpressionSpecification = [
+	'interpolate',
+	['linear'],
+	['zoom'],
+	5,
+	['*', ['var', 'base'], 0.5],
+	9,
+	['*', ['var', 'base'], 1],
+	12,
+	['*', ['var', 'base'], 2],
+	16,
+	['*', ['var', 'base'], 2.5],
+	20,
+	['*', ['var', 'base'], 3]
+];
 
 function getUrlBase(url: string): string {
 	const { origin, pathname } = new URL(url);
@@ -239,121 +268,103 @@ export const getStyle = (
 				'source-layer': 'coastline',
 				paint: { 'fill-color': c.water }
 			},
+			landuseLayer('landuse-park', c.landusePark, [
+				'park',
+				'garden',
+				'playground',
+				'miniature_golf',
+				'golf_course',
+				'village_green',
+				'recreation_ground',
+				'greenhouse_horticulture',
+				'allotments'
+			]),
+			landuseLayer('landuse-commercial', c.landuseCommercial, ['commercial']),
+			landuseLayer('landuse-industrial', c.landuseIndustrial, [
+				'industrial',
+				'railway',
+				'quarry',
+				'farmyard',
+				'landfill',
+				'garages'
+			]),
+			landuseLayer('landuse-residential', c.landuseResidential, ['residential']),
+			landuseLayer('landuse-retail', c.landuseRetail, ['retail']),
+			landuseLayer('landuse-agriculture', c.landuseAgriculture, ['brownfield', 'greenfield']), // agriculture group in the VersaTiles Shortbread style
+			landuseLayer('landuse-construction', c.landuseConstruction, [
+				'bare_rock',
+				'scree',
+				'shingle'
+			]),
+			landuseLayer('landuse-nature_light', c.landuseNatureLight, [
+				'farmland',
+				'vineyard',
+				'plant_nursery',
+				'orchard',
+				'meadow',
+				'grassland',
+				'grass',
+				'heath',
+				'swamp',
+				'bog',
+				'string_bog',
+				'wet_meadow',
+				'marsh'
+			]),
+			landuseLayer('landuse-nature_heavy', c.landuseNatureHeavy, ['forest', 'scrub']),
+			landuseLayer('landuse-cemetery', c.landuseCemetery, ['cemetery', 'grave_yard']),
+			landuseLayer('landuse-beach', c.landuseBeach, ['beach', 'sand']),
 			{
-				id: 'landuse_park',
-				type: 'fill',
-				source: 'osm',
-				'source-layer': 'land',
-				filter: [
-					'in',
-					'kind',
-					'park',
-					'garden',
-					'playground',
-					'miniature_golf',
-					'golf_course',
-					'village_green',
-					'recreation_ground',
-					'greenhouse_horticulture',
-					'allotments'
-				],
-				paint: {
-					'fill-color': c.landusePark,
-					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
-				}
-			},
-			{
-				id: 'landuse',
-				type: 'fill',
-				source: 'osm',
-				'source-layer': 'land',
-				filter: [
-					'!in',
-					'kind',
-					'park',
-					'garden',
-					'playground',
-					'miniature_golf',
-					'golf_course',
-					'village_green',
-					'recreation_ground',
-					'greenhouse_horticulture',
-					'allotments',
-					'public_transport'
-				],
-				paint: {
-					'fill-color': [
-						'match',
-						['get', 'kind'],
-						'commercial',
-						c.landuseCommercial,
-						['industrial', 'railway', 'quarry', 'farmyard', 'landfill', 'garages'],
-						c.landuseIndustrial,
-						'residential',
-						c.landuseResidential,
-						'retail',
-						c.landuseRetail,
-						// agriculture group in the VersaTiles Shortbread style
-						['brownfield', 'greenfield'],
-						c.landuseAgriculture,
-						['bare_rock', 'scree', 'shingle'],
-						c.landuseConstruction,
-
-						[
-							'farmland',
-							'vineyard',
-							'plant_nursery',
-							'orchard',
-							'meadow',
-							'grassland',
-							'grass',
-							'heath',
-							'swamp',
-							'bog',
-							'string_bog',
-							'wet_meadow',
-							'marsh'
-						],
-						c.landuseNatureLight,
-						['forest', 'scrub'],
-						c.landuseNatureHeavy,
-						['cemetery', 'grave_yard'],
-						c.landuseCemetery,
-						['beach', 'sand'],
-						c.landuseBeach,
-
-						'magenta'
-					],
-					// soft fade-in like VersaTiles land layers
-					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
-				}
-			},
-			{
-				id: 'sites',
+				id: 'sites-complex',
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'sites',
 				// construction is rendered by its own pattern layer below
-				filter: ['!=', 'kind', 'construction'],
+				filter: ['in', 'kind', 'university', 'school', 'college', 'prison'],
 				paint: {
-					'fill-color': [
-						'match',
-						['get', 'kind'],
-						['university', 'school', 'college', 'prison'],
-						c.landuseComplex,
-						// like VersaTiles: translucent red
-						'hospital',
-						c.siteHospital,
-						'sports_center',
-						c.sport,
-						'danger_area',
-						c.landuseConstruction,
-						['parking', 'bicycle_parking'],
-						c.pedestrian,
-
-						'magenta'
-					],
-					'fill-opacity': ['match', ['get', 'kind'], 'hospital', 0.1, 1]
+					'fill-color': c.landuseComplex
+				}
+			},
+			{
+				id: 'sites-hospital',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['==', 'kind', 'hospital'],
+				paint: {
+					// like VersaTiles: translucent red
+					'fill-color': c.siteHospital,
+					'fill-opacity': 0.1
+				}
+			},
+			{
+				id: 'sites-sport',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['==', 'kind', 'sports_center'],
+				paint: {
+					'fill-color': c.sport
+				}
+			},
+			{
+				id: 'sites-pedestrian',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['in', 'kind', 'parking', 'bicycle_parking'],
+				paint: {
+					'fill-color': c.pedestrian
+				}
+			},
+			{
+				id: 'sites-danger',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['==', 'kind', 'danger_area'],
+				paint: {
+					'fill-color': c.landuseConstruction
 				}
 			},
 			{
@@ -370,13 +381,24 @@ export const getStyle = (
 				}
 			},
 			{
+				id: 'water-glacier',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'water_polygons',
+				filter: ['==', 'kind', 'glacier'],
+				paint: {
+					// glaciers white like in VersaTiles
+					'fill-color': c.glacier
+				}
+			},
+			{
 				id: 'water',
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'water_polygons',
+				filter: ['!=', 'kind', 'glacier'],
 				paint: {
-					// glaciers white like in VersaTiles
-					'fill-color': ['match', ['get', 'kind'], 'glacier', c.glacier, c.water]
+					'fill-color': c.water
 				}
 			},
 			// dams and piers like in VersaTiles
@@ -834,7 +856,7 @@ export const getStyle = (
 				}
 			},
 			{
-				id: 'road',
+				id: 'road-motorway',
 				type: 'line',
 				source: 'osm',
 				'source-layer': 'streets',
@@ -851,6 +873,170 @@ export const getStyle = (
 					'all',
 					['has', 'ref'],
 					['==', ['get', 'rail'], false],
+					['==', ['get', 'kind'], 'motorway'],
+					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['get', 'zoom'], 12]]
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					// like VersaTiles: links get the same color as their parent kind
+					// (motorway_link = motorway, ...), only the width is reduced
+					'line-color': c.motorway,
+					'line-width': [
+						'let',
+						'base',
+						['case', ['to-boolean', ['get', 'link']], 3, 3.5],
+						roadWidthInterpolation
+					]
+				}
+			},
+			{
+				id: 'road-trunk',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				// like the old release: only roads with a ref get the full-width
+				// opaque body here; everything else is carried by the faint back
+				// layers (thin at overview zooms) and the minor-way layers.
+				// minzoom 6: rail comes first, motorway/trunk one zoom later (only
+				// those two kinds exist below z6 in the tiles).
+				minzoom: 6,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
+					['==', ['get', 'kind'], 'trunk'],
+					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['get', 'zoom'], 12]]
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					// like VersaTiles: links get the same color as their parent kind
+					// (motorway_link = motorway, ...), only the width is reduced
+					'line-color': c.motorwayLink,
+					'line-width': [
+						'let',
+						'base',
+						['case', ['to-boolean', ['get', 'link']], 2.5, 3],
+						roadWidthInterpolation
+					]
+				}
+			},
+			{
+				id: 'road-primary-secondary',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				// like the old release: only roads with a ref get the full-width
+				// opaque body here; everything else is carried by the faint back
+				// layers (thin at overview zooms) and the minor-way layers.
+				// minzoom 6: rail comes first, motorway/trunk one zoom later (only
+				// those two kinds exist below z6 in the tiles).
+				minzoom: 6,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
+					['in', ['get', 'kind'], ['literal', ['primary', 'secondary', 'runway', 'taxiway']]],
+					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['zoom'], 13]],
+					['any', ['==', ['get', 'kind'], 'secondary'], ['>', ['zoom'], 11]]
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					// like VersaTiles: links get the same color as their parent kind
+					// (motorway_link = motorway, ...), only the width is reduced
+					'line-color': c.primarySecondary,
+					'line-width': [
+						'let',
+						'base',
+						[
+							'case',
+							['to-boolean', ['get', 'link']],
+							['match', ['get', 'kind'], ['primary', 'secondary'], 1.75, 0.75],
+							['literal', 2.5]
+						],
+						roadWidthInterpolation
+					]
+				}
+			},
+			{
+				id: 'road-tertiary',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				// like the old release: only roads with a ref get the full-width
+				// opaque body here; everything else is carried by the faint back
+				// layers (thin at overview zooms) and the minor-way layers.
+				// minzoom 6: rail comes first, motorway/trunk one zoom later (only
+				// those two kinds exist below z6 in the tiles).
+				minzoom: 6,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
+					['==', ['get', 'kind'], 'tertiary'],
+					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['zoom'], 13]],
+					['>', ['zoom'], 11]
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					// like VersaTiles: links get the same color as their parent kind
+					// (motorway_link = motorway, ...), only the width is reduced
+					'line-color': c.linkTertiary,
+					'line-width': [
+						'let',
+						'base',
+						['case', ['to-boolean', ['get', 'link']], 0.75, 1.75],
+						roadWidthInterpolation
+					]
+				}
+			},
+			{
+				id: 'road-residential',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 11,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
+					['==', ['get', 'kind'], 'residential']
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					'line-color': c.residential,
+					'line-width': ['let', 'base', 1.5, roadWidthInterpolation]
+				}
+			},
+			{
+				id: 'road',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 11,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
 					[
 						'!',
 						[
@@ -859,6 +1045,14 @@ export const getStyle = (
 							[
 								'literal',
 								[
+									'motorway',
+									'trunk',
+									'primary',
+									'secondary',
+									'runway',
+									'taxiway',
+									'tertiary',
+									'residential',
 									'footway',
 									'track',
 									'steps',
@@ -870,90 +1064,13 @@ export const getStyle = (
 								]
 							]
 						]
-					],
-					[
-						'any',
-						['!', ['to-boolean', ['get', 'link']]],
-						['all', ['==', ['get', 'kind'], 'motorway'], ['>=', ['zoom'], 12]],
-						['>=', ['zoom'], 13]
-					],
-					[
-						'any',
-						['==', ['get', 'kind'], 'motorway'],
-						['==', ['get', 'kind'], 'trunk'],
-						['==', ['get', 'kind'], 'secondary'],
-						['>', ['zoom'], 11]
 					]
 				],
 				paint: {
 					// dimmed in tunnels
 					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
-					// like VersaTiles: links get the same color as their parent kind
-					// (motorway_link = motorway, ...), only the width is reduced
-					'line-color': [
-						'match',
-						['get', 'kind'],
-						'motorway',
-						c.motorway,
-						'trunk',
-						c.motorwayLink,
-						['primary', 'secondary', 'runway', 'taxiway'],
-						c.primarySecondary,
-						'tertiary',
-						c.linkTertiary,
-						'residential',
-						c.residential,
-						c.road
-					],
-					'line-width': [
-						'let',
-						'base',
-						[
-							'case',
-							['to-boolean', ['get', 'link']],
-							[
-								'match',
-								['get', 'kind'],
-								'motorway',
-								3,
-								'trunk',
-								2.5,
-								['primary', 'secondary', 'tertiary'],
-								1.75,
-								0.75
-							],
-							[
-								'match',
-								['get', 'kind'],
-								'motorway',
-								3.5,
-								'trunk',
-								3,
-								['primary', 'secondary', 'runway', 'taxiway'],
-								2.5,
-								'tertiary',
-								1.75,
-								'residential',
-								1.5,
-								0.75
-							]
-						],
-						[
-							'interpolate',
-							['linear'],
-							['zoom'],
-							5,
-							['*', ['var', 'base'], 0.5],
-							9,
-							['*', ['var', 'base'], 1],
-							12,
-							['*', ['var', 'base'], 2],
-							16,
-							['*', ['var', 'base'], 2.5],
-							20,
-							['*', ['var', 'base'], 3]
-						]
-					]
+					'line-color': c.road,
+					'line-width': ['let', 'base', 0.75, roadWidthInterpolation]
 				}
 			},
 			// streets with designated bicycle infrastructure, tinted like VersaTiles
@@ -1432,12 +1549,12 @@ export const getStyle = (
 				'source-layer': 'streets',
 				filter: [
 					'all',
-					['in', 'kind', 'footway', 'path', 'pedestrian', 'cycleway'],
+					['in', 'kind', 'footway', 'path', 'pedestrian'],
 					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
 				],
 				minzoom: 12,
 				paint: {
-					'line-color': ['match', ['get', 'kind'], 'cycleway', c.cycleway, c.footpath],
+					'line-color': c.footpath,
 					'line-dasharray': [2, 1],
 					'line-opacity': [
 						'interpolate',
@@ -1450,6 +1567,24 @@ export const getStyle = (
 						14,
 						1
 					],
+					'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 14, 0.6, 17, 1.8]
+				}
+			},
+			{
+				id: 'cycleway',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['==', 'kind', 'cycleway'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				minzoom: 12,
+				paint: {
+					'line-color': c.cycleway,
+					'line-dasharray': [2, 1],
+					'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0, 14, 1],
 					'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 14, 0.6, 17, 1.8]
 				}
 			},
@@ -1606,7 +1741,7 @@ export const getStyle = (
 					'text-justify': 'center',
 					'text-rotation-alignment': 'viewport',
 					'text-pitch-alignment': 'viewport',
-					'icon-image': c.shield,
+					'icon-image': 'shield',
 					'icon-text-fit': 'both',
 					'icon-text-fit-padding': [0.5, 4, 0.5, 4],
 					'icon-rotation-alignment': 'viewport',
