@@ -64,10 +64,12 @@ api::oneToMany_response one_to_many_direct(
       "mode {} not supported for one-to-many", fmt::streamed(mode));
 
   auto const profile = to_profile(mode, pedestrian_profile, elevation_costs);
-  auto const paths =
-      osr::route(to_profile_parameters(profile, params), w, l, profile, one,
-                 many, max_direct_time, dir, max_matching_distance, nullptr,
-                 nullptr, elevations_, [&](auto&&) { return with_distance; });
+  auto const paths = osr::route(
+      to_profile_parameters(profile, params), w, l, profile, one, many,
+      std::chrono::seconds{
+          static_cast<std::chrono::seconds::rep>(max_direct_time)},
+      dir, max_matching_distance, nullptr, nullptr, elevations_,
+      [&](auto&&) { return with_distance; });
 
   return utl::to_vec(paths, [&](std::optional<osr::path> const& p) {
     return p

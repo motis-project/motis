@@ -162,8 +162,8 @@ elevator_footpath_map_t compute_footpaths(
                     }
                     return s.neighbor_candidates_;
                   }(),
-                  static_cast<osr::cost_t>(mode.max_duration_.count()),
-                  osr::direction::kForward, nullptr, nullptr, elevations,
+                  mode.max_duration_, osr::direction::kForward, nullptr,
+                  nullptr, elevations,
                   [](osr::path const& p) { return p.uses_elevator_; })
                   ->results();
 
