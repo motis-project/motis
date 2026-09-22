@@ -64,6 +64,7 @@
 		"@deck.gl/mapbox": "~9.2.11",
 		"@hey-api/client-fetch": "^0.4.4",
 		"@lucide/svelte": "^0.548.0",
+		"@mapbox/mapbox-gl-rtl-text": "0.2.3",
 		"@mapbox/polyline": "^1.2.1",
 		"@motis-project/motis-client": "workspace:^",
 		"@tanstack/svelte-query": "^6.0.18",

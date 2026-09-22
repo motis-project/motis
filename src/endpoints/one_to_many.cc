@@ -190,7 +190,7 @@ std::vector<api::ParetoSet> transit_durations(
   auto totals = n::vector<double>{};
   for (auto const [i, l] : utl::enumerate(many)) {
     totals.clear();
-    totals.resize(q.max_transfers_, kInfinity);
+    totals.resize(q.max_transfers_ + 1U, kInfinity);
     auto const offsets = r.get_offsets(
         nullptr, l,
         arrive_by ? osr::direction::kForward : osr::direction::kBackward,

@@ -702,7 +702,7 @@
             <StartTime>2019-05-01T02:05:00Z</StartTime>
             <EndTime>2019-05-01T02:24:00Z</EndTime>
             <Transfers>0</Transfers>
-            <Distance>110</Distance>
+            <Distance>118</Distance>
             <Leg>
               <Id>1</Id>
               <Duration>PT10M</Duration>
@@ -1174,7 +1174,7 @@
                   <PersonalMode>foot</PersonalMode>
                 </Service>
                 <Duration>PT4M</Duration>
-                <Length>28</Length>
+                <Length>36</Length>
                 <LegTrack>
                   <TrackSection>
                     <TrackSectionStart>
@@ -1307,7 +1307,7 @@
                       </Position>
                     </LinkProjection>
                     <Duration>PT4M</Duration>
-                    <Length>28</Length>
+                    <Length>36</Length>
                   </TrackSection>
                 </LegTrack>
               </ContinuousLeg>

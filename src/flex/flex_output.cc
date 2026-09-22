@@ -36,7 +36,6 @@ std::string_view get_flex_id(n::timetable const& tt, n::flex_stop_t const& s) {
 }
 
 flex_output::flex_output(osr::ways const& w,
-                         osr::lookup const& l,
                          osr::platforms const* pl,
                          platform_matches_t const* matches,
                          adr_ext const* ae,
@@ -44,7 +43,9 @@ flex_output::flex_output(osr::ways const& w,
                          tag_lookup const& tags,
                          n::timetable const& tt,
                          flex_areas const& fa,
-                         mode_id const id)
+                         mode_payload const id,
+                         flex_additional_nodes const& additional_nodes,
+                         osr::sharing_data sharing_data)
     : w_{w},
       pl_{pl},
       matches_{matches},
@@ -53,9 +54,9 @@ flex_output::flex_output(osr::ways const& w,
       tt_{tt},
       tags_{tags},
       fa_{fa},
-      sharing_data_{flex::prepare_sharing_data(
-          tt, w, l, pl, fa, matches, id, id.get_dir(), flex_routing_data_)},
-      mode_id_(id) {}
+      additional_nodes_{additional_nodes},
+      sharing_data_{std::move(sharing_data)},
+      mode_payload_{id} {}
 
 flex_output::~flex_output() = default;
 
@@ -63,7 +64,9 @@ bool flex_output::is_time_dependent() const { return false; }
 
 api::ModeEnum flex_output::get_mode() const { return api::ModeEnum::FLEX; }
 
-transport_mode_t flex_output::get_cache_key() const { return mode_id_.to_id(); }
+transport_mode_t flex_output::get_cache_key() const {
+  return transport_mode(api::ModeEnum::FLEX, mode_payload_.to_payload());
+}
 
 osr::search_profile flex_output::get_profile() const {
   return osr::search_profile::kCarSharing;
@@ -81,21 +84,21 @@ void flex_output::annotate_leg(n::lang_t const& lang,
     return;
   }
 
-  auto const t = mode_id_.get_flex_transport();
+  auto const t = mode_payload_.get_flex_transport();
   auto const stop_seq = tt_.flex_stop_seq_[tt_.flex_transport_stop_seq_[t]];
   auto from_stop = std::optional<n::stop_idx_t>{};
   auto to_stop = std::optional<n::stop_idx_t>{};
   for (auto i = 0U; i != stop_seq.size(); ++i) {
     auto const stop_idx = static_cast<n::stop_idx_t>(
-        mode_id_.get_dir() == osr::direction::kForward
+        mode_payload_.get_dir() == osr::direction::kForward
             ? i
             : stop_seq.size() - i - 1U);
     auto const stop = stop_seq[stop_idx];
     if (!from_stop.has_value() &&
-        is_in_flex_stop(tt_, w_, fa_, flex_routing_data_, stop, from)) {
+        is_in_flex_stop(tt_, w_, fa_, additional_nodes_, stop, from)) {
       from_stop = stop_idx;
     } else if (!to_stop.has_value() &&
-               is_in_flex_stop(tt_, w_, fa_, flex_routing_data_, stop, to)) {
+               is_in_flex_stop(tt_, w_, fa_, additional_nodes_, stop, to)) {
       to_stop = stop_idx;
       break;
     }
@@ -113,7 +116,7 @@ void flex_output::annotate_leg(n::lang_t const& lang,
 
   auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
     if (w_.is_additional_node(n)) {
-      auto const l = flex_routing_data_.get_additional_node(n);
+      auto const l = additional_nodes_.get(n);
       p = to_place(&tt_, &tags_, &w_, pl_, matches_, ae_, tz_, lang,
                    tt_location{l});
     }
@@ -148,7 +151,7 @@ api::Place flex_output::get_place(n::lang_t const& lang,
                                   osr::node_idx_t const n,
                                   std::optional<std::string> const& tz) const {
   if (w_.is_additional_node(n)) {
-    auto const l = flex_routing_data_.get_additional_node(n);
+    auto const l = additional_nodes_.get(n);
     auto const c = tt_.locations_.coordinates_.at(l);
     return api::Place{
         .name_ = std::string{tt_.translate(lang, tt_.locations_.names_.at(l))},

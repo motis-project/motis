@@ -44,17 +44,18 @@
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
-#include "motis/flex/mode_id.h"
+#include "motis/flex/mode_payload.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/osr/mode_to_profile.h"
+#include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/parameters.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 #include "itinerary_id.pb.h"
 
@@ -268,8 +269,7 @@ std::string generate_itinerary_id(n::routing::journey const& j,
               fr.is_scheduled());
         },
         [&](n::routing::offset const& o) {
-          auto const id = o.type();
-          auto const mode = to_mode(id);
+          auto const mode = to_mode(o.mode());
           return make_non_pt_leg(jl, mode);
         },
         [&](n::footpath const&) {
@@ -393,9 +393,8 @@ std::optional<n::stop_idx_t> find_stop_by_id_time(
                                     allowed_deviation_sec);
 }
 
-constexpr auto kWalkTransportModeId = static_cast<n::transport_mode_id_t>(
-    static_cast<std::underlying_type_t<osr::search_profile>>(
-        osr::search_profile::kFoot));
+constexpr auto kWalkTransportMode =
+    transport_mode(api::ModeEnum::WALK, osr::search_profile::kFoot);
 
 struct candidate_score {
   bool operator<(candidate_score const& o) const {
@@ -719,6 +718,7 @@ api::Itinerary reconstruct_itinerary(
 
   // needed to mark blocked elevator nodes in street routing
   auto blocked = osr::bitvec<osr::node_idx_t>{};
+  auto otm_searches = one_to_many_searches{};
   if (routing.is_osr_loaded()) {
     blocked.resize(stop_times_ep.w_->n_nodes());
   }
@@ -742,7 +742,9 @@ api::Itinerary reconstruct_itinerary(
         is_start ? flm.pre_transit_ : flm.post_transit_, flm.osr_params_,
         flm.pedestrian_profile_, flm.elevation_costs_,
         is_start ? flm.max_pre_transit_ : flm.max_post_transit_,
-        flm.max_matching_distance_, gbfs_rd, stats);
+        flm.max_matching_distance_, gbfs_rd, stats,
+        is_start ? &otm_searches[n::special_station::kStart]
+                 : &otm_searches[n::special_station::kEnd]);
   };
 
   auto const get_td_offsets = [&](leg_hint const& h, bool const is_start,
@@ -759,7 +761,9 @@ api::Itinerary reconstruct_itinerary(
         flm.pedestrian_profile_, flm.elevation_costs_,
         flm.max_matching_distance_,
         is_start ? flm.max_pre_transit_ : flm.max_post_transit_, anchor_time,
-        stats);
+        stats,
+        is_start ? &otm_searches[n::special_station::kStart]
+                 : &otm_searches[n::special_station::kEnd]);
   };
 
   auto const reconstruct = [&](n::routing::journey::leg const& l,
@@ -782,7 +786,8 @@ api::Itinerary reconstruct_itinerary(
                /*with_fares=*/false, with_scheduled_skipped_stops,
                stop_times_ep.config_.timetable_.value().max_matching_distance_,
                flm.max_matching_distance_, 6U, false, false, lang,
-               /*set_itinerary_id_field=*/false, alternatives)
+               /*set_itinerary_id_field=*/false, alternatives, nullptr,
+               one_to_many_view{&otm_searches})
         .legs_;
   };
 
@@ -826,7 +831,7 @@ api::Itinerary reconstruct_itinerary(
     auto q = n::routing::query{};
     q.prf_idx_ = safe_prf_idx;
     auto const offs = std::vector<n::routing::offset>{
-        {(l.to_), n::duration_t{0}, kWalkTransportModeId}};
+        {(l.to_), n::duration_t{0}, kWalkTransportMode}};
 
     auto const fp_leg = n::routing::lookup_footpath(
         l.from_, l.dep_, n::routing::side::kAlighting, stop_times_ep.tt_,

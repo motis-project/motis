@@ -1594,6 +1594,55 @@ export type RefreshItineraryPostBody = {
     id: ItineraryId;
 };
 
+/**
+ * A client-computed first/last mile option: the given transit stop can
+ * be reached from the query coordinate (or vice versa) with the given
+ * duration and mode.
+ *
+ */
+export type PlanOffset = {
+    /**
+     * stop id of the transit stop
+     * (parent stations are expanded to their child stops)
+     *
+     */
+    stopId: string;
+    /**
+     * duration in seconds
+     */
+    duration: number;
+    /**
+     * mode used to reach the stop, used to render the first/last mile
+     * leg (supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+     *
+     */
+    mode?: Mode;
+};
+
+/**
+ * Body for the `planPost` endpoint. Carries only the optional offset
+ * lists; all routing parameters are passed as query parameters (same as
+ * the `plan` GET endpoint). An absent or empty list keeps the default
+ * behavior (offsets computed by the server) for that side, so an empty
+ * body `{}` is equivalent to the GET endpoint.
+ *
+ */
+export type PlanPostBody = {
+    /**
+     * Offsets for the `fromPlace` side: transit stops reachable from
+     * `fromPlace`, replacing the server-side first mile computation.
+     *
+     */
+    fromOffsets?: Array<PlanOffset>;
+    /**
+     * Offsets for the `toPlace` side: transit stops from which
+     * `toPlace` can be reached, replacing the server-side last mile
+     * computation.
+     *
+     */
+    toOffsets?: Array<PlanOffset>;
+};
+
 export type Itinerary = {
     /**
      * journey duration in seconds
@@ -2773,6 +2822,52 @@ export type PlanResponse = ({
 });
 
 export type PlanError = (Error);
+
+export type PlanPostData = {
+    body: PlanPostBody;
+};
+
+export type PlanPostResponse = ({
+    /**
+     * the routing query
+     */
+    requestParameters: {
+        [key: string]: (string);
+    };
+    /**
+     * debug statistics
+     */
+    debugOutput: {
+        [key: string]: (number);
+    };
+    from: Place;
+    to: Place;
+    /**
+     * Direct trips by `WALK`, `BIKE`, `CAR`, etc. without time-dependency.
+     * The starting time (`arriveBy=false`) / arrival time (`arriveBy=true`) is always the queried `time` parameter (set to \"now\" if not set).
+     * But all `direct` connections are meant to be independent of absolute times.
+     *
+     */
+    direct: Array<Itinerary>;
+    /**
+     * list of itineraries
+     */
+    itineraries: Array<Itinerary>;
+    /**
+     * Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
+     * The previous page is a set of itineraries departing BEFORE the first itinerary in the result for a depart after search. When using the default sort order the previous set of itineraries is inserted before the current result.
+     *
+     */
+    previousPageCursor: string;
+    /**
+     * Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
+     * The next page is a set of itineraries departing AFTER the last itinerary in this result.
+     *
+     */
+    nextPageCursor: string;
+});
+
+export type PlanPostError = (Error);
 
 export type OneToManyData = {
     query: {

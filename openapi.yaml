@@ -1026,7 +1026,7 @@ paths:
           description: routing result
           content:
             application/json:
-              schema:
+              schema: &plan-response-schema
                 type: object
                 required:
                   - requestParameters
@@ -1075,6 +1075,54 @@ paths:
                       Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
                       The next page is a set of itineraries departing AFTER the last itinerary in this result.
                     type: string
+    post:
+      tags:
+        - routing
+      summary: |
+        Computes optimal connections from one place to another,
+        with the option to provide client-computed offsets
+        for the first and/or last mile.
+      operationId: planPost
+      description: |
+        All routing parameters are passed as query parameters
+        (same as the `plan` GET endpoint - see there for their descriptions).
+        The request body carries only the offset lists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanPostBody'
+      responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: routing result
+          content:
+            application/json:
+              schema: *plan-response-schema
 
   /api/v1/one-to-many:
     get:
@@ -5620,6 +5668,57 @@ components:
       properties:
         id:
           $ref: '#/components/schemas/ItineraryId'
+
+    PlanOffset:
+      description: |
+        A client-computed first/last mile option: the given transit stop can
+        be reached from the query coordinate (or vice versa) with the given
+        duration and mode.
+      type: object
+      required:
+        - stopId
+        - duration
+      properties:
+        stopId:
+          description: |
+            stop id of the transit stop
+            (parent stations are expanded to their child stops)
+          type: string
+        duration:
+          description: duration in seconds
+          type: integer
+          minimum: 0
+        mode:
+          description: |
+            mode used to reach the stop, used to render the first/last mile
+            leg (supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+          $ref: '#/components/schemas/Mode'
+          default: WALK
+
+    PlanPostBody:
+      description: |
+        Body for the `planPost` endpoint. Carries only the optional offset
+        lists; all routing parameters are passed as query parameters (same as
+        the `plan` GET endpoint). An absent or empty list keeps the default
+        behavior (offsets computed by the server) for that side, so an empty
+        body `{}` is equivalent to the GET endpoint.
+      type: object
+      properties:
+        fromOffsets:
+          description: |
+            Offsets for the `fromPlace` side: transit stops reachable from
+            `fromPlace`, replacing the server-side first mile computation.
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanOffset'
+        toOffsets:
+          description: |
+            Offsets for the `toPlace` side: transit stops from which
+            `toPlace` can be reached, replacing the server-side last mile
+            computation.
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanOffset'
 
     Itinerary:
       type: object

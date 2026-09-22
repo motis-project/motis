@@ -395,7 +395,8 @@ void import(config const& c,
             {.adjust_footpaths_ = t.adjust_footpaths_,
              .merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
-             .max_footpath_length_ = t.max_footpath_length_},
+             .max_footpath_length_ = t.max_footpath_length_,
+             .merge_stats_dir_ = data_path},
             interval, assistance.get(), shapes.get(), false))};
 
         tt->write(data_path / "tt.bin");

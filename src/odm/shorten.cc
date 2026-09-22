@@ -8,7 +8,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/odm/prima.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 using namespace std::chrono_literals;
 namespace n = nigiri;
@@ -29,7 +29,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto& odm_leg = begin(j.legs_)[0];
     auto& pt_leg = begin(j.legs_)[1];
 
-    if (!is_odm_leg(odm_leg, kOdmTransportModeId) ||
+    if (!is_odm_leg(odm_leg, kOdmTransportMode) ||
         !std::holds_alternative<nr::journey::run_enter_exit>(pt_leg.uses_)) {
       return;
     }
@@ -105,7 +105,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto& odm_leg = rbegin(j.legs_)[0];
     auto& pt_leg = rbegin(j.legs_)[1];
 
-    if (!is_odm_leg(odm_leg, kOdmTransportModeId) ||
+    if (!is_odm_leg(odm_leg, kOdmTransportMode) ||
         !std::holds_alternative<nr::journey::run_enter_exit>(pt_leg.uses_)) {
       return;
     }

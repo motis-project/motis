@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <variant>
@@ -17,6 +18,7 @@
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/timing.h"
+#include "utl/to_vec.h"
 
 #include "osr/lookup.h"
 #include "osr/platforms.h"
@@ -27,6 +29,7 @@
 
 #include "nigiri/common/interval.h"
 #include "nigiri/constants.h"
+#include "nigiri/for_each_meta.h"
 #include "nigiri/location_match_mode.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
@@ -56,8 +59,10 @@
 #include "motis/match_platforms.h"
 #include "motis/metrics_registry.h"
 #include "motis/odm/meta_router.h"
+#include "motis/osr/default_output.h"
 #include "motis/osr/max_distance.h"
 #include "motis/osr/mode_to_profile.h"
+#include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/street_routing.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
@@ -100,6 +105,35 @@ std::vector<n::routing::offset> radius_offsets(
   return offsets;
 }
 
+std::vector<n::routing::offset> client_offsets(
+    std::vector<api::PlanOffset> const& offsets,
+    tag_lookup const& tags,
+    n::timetable const& tt) {
+  auto ret = std::vector<n::routing::offset>{};
+  for (auto const& x : offsets) {
+    utl::verify<net::bad_request_exception>(
+        x.mode_ == api::ModeEnum::WALK || x.mode_ == api::ModeEnum::BIKE ||
+            x.mode_ == api::ModeEnum::CAR,
+        "Unsupported offset mode {}, supported: WALK, BIKE, CAR",
+        fmt::streamed(x.mode_));
+    utl::verify<net::bad_request_exception>(
+        x.duration_ >= 0 &&
+            x.duration_ / 60 <= std::numeric_limits<n::duration_t::rep>::max(),
+        "Invalid offset duration {}", x.duration_);
+    auto const duration = std::chrono::duration_cast<n::duration_t>(
+        std::chrono::seconds{x.duration_});
+    auto const mode = client_transport_mode(x.mode_);
+    // parent stations have no departures - expand them to their child stops
+    // (a child stop expands to just itself)
+    n::routing::for_each_meta(
+        tt, n::routing::location_match_mode::kOnlyChildren,
+        tags.get_location(tt, x.stopId_), [&](n::location_idx_t const l) {
+          ret.emplace_back(l, duration, mode);
+        });
+  }
+  return ret;
+}
+
 osr::location stop_to_osr_location(routing const& r,
                                    n::location_idx_t const l) {
   return osr::location{r.tt_->locations_.coordinates_[l],
@@ -119,7 +153,8 @@ n::routing::td_offsets_t get_td_offsets(
     double const max_matching_distance,
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
-    stats_map_t& stats) {
+    stats_map_t& stats,
+    one_to_many_side* const states) {
   if (!r.is_osr_loaded()) {
     return {};
   }
@@ -135,7 +170,7 @@ n::routing::td_offsets_t get_td_offsets(
       flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, r.way_matches_,
                                 *r.tt_, *r.fa_, *r.loc_tree_, start_time, pos,
                                 dir, max, max_matching_distance, osr_params,
-                                frd, ret, stats);
+                                frd, ret, stats, states);
       stats.emplace(fmt::format("prepare_{}_FLEX", to_str(dir)),
                     UTL_GET_TIMING_MS(flex_timer));
       continue;
@@ -145,6 +180,10 @@ n::routing::td_offsets_t get_td_offsets(
 
     if (e == nullptr || profile != osr::search_profile::kWheelchair) {
       continue;  // handled by get_offsets
+    }
+
+    if (blocked.get() == nullptr) {
+      blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
     }
 
     utl::equal_ranges_linear(
@@ -157,12 +196,10 @@ n::routing::td_offsets_t get_td_offsets(
         },
         [&](auto&& from, auto&& to) {
           auto& offsets = ret[from->target_];
+          auto const mode = transport_mode(profile);
           for (auto it = from; it != to; ++it) {
-            offsets.push_back(n::routing::td_offset{
-                .valid_from_ = it->valid_from_,
-                .duration_ = it->duration_,
-                .transport_mode_id_ =
-                    static_cast<n::transport_mode_id_t>(profile)});
+            offsets.push_back(n::routing::td_offset::make(it->valid_from_,
+                                                          it->duration_, mode));
           }
         });
   }
@@ -186,7 +223,8 @@ n::routing::td_offsets_t routing::get_td_offsets(
     double const max_matching_distance,
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
-    stats_map_t& stats) const {
+    stats_map_t& stats,
+    one_to_many_side* const states) const {
   return std::visit(
       utl::overloaded{
           [&](tt_location l) {
@@ -196,12 +234,13 @@ n::routing::td_offsets_t routing::get_td_offsets(
             return ::motis::ep::get_td_offsets(
                 *this, rtt, e, stop_to_osr_location(*this, l.l_), dir, modes,
                 osr_params, pedestrian_profile, elevation_costs,
-                max_matching_distance, max, start_time, stats);
+                max_matching_distance, max, start_time, stats, states);
           },
           [&](osr::location const& pos) {
             return ::motis::ep::get_td_offsets(
                 *this, rtt, e, pos, dir, modes, osr_params, pedestrian_profile,
-                elevation_costs, max_matching_distance, max, start_time, stats);
+                elevation_costs, max_matching_distance, max, start_time, stats,
+                states);
           }},
       p);
 }
@@ -238,7 +277,8 @@ std::vector<n::routing::offset> get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
-    stats_map_t& stats) {
+    stats_map_t& stats,
+    one_to_many_side* const states) {
   if (!r.is_osr_loaded()) {
     return {};
   }
@@ -286,7 +326,8 @@ std::vector<n::routing::offset> get_offsets(
     auto near_stop_match_cache = std::vector<near_stop_match_cache_entry>{};
 
     auto const route = [&](osr::search_profile const p,
-                           osr::sharing_data const* sharing) {
+                           osr::sharing_data const* sharing,
+                           transport_mode_t const mode) {
       auto const params = to_profile_parameters(p, osr_params);
       auto pos_match = osr::match_result{};
       r.l_->match(params, pos, false, dir, max_matching_distance, nullptr, p,
@@ -304,11 +345,29 @@ std::vector<n::routing::offset> get_offsets(
         cached_near_stop_matches = std::prev(end(near_stop_match_cache));
       }
 
-      return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
-                        pos_match[osr::match_idx_t{0U}],
-                        cached_near_stop_matches->matches_,
-                        static_cast<osr::cost_t>(max.count()), dir, nullptr,
-                        sharing, elevations);
+      auto state = osr::route_one_to_many(
+          params, *r.w_, *r.l_, p, pos, near_stop_locations,
+          pos_match[osr::match_idx_t{0U}], cached_near_stop_matches->matches_,
+          static_cast<osr::cost_t>(max.count()), dir, nullptr, sharing,
+          elevations);
+      auto const& paths = state->results();
+
+      if (states != nullptr) {
+        // Keep the search: offset legs are reconstructed from it later.
+        auto dest_idx = hash_map<n::location_idx_t, std::size_t>{};
+        for (auto const [i, l] : utl::enumerate(near_stops)) {
+          if (paths[i].has_value()) {
+            dest_idx.emplace(l, i);
+          }
+        }
+        if (!dest_idx.empty()) {
+          states->by_mode_[mode] = states->searches_.size();
+          states->searches_.emplace_back(
+              one_to_many_search{std::move(state), std::move(dest_idx), {}});
+        }
+      }
+
+      return paths;
     };
 
     if (osr::is_rental_profile(profile)) {
@@ -373,15 +432,16 @@ std::vector<n::routing::offset> get_offsets(
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
 
+          auto const mode = gbfs_rd.get_transport_mode(prod_ref);
           auto const paths =
-              route(gbfs::get_osr_profile(prod.form_factor_), &sharing);
+              route(gbfs::get_osr_profile(prod.form_factor_), &sharing, mode);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
               offsets.emplace_back(l,
                                    n::duration_t{static_cast<unsigned>(
                                        std::ceil(p->cost_ / 60.0))},
-                                   gbfs_rd.get_transport_mode(prod_ref));
+                                   mode);
             }
           }
         }
@@ -392,13 +452,14 @@ std::vector<n::routing::offset> get_offsets(
       }
 
     } else {
-      auto const paths = route(profile, nullptr);
+      auto const mode = transport_mode(profile);
+      auto const paths = route(profile, nullptr, mode);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
           offsets.emplace_back(
               l,
               n::duration_t{static_cast<unsigned>(std::ceil(p->cost_ / 60.0))},
-              static_cast<n::transport_mode_id_t>(profile));
+              mode);
         }
       }
     }
@@ -473,12 +534,13 @@ std::vector<n::routing::offset> routing::get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
-    stats_map_t& stats) const {
+    stats_map_t& stats,
+    one_to_many_side* const states) const {
   auto const do_get_offsets = [&](osr::location const pos) {
     return ::motis::ep::get_offsets(*this, rtt, pos, dir, elevations_, modes,
                                     ro, osr_params, pedestrian_profile,
                                     elevation_costs, max, max_matching_distance,
-                                    gbfs_rd, stats);
+                                    gbfs_rd, stats, states);
   };
   return std::visit(
       utl::overloaded{
@@ -510,10 +572,8 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
         tt == nullptr || tt->external_interval().contains(t),
         "query time {} is outside of loaded timetable window {}", t,
         tt ? tt->external_interval() : n::interval<n::unixtime_t>{});
-    auto const window =
-        std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{
-            query.searchWindow_ *
-            (query.arriveBy_ ? -1 : 1)});  // TODO redundant minus
+    auto const window = std::chrono::duration_cast<n::duration_t>(
+        std::chrono::seconds{query.searchWindow_});
     return {{.start_time_ = query.timetableView_ && tt
                                 ? n::routing::start_time_t{n::interval{
                                       tt->external_interval().clamp(
@@ -587,8 +647,15 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           *tt_, *loc_tree_, time, get_location(from).pos_,
           osr::direction::kForward, max, osr_params);
       for (auto const& [_, ids] : routings) {
-        route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, ae_, tz_,
-                                             *tags_, *tt_, *fa_, ids.front()});
+        // No one-to-many search to reconstruct from here: this owns the
+        // routing data for as long as the routing runs.
+        auto frd = flex::flex_routing_data{};
+        auto sharing =
+            flex::prepare_sharing_data(*tt_, *w_, *l_, pl_, *fa_, matches_,
+                                       ids.front(), ids.front().get_dir(), frd);
+        route_with_profile(flex::flex_output{
+            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, *fa_, ids.front(),
+            frd.additional_nodes_, std::move(sharing)});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
                m == api::ModeEnum::BIKE || m == api::ModeEnum::CAR_PARKING ||
@@ -734,9 +801,14 @@ std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum> m) {
 };
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
+  return route(api::plan_params{url.params()}, get_api_version(url), nullptr);
+}
+
+api::plan_response routing::route(api::plan_params const& query,
+                                  unsigned const api_version,
+                                  api::PlanPostBody const* post_body) const {
   metrics_->routing_requests_.Increment();
 
-  auto const query = api::plan_params{url.params()};
   auto const max_matching_distance =
       std::min(query.maxMatchingDistance_,
                config_.get_limits().max_max_matching_distance_);
@@ -760,11 +832,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                   : rt->rtt_.get();
   auto const e = rt->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
+  auto otm_searches = one_to_many_searches{};
+  auto* const otm_start = &otm_searches[n::special_station::kStart];
+  auto* const otm_dest = &otm_searches[n::special_station::kEnd];
   if (blocked.get() == nullptr && is_osr_loaded()) {
     blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
   }
-
-  auto const api_version = get_api_version(url);
 
   auto const deduplicate = [](auto m) {
     utl::erase_duplicates(m);
@@ -927,6 +1000,20 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     UTL_START_TIMING(query_preparation);
     auto prepare_stats = std::map<std::string, std::uint64_t>{};
 
+    // client-supplied offsets (POST body): a non-empty list replaces the
+    // server-side offset computation for that side
+    auto const get_client_offsets =
+        [&](bool const from_side) -> std::vector<api::PlanOffset> const* {
+      if (post_body == nullptr) {
+        return nullptr;
+      }
+      auto const& o =
+          from_side ? post_body->fromOffsets_ : post_body->toOffsets_;
+      return o.has_value() && !o->empty() ? &*o : nullptr;
+    };
+    auto const* start_client = get_client_offsets(!query.arriveBy_);
+    auto const* dest_client = get_client_offsets(query.arriveBy_);
+
     auto const use_radius_start = query.radius_.has_value() &&
                                   std::holds_alternative<osr::location>(start);
     auto const use_radius_dest = query.radius_.has_value() &&
@@ -934,15 +1021,20 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
-        .start_match_mode_ = (use_radius_start || is_osr_loaded())
-                                 ? n::routing::location_match_mode::kIntermodal
-                                 : n::routing::location_match_mode::kEquivalent,
-        .dest_match_mode_ = (use_radius_dest || is_osr_loaded())
-                                ? n::routing::location_match_mode::kIntermodal
-                                : n::routing::location_match_mode::kEquivalent,
-        .use_start_footpaths_ = !use_radius_start && !is_osr_loaded(),
+        .start_match_mode_ =
+            (start_client != nullptr || use_radius_start || is_osr_loaded())
+                ? n::routing::location_match_mode::kIntermodal
+                : n::routing::location_match_mode::kEquivalent,
+        .dest_match_mode_ =
+            (dest_client != nullptr || use_radius_dest || is_osr_loaded())
+                ? n::routing::location_match_mode::kIntermodal
+                : n::routing::location_match_mode::kEquivalent,
+        .use_start_footpaths_ =
+            start_client == nullptr && !use_radius_start && !is_osr_loaded(),
         .start_ =
-            use_radius_start
+            start_client != nullptr
+                ? client_offsets(*start_client, *tags_, *tt_)
+            : use_radius_start
                 ? radius_offsets(*loc_tree_,
                                  std::get<osr::location>(start).pos_,
                                  *query.radius_)
@@ -958,9 +1050,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       osr_params, query.pedestrianProfile_,
                       query.elevationCosts_,
                       query.arriveBy_ ? post_transit_time : pre_transit_time,
-                      max_matching_distance, gbfs_rd, prepare_stats),
+                      max_matching_distance, gbfs_rd, prepare_stats, otm_start),
         .destination_ =
-            use_radius_dest
+            dest_client != nullptr ? client_offsets(*dest_client, *tags_, *tt_)
+            : use_radius_dest
                 ? radius_offsets(*loc_tree_, std::get<osr::location>(dest).pos_,
                                  *query.radius_)
                 : get_offsets(
@@ -975,7 +1068,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       osr_params, query.pedestrianProfile_,
                       query.elevationCosts_,
                       query.arriveBy_ ? pre_transit_time : post_transit_time,
-                      max_matching_distance, gbfs_rd, prepare_stats),
+                      max_matching_distance, gbfs_rd, prepare_stats, otm_dest),
         .td_start_ = get_td_offsets(
             rtt, e, start,
             query.arriveBy_ ? osr::direction::kBackward
@@ -983,7 +1076,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             start_modes, osr_params, query.pedestrianProfile_,
             query.elevationCosts_, max_matching_distance,
             query.arriveBy_ ? post_transit_time : pre_transit_time,
-            start_time.start_time_, prepare_stats),
+            start_time.start_time_, prepare_stats, otm_start),
         .td_dest_ = get_td_offsets(
             rtt, e, dest,
             query.arriveBy_ ? osr::direction::kForward
@@ -991,7 +1084,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             dest_modes, osr_params, query.pedestrianProfile_,
             query.elevationCosts_, max_matching_distance,
             query.arriveBy_ ? pre_transit_time : post_transit_time,
-            start_time.start_time_, prepare_stats),
+            start_time.start_time_, prepare_stats, otm_dest),
         .max_transfers_ = static_cast<std::uint8_t>(max_transfers),
         .max_travel_time_ = query.maxTravelTime_
                                 .and_then([](std::int64_t const dur) {
@@ -1180,9 +1273,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
               query.numLegAlternatives_ > 0
                   ? alternatives_context{query_alternatives{
                         q_for_alts,
-                        static_cast<std::size_t>(query.numLegAlternatives_)}}
+                        static_cast<std::size_t>(query.numLegAlternatives_),
+                        query.arriveBy_}}
                   : alternatives_context{},
-              &fares_time);
+              &fares_time, one_to_many_view{&otm_searches});
         });
 
     return {
@@ -1207,6 +1301,37 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       .to_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, to),
       .direct_ = std::move(direct),
       .itineraries_ = {}};
+}
+
+api::plan_response routing_post::operator()(
+    boost::urls::url_view const& url, api::PlanPostBody const& body) const {
+  auto const r = routing{.config_ = config_,
+                         .w_ = w_,
+                         .l_ = l_,
+                         .pl_ = pl_,
+                         .elevations_ = elevations_,
+                         .tt_ = tt_,
+                         .tbd_ = tbd_,
+                         .tags_ = tags_,
+                         .loc_tree_ = loc_tree_,
+                         .fa_ = fa_,
+                         .matches_ = matches_,
+                         .way_matches_ = way_matches_,
+                         .rt_ = rt_,
+                         .shapes_ = shapes_,
+                         .gbfs_ = gbfs_,
+                         .ae_ = ae_,
+                         .tz_ = tz_,
+                         .odm_bounds_ = odm_bounds_,
+                         .ride_sharing_bounds_ = ride_sharing_bounds_,
+                         .metrics_ = metrics_
+#if defined(NIGIRI_CUDA)
+                         ,
+                         .gpu_pool_ = gpu_pool_
+#endif
+  };
+  // Routing params come from the query string; the body carries the offsets.
+  return r.route(api::plan_params{url.params()}, get_api_version(url), &body);
 }
 
 }  // namespace motis::ep
