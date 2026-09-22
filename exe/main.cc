@@ -84,7 +84,12 @@ int main(int ac, char** av) {
     case cista::hash("extract"): return_value = extract(ac, av); break;
     case cista::hash("generate"): return_value = generate(ac, av); break;
     case cista::hash("params"): return_value = params(ac, av); break;
-    case cista::hash("batch"): return_value = batch(ac, av); break;
+    case cista::hash("batch"): try { return_value = batch(ac, av);
+      } catch (std::exception const& e) {
+        fmt::println(stderr, "batch failed: {}", e.what());
+        return_value = 1;
+      }
+      break;
     case cista::hash("compare"): return_value = compare(ac, av); break;
 
     case cista::hash("config"): {

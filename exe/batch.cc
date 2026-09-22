@@ -160,6 +160,21 @@ int batch(int ac, char** av) {
   utl::for_each_line(utl::cstr{f.view()},
                      [&](utl::cstr s) { queries.push_back(s.view()); });
 
+  n_threads = static_cast<unsigned>(
+      std::min(static_cast<std::size_t>(n_threads), queries.size()));
+
+  utl::verify(!fs::exists(responses_path) ||
+                  !fs::equivalent(queries_path, responses_path),
+              "query and response files must be different");
+  auto out = std::ofstream{};
+  out.exceptions(std::ios::failbit | std::ios::badbit);
+  out.open(responses_path);
+  if (queries.empty()) {
+    out.close();
+    fmt::println("Processed 0 queries in 00:00:00");
+    return 0;
+  }
+
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");
 
@@ -168,6 +183,11 @@ int batch(int ac, char** av) {
 
   fmt::println("hardware_concurrency = {}, using {} threads",
                std::thread::hardware_concurrency(), n_threads);
+#if defined(USE_MIMALLOC)
+  fmt::println("allocator = mimalloc");
+#else
+  fmt::println("allocator = system");
+#endif
 
   if (rt) {
     apply_canned_rt_update(c, d);
@@ -175,10 +195,10 @@ int batch(int ac, char** av) {
   gbfs::apply_canned_gbfs_update(c, d);
 
   auto response_time = stats{"response_time", 0U};
+  response_time.values_.reserve(queries.size());
 
   struct state {};
 
-  auto out = std::ofstream{responses_path};
   auto m = motis_instance{net::default_exec{}, d, c, ""};
   auto const compute_response = [&](state&, std::size_t const id) {
     UTL_START_TIMING(request);
@@ -187,13 +207,13 @@ int batch(int ac, char** av) {
       m.qr_(
           {boost::beast::http::verb::get,
            boost::beast::string_view{queries.at(id)}, 11},
-          [&](net::web_server::http_res_t const& res) {
+          [&](net::web_server::http_res_t&& res) {
             std::visit(
                 [&](auto&& r) {
                   using ResponseType = std::decay_t<decltype(r)>;
                   if constexpr (std::is_same_v<ResponseType,
                                                net::web_server::string_res_t>) {
-                    response = r.body();
+                    response = std::move(r.body());
                     if (response.empty()) {
                       std::cout << "empty response for " << id << ": "
                                 << queries.at(id) << " [status=" << r.result()
@@ -224,6 +244,7 @@ int batch(int ac, char** av) {
         out << s.second << "\n";
       },
       pt->update_fn(), utl::parallel_error_strategy::QUIT_EXEC, n_threads);
+  out.close();
   fmt::println("Processed {} queries in {:%T}", queries.size(),
                std::chrono::steady_clock::now() - start_batch);
 
