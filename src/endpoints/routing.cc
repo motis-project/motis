@@ -352,8 +352,8 @@ std::vector<n::routing::offset> get_offsets(
       auto state = osr::route_one_to_many(
           params, *r.w_, *r.l_, p, pos, near_stop_locations,
           pos_match[osr::match_idx_t{0U}], cached_near_stop_matches->matches_,
-          static_cast<osr::cost_t>(max.count()), dir, nullptr, sharing,
-          elevations, [](osr::path const&) { return false; }, std::nullopt,
+          max, dir, nullptr, sharing, elevations,
+          [](osr::path const&) { return false; }, std::nullopt,
           osr::route_options{.exact_return_at_from_ = exact_return_at_from});
       auto const& paths = state->results();
 

@@ -63,7 +63,7 @@ api::transfers_response transfers::operator()(
         utl::to_vec(
             neighbors,
             [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),
-        c_.timetable_.value().max_footpath_length_ * 60U,
+        std::chrono::seconds{c_.timetable_.value().max_footpath_length_ * 60U},
         osr::direction::kForward, c_.timetable_.value().max_matching_distance_,
         e == nullptr ? nullptr : &e->blocked_, nullptr, nullptr,
         [](osr::path const& p) { return p.uses_elevator_; });

@@ -1,4 +1,5 @@
 #include "motis/endpoints/osr_routing.h"
+#include <chrono>
 
 #include "utl/pipes.h"
 
@@ -38,8 +39,8 @@ json::value osr_routing::operator()(json::value const& query) const {
   auto const from = parse_location(q.at("start"));
   auto const to = parse_location(q.at("destination"));
   auto const max_it = q.find("max");
-  auto const max = static_cast<osr::cost_t>(
-      max_it == q.end() ? 3600 : max_it->value().as_int64());
+  auto const max = std::chrono::seconds{
+      max_it == q.end() ? 3600 : max_it->value().as_int64()};
   auto const p =
       route(to_profile_parameters(profile, {}), w_, l_, profile, from, to, max,
             dir, 8, e == nullptr ? nullptr : &e->blocked_);

@@ -285,7 +285,8 @@ TEST(one_to_many, post_request_backward) {
               {{.duration_ = 1020.0, .transfers_ = 0}},
               {},
               {{.duration_ = 3360.0, .transfers_ = 1}},  // from DA_10: 3420.0
-              {},
+              // Walk fits maxPreTransitTime, only its cost exceeds 300
+              {{.duration_ = 3420.0, .transfers_ = 1}},
           }}}),
       durations);
 }
@@ -669,7 +670,7 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
   EXPECT_DOUBLE_EQ(1020.0, td.at(0).at(0).duration_);
   EXPECT_EQ(0, td.at(0).at(0).transfers_);
   ASSERT_EQ(2U, td.at(1).size());
-  EXPECT_DOUBLE_EQ(1680.0, td.at(1).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1500.0, td.at(1).at(0).duration_);
   EXPECT_EQ(0, td.at(1).at(0).transfers_);
   EXPECT_DOUBLE_EQ(1380.0, td.at(1).at(1).duration_);
   EXPECT_EQ(1, td.at(1).at(1).transfers_);

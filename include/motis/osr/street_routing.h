@@ -53,7 +53,8 @@ using street_routing_cache_key_t = std::tuple<osr::location,
                                               transport_mode_t,
                                               nigiri::unixtime_t,
                                               osr::direction,
-                                              bool>;
+                                              bool,
+                                              std::chrono::seconds>;
 
 using street_routing_cache_t =
     hash_map<street_routing_cache_key_t, std::optional<osr::path>>;

@@ -108,8 +108,7 @@ std::vector<n::td_footpath> get_td_footpaths(
         to_profile_parameters(profile, osr_params), w, l, profile, start,
         utl::to_vec(neighbors,
                     [&](auto&& x) { return get_loc(tt, w, pl, matches, x); }),
-        static_cast<osr::cost_t>(max.count()), dir, max_matching_distance,
-        &blocked_mem);
+        max, dir, max_matching_distance, &blocked_mem);
 
     for (auto const [to, p] : utl::zip(neighbors, results)) {
       auto const minutes = p.has_value()
