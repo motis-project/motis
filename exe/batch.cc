@@ -1,3 +1,8 @@
+#if defined(_MSC_VER)
+// needs to be the first to include WinSock.h
+#include "boost/asio.hpp"
+#endif
+
 #include <fstream>
 #include <iostream>
 
@@ -7,7 +12,13 @@
 #include "utl/parallel_for.h"
 #include "utl/parser/cstr.h"
 
+#include "ctx/ctx.h"
+
+#include "net/web_server/web_server.h"
+
 #include "motis/config.h"
+#include "motis/ctx_data.h"
+#include "motis/ctx_exec.h"
 #include "motis/data.h"
 #include "motis/gbfs/update.h"
 #include "motis/motis_instance.h"
@@ -176,25 +187,57 @@ int batch(int ac, char** av) {
 
   auto response_time = stats{"response_time", 0U};
 
-  struct state {};
-
   auto out = std::ofstream{responses_path};
-  auto m = motis_instance{net::default_exec{}, d, c, ""};
-  auto const compute_response = [&](state&, std::size_t const id) {
-    UTL_START_TIMING(request);
-    auto response = std::string{};
+
+  // meta_router (ODM) dispatches sub-queries via ctx_call, which requires a
+  // live ctx fiber operation to suspend/resume on. net::default_exec runs
+  // handlers synchronously without such a context, so it must not be used
+  // here -- mirror server.cc's ctx::scheduler + ctx_exec setup instead.
+  auto scheduler = ctx::scheduler<ctx_data>{};
+  auto m = motis_instance{ctx_exec{scheduler.runner_.ios(), scheduler}, d, c, ""};
+
+  auto responses = std::vector<std::string>(queries.size());
+  auto starts =
+      std::vector<std::chrono::steady_clock::time_point>(queries.size());
+
+  auto const pt = utl::activate_progress_tracker("batch");
+  pt->in_high(queries.size());
+  auto const start_batch = std::chrono::steady_clock::now();
+
+  // ctx_exec completion callbacks are only ever invoked from the thread that
+  // calls scheduler.runner_.run() below (it alone drives the ctx scheduler's
+  // io_context), so this counter needs no synchronization.
+  //
+  // Deliberately NOT using runner_.run(n_threads, /*quit_on_ios_exit=*/true):
+  // that shutdown path has ctx::runner::run() call work_stack_.clear() on
+  // this thread while worker threads may still be concurrently popping from
+  // the same work_stack_ -- a real race in ctx::runner, unrelated to this
+  // tool, that a ThreadSanitizer run reproduced as a SEGV in
+  // ctx::stack_manager::dealloc. Stopping the scheduler explicitly once all
+  // queries have completed (mirroring server.cc's shutdown handler) avoids
+  // that path entirely: work_stack_.stop() lets each worker's poll() loop
+  // exit on its own before being joined.
+  auto completed = std::size_t{0U};
+  auto const on_query_done = [&] {
+    if (++completed == queries.size()) {
+      scheduler.runner_.stop();
+    }
+  };
+
+  for (auto id = std::size_t{0U}; id != queries.size(); ++id) {
+    starts[id] = std::chrono::steady_clock::now();
     try {
       m.qr_(
           {boost::beast::http::verb::get,
            boost::beast::string_view{queries.at(id)}, 11},
-          [&](net::web_server::http_res_t const& res) {
+          [&, id](net::web_server::http_res_t const& res) {
             std::visit(
                 [&](auto&& r) {
                   using ResponseType = std::decay_t<decltype(r)>;
                   if constexpr (std::is_same_v<ResponseType,
                                                net::web_server::string_res_t>) {
-                    response = r.body();
-                    if (response.empty()) {
+                    responses[id] = r.body();
+                    if (responses[id].empty()) {
                       std::cout << "empty response for " << id << ": "
                                 << queries.at(id) << " [status=" << r.result()
                                 << "]\n";
@@ -205,25 +248,31 @@ int batch(int ac, char** av) {
                   }
                 },
                 res);
+            response_time.add(
+                id, static_cast<std::uint64_t>(
+                        std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - starts[id])
+                            .count()));
+            pt->increment();
+            on_query_done();
           },
           false);
     } catch (std::exception const& e) {
       std::cerr << "ERROR IN QUERY " << id << ": " << e.what() << "\n";
+      on_query_done();
     }
-    return std::pair{UTL_GET_TIMING_MS(request), std::move(response)};
-  };
+  }
 
-  auto const pt = utl::activate_progress_tracker("batch");
-  pt->in_high(queries.size());
-  auto const start_batch = std::chrono::steady_clock::now();
-  utl::parallel_ordered_collect_threadlocal<state>(
-      queries.size(), compute_response,
-      [&](std::size_t const id,
-          std::pair<std::uint64_t, std::string> const& s) {
-        response_time.add(id, s.first);
-        out << s.second << "\n";
-      },
-      pt->update_fn(), utl::parallel_error_strategy::QUIT_EXEC, n_threads);
+  // runs the ctx scheduler's io loop + worker threads on this thread until
+  // on_query_done() above calls scheduler.runner_.stop().
+  if (!queries.empty()) {
+    scheduler.runner_.run(n_threads);
+  }
+
+  for (auto const& response : responses) {
+    out << response << "\n";
+  }
+
   fmt::println("Processed {} queries in {:%T}", queries.size(),
                std::chrono::steady_clock::now() - start_batch);
 
