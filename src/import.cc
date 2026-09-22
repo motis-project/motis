@@ -407,18 +407,6 @@ void import(config const& c,
       },
       {tt_hash, n_version()}};
 
-  auto tbd = task{"tbd",
-                  {&tt},
-                  c.timetable_.has_value() && c.timetable_->tb_,
-                  [&]() {
-                    auto d = data{data_path};
-                    d.load_tt("tt.bin");
-                    cista::write(
-                        data_path / "tbd.bin",
-                        n::routing::tb::preprocess(*d.tt_, n::kDefaultProfile));
-                  },
-                  {tt_hash, n_version(), tbd_version()}};
-
   auto adr_extend = task{
       "adr_extend",
       c.osm_.has_value() ? std::vector<task*>{&adr, &tt}
@@ -520,7 +508,10 @@ void import(config const& c,
              .profile_idx_ = n::kFootProfile,
              .max_matching_distance_ = c.timetable_->max_matching_distance_,
              .extend_missing_ = c.timetable_->extend_missing_footpaths_,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min,
+             // osr_footpath is the switch: without it this never runs and the
+             // default profile stays the loader's layer
+             .rebuild_default_profile_ = true},
             {.profile_ = osr::search_profile::kWheelchair,
              .profile_idx_ = n::kWheelchairProfile,
              .max_matching_distance_ = 8.0,
@@ -551,6 +542,25 @@ void import(config const& c,
        std::pair{"way_matches",
                  cista::build_hash(c.timetable_.value_or(config::timetable{})
                                        .preprocess_max_matching_distance_)}}};
+
+  // osr_footpath replaces the walks of the default profile: the transfers
+  // have to be precomputed on the timetable the server routes on.
+  auto tbd_hashes = meta_t{tt_hash, n_version(), tbd_version()};
+  if (c.osr_footpath_) {
+    tbd_hashes.insert(begin(osr_footpath.hashes_), end(osr_footpath.hashes_));
+  }
+  auto tbd = task{"tbd",
+                  c.osr_footpath_ ? std::vector<task*>{&tt, &osr_footpath}
+                                  : std::vector<task*>{&tt},
+                  c.timetable_.has_value() && c.timetable_->tb_,
+                  [&]() {
+                    auto d = data{data_path};
+                    d.load_tt(c.osr_footpath_ ? "tt_ext.bin" : "tt.bin");
+                    cista::write(
+                        data_path / "tbd.bin",
+                        n::routing::tb::preprocess(*d.tt_, n::kDefaultProfile));
+                  },
+                  std::move(tbd_hashes)};
 
   auto route_shapes_task = task{
       "route_shapes",

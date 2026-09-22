@@ -1,5 +1,6 @@
 #include "motis/compute_footpaths.h"
 
+#include "nigiri/loader/build_footpaths.h"
 #include "nigiri/loader/build_lb_graph.h"
 
 #include "cista/mmap.h"
@@ -85,6 +86,11 @@ elevator_footpath_map_t compute_footpaths(
     for (auto& fps : transfers) {
       fps.clear();
     }
+
+    // beeline estimates the default profile gets on top of `transfers`
+    auto default_estimates =
+        n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
+            mode.rebuild_default_profile_ ? tt.n_locations() : 0U);
 
     auto const is_candidate = [&](n::location_idx_t const l) {
       // Virtual locations sit exactly where their stop sits, and no profile
@@ -205,24 +211,33 @@ elevator_footpath_map_t compute_footpaths(
           // with it. The virtual locations the rules created carry nothing
           // here, and the routing projects them onto their stop.
 
-          // A pair the router cannot connect over a few meters is an OSM data
-          // error rather than a real gap: bridge it with the beeline.
-          if (mode.extend_missing_) {
+          // A pair the router cannot connect is estimated by its beeline
+          // where that is an OSM data error rather than a real gap: over a
+          // few meters, and in the default profile also within one station.
+          if (mode.extend_missing_ || mode.rebuild_default_profile_) {
             for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
-              if (r.has_value()) {
-                continue;
-              }
-              auto const dist = geo::distance(tt.locations_.coordinates_[l],
-                                              tt.locations_.coordinates_[n]);
-              if (dist >= kMaxMissingFootpathDistance ||
+              if (r.has_value() ||
                   utl::any_of(transfers[l], [&](n::footpath const fp) {
                     return fp.target() == n;
                   })) {
                 continue;
               }
-              transfers[l].emplace_back(n::footpath{
+              auto const dist = geo::distance(tt.locations_.coordinates_[l],
+                                              tt.locations_.coordinates_[n]);
+              auto const estimate = n::footpath{
                   n, n::duration_t{
-                         static_cast<int>(std::ceil((dist / 0.7) / 60.0))}});
+                         static_cast<int>(std::ceil((dist / 0.7) / 60.0))}};
+              if (estimate.duration() > mode.max_duration_) {
+                continue;
+              }
+              auto const is_close = dist < kMaxMissingFootpathDistance;
+              if (mode.extend_missing_ && is_close) {
+                transfers[l].emplace_back(estimate);
+              } else if (mode.rebuild_default_profile_ &&
+                         (is_close || tt.locations_.get_root_idx(l) ==
+                                          tt.locations_.get_root_idx(n))) {
+                default_estimates[l].emplace_back(estimate);
+              }
             }
           }
 
@@ -253,6 +268,14 @@ elevator_footpath_map_t compute_footpaths(
 
     n::loader::build_lb_graph<n::direction::kForward>(tt, mode.profile_idx_);
     n::loader::build_lb_graph<n::direction::kBackward>(tt, mode.profile_idx_);
+
+    if (mode.rebuild_default_profile_) {
+      for (auto const [walks, estimates] :
+           utl::zip(transfers, default_estimates)) {
+        utl::concat(walks, estimates);
+      }
+      n::loader::rebuild_default_profile(tt, transfers);
+    }
 
     n_done += tt.n_locations();
   }

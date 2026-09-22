@@ -150,6 +150,21 @@ test_case_params const import_test_case<test_case::FFM_one_to_many>() {
   return import_test_case(std::move(c), "test/test_case/ffm_one_to_many_data");
 }
 
+template <>
+test_case_params const
+import_test_case<test_case::FFM_one_to_many_no_osr_footpath>() {
+  auto const c =
+      config{.osm_ = {"test/resources/test_case.osm.pbf"},
+             .timetable_ =
+                 config::timetable{.first_day_ = "2019-05-01",
+                                   .num_days_ = 2,
+                                   .datasets_ = {{"test", {.path_ = kGTFS}}}},
+             .street_routing_ = true,
+             .osr_footpath_ = false};
+  return import_test_case(
+      std::move(c), "test/test_case/ffm_one_to_many_no_osr_footpath_data");
+}
+
 std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>
 parse_time(std::string_view time) {
   return std::chrono::time_point_cast<std::chrono::seconds>(
@@ -171,7 +186,8 @@ auto one_to_many_v1_get(data& d) {
 }
 
 TEST(one_to_many, get_request_forward) {
-  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] =
+      get_test_case<test_case::FFM_one_to_many_no_osr_footpath>();
 
   auto const durations = one_to_many_get(d)(
       "/api/experimental/one-to-many-intermodal"
@@ -244,7 +260,8 @@ TEST(one_to_many, get_request_forward) {
 }
 
 TEST(one_to_many, post_request_backward) {
-  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] =
+      get_test_case<test_case::FFM_one_to_many_no_osr_footpath>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "50.113816,8.679421,0",  // Near FFM_HAUPT
@@ -497,7 +514,8 @@ TEST(one_to_many, oneway_post_backward_for_post_transit_and_direct_modes) {
 }
 
 TEST(one_to_many, oneway_post_forward_for_post_transit_modes) {
-  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] =
+      get_test_case<test_case::FFM_one_to_many_no_osr_footpath>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "test_PAUL1",
@@ -518,7 +536,8 @@ TEST(one_to_many, oneway_post_forward_for_post_transit_modes) {
 }
 
 TEST(one_to_many, oneway_get_backward_for_pre_transit_modes) {
-  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] =
+      get_test_case<test_case::FFM_one_to_many_no_osr_footpath>();
 
   auto const durations = one_to_many_get(d)(
       "/api/experimental/one-to-many-intermodal"
@@ -714,32 +733,60 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
 
   // The default profile honours the rows: 4 min between the FFM platforms
   // and the FFM_B/FFM_C stops, 5 to 9 min around DA - shorter than the
-  // walks, and a rule wins over the walking time.
-  auto const default_durations =
-      one_to_many_post(d)(api::OneToManyIntermodalParams{
-          .one_ = "49.8722160,8.6282315",
-          .many_ = {"49.875292,8.6277460", "49.874995,8.6313925",
-                    "49.871561,8.6320181", "50.111900,8.675208"},
-          .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
-          .maxMatchingDistance_ = 25,
-          .useRoutedTransfers_ = false,
-          .withDistance_ = true});
-  auto const& dd = default_durations.transit_durations_.value();
-  ASSERT_EQ(4U, dd.size());
-  ASSERT_EQ(1U, dd.at(0).size());
-  EXPECT_DOUBLE_EQ(1140.0, dd.at(0).at(0).duration_);
-  EXPECT_EQ(0, dd.at(0).at(0).transfers_);
-  ASSERT_EQ(1U, dd.at(1).size());
-  EXPECT_DOUBLE_EQ(1320.0, dd.at(1).at(0).duration_);
-  EXPECT_EQ(0, dd.at(1).at(0).transfers_);
-  ASSERT_EQ(2U, dd.at(2).size());
-  EXPECT_DOUBLE_EQ(1500.0, dd.at(2).at(0).duration_);
-  EXPECT_EQ(0, dd.at(2).at(0).transfers_);
-  EXPECT_DOUBLE_EQ(1440.0, dd.at(2).at(1).duration_);
-  EXPECT_EQ(1, dd.at(2).at(1).transfers_);
-  ASSERT_EQ(1U, dd.at(3).size());
-  EXPECT_DOUBLE_EQ(4440.0, dd.at(3).at(0).duration_);
-  EXPECT_EQ(2, dd.at(3).at(0).transfers_);
+  // walks, and a rule wins over the walking time. What no row states is
+  // walked: on beelines without osr_footpath, on routed footpaths with it.
+  auto const default_profile = [](data& x) {
+    return one_to_many_post(x)(api::OneToManyIntermodalParams{
+        .one_ = "49.8722160,8.6282315",
+        .many_ = {"49.875292,8.6277460", "49.874995,8.6313925",
+                  "49.871561,8.6320181", "50.111900,8.675208"},
+        .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+        .maxMatchingDistance_ = 25,
+        .useRoutedTransfers_ = false,
+        .withDistance_ = true});
+  };
+
+  {  // without osr_footpath: the loader's layer
+    auto [beeline, _c] =
+        get_test_case<test_case::FFM_one_to_many_no_osr_footpath>();
+    auto const default_durations = default_profile(beeline);
+    auto const& dd = default_durations.transit_durations_.value();
+    ASSERT_EQ(4U, dd.size());
+    ASSERT_EQ(1U, dd.at(0).size());
+    EXPECT_DOUBLE_EQ(1140.0, dd.at(0).at(0).duration_);
+    EXPECT_EQ(0, dd.at(0).at(0).transfers_);
+    ASSERT_EQ(1U, dd.at(1).size());
+    EXPECT_DOUBLE_EQ(1320.0, dd.at(1).at(0).duration_);
+    EXPECT_EQ(0, dd.at(1).at(0).transfers_);
+    ASSERT_EQ(2U, dd.at(2).size());
+    EXPECT_DOUBLE_EQ(1500.0, dd.at(2).at(0).duration_);
+    EXPECT_EQ(0, dd.at(2).at(0).transfers_);
+    EXPECT_DOUBLE_EQ(1440.0, dd.at(2).at(1).duration_);
+    EXPECT_EQ(1, dd.at(2).at(1).transfers_);
+    ASSERT_EQ(1U, dd.at(3).size());
+    EXPECT_DOUBLE_EQ(4440.0, dd.at(3).at(0).duration_);
+    EXPECT_EQ(2, dd.at(3).at(0).transfers_);
+  }
+
+  {  // with osr_footpath: routed walks, and the rows still win
+    auto const default_durations = default_profile(d);
+    auto const& dd = default_durations.transit_durations_.value();
+    ASSERT_EQ(4U, dd.size());
+    // no row on the way to Tram_1: the routed walk, like useRoutedTransfers
+    ASSERT_EQ(1U, dd.at(0).size());
+    EXPECT_DOUBLE_EQ(td.at(0).at(0).duration_, dd.at(0).at(0).duration_);
+    EXPECT_EQ(0, dd.at(0).at(0).transfers_);
+    // the rows beat the routed walks (1860 / 1800 with useRoutedTransfers)
+    ASSERT_EQ(1U, dd.at(1).size());
+    EXPECT_DOUBLE_EQ(1320.0, dd.at(1).at(0).duration_);
+    EXPECT_EQ(0, dd.at(1).at(0).transfers_);
+    ASSERT_EQ(1U, dd.at(2).size());
+    EXPECT_DOUBLE_EQ(1500.0, dd.at(2).at(0).duration_);
+    EXPECT_EQ(0, dd.at(2).at(0).transfers_);
+    ASSERT_EQ(1U, dd.at(3).size());
+    EXPECT_DOUBLE_EQ(4440.0, dd.at(3).at(0).duration_);
+    EXPECT_EQ(2, dd.at(3).at(0).transfers_);
+  }
 }
 
 TEST(one_to_many, pareto_sets_with_multiple_entries) {
@@ -748,7 +795,8 @@ TEST(one_to_many, pareto_sets_with_multiple_entries) {
   // After bug fix: Slow walking speed, so that transit is faster
   // might require moving stops (B2->T1, T1->T2, T2 delete) with paths:
   // Bus1 -> Tram3, Bus1 -> Bus2 -> Tram3, Bus1 -> Bus2 -> Tram1/2 -> Tram3
-  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] =
+      get_test_case<test_case::FFM_one_to_many_no_osr_footpath>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "49.8722160,8.6282315",  // DA_Bus_1

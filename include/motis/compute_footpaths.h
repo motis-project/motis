@@ -22,6 +22,13 @@ struct routed_transfers_settings {
   bool extend_missing_{false};
   std::chrono::seconds max_duration_;
   std::function<bool(nigiri::location_idx_t)> is_candidate_{};
+
+  // Also replace the walks of the default profile (0) with this profile's: the
+  // beelines the loader wrote are only there because nigiri has no street
+  // routing. transfers.txt stays authoritative over the routed durations. A
+  // pair the router cannot connect keeps a beeline estimate if it is closer
+  // than 100m or within one station: OSM often lacks a station's passages.
+  bool rebuild_default_profile_{false};
 };
 
 elevator_footpath_map_t compute_footpaths(
