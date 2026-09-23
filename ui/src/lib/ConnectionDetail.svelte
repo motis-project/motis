@@ -10,13 +10,14 @@
 		Accessibility,
 		ExternalLink
 	} from '@lucide/svelte';
+    import { Modal, Content, Trigger } from "sv-popup"
 	import type {
 		FareProduct,
 		Itinerary,
 		Leg,
 		Mode,
 		Place,
-		StepInstruction
+		StepInstruction,
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
 	import ReservationRequired from '$lib/ReservationRequired.svelte';
@@ -24,6 +25,7 @@
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
 	import { Button } from '$lib/components/ui/button';
 	import Route from '$lib/Route.svelte';
+    import ElevationProfile from './ElevationProfile.svelte';
 	import Alerts from '$lib/Alerts.svelte';
 	import { getModeName } from '$lib/getModeName';
 	import { language, t } from '$lib/i18n/translation';
@@ -240,9 +242,19 @@
 				</Button>
 			</span>
 		{/if}
+        {#if l.elevationProfile}
+            <Modal basic small=true>
+                <Content>
+                    <ElevationProfile profile={l.elevationProfile} />
+                </Content>
+                <Trigger>
+                    <Button variant="outline">Elevation Profile</Button>
+                </Trigger>
+            </Modal>
+        {/if}
 		{#if stepsWithElevation && stepsWithElevation.length > 0}
 			<div class="ml-6 flex items-center gap-2 text-xs">
-				{t.incline}
+                {t.incline}
 				<div class="flex items-center">
 					<ArrowUp class="size-4" />
 					{stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)} m
@@ -256,7 +268,7 @@
 				</div>
 			</div>
 		{/if}
-		{#if stepsWithToll && stepsWithToll.length > 0}
+        {#if stepsWithToll && stepsWithToll.length > 0}
 			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
 				<DollarSign class="size-4" />
 				{t.toll}
@@ -585,7 +597,7 @@
 						</span>
 					</div>
 				{/if}
-				{@render streetLeg(l)}
+                {@render streetLeg(l)}
 				{#if !isLast}
 					{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, l.mode, 1, true)}
 				{/if}

@@ -4832,7 +4832,8 @@ components:
       type: object
       required:
         - points
-        - size
+        - min
+        - max
       properties:
         points:
           description: |
