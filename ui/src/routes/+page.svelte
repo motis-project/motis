@@ -754,7 +754,7 @@
 			: undefined
 	);
 
-	let searchDebounceTimer: number;
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
@@ -849,7 +849,7 @@
 			}
 		}
 	});
-	let isochronesQueryTimeout: number;
+	let isochronesQueryTimeout: ReturnType<typeof setTimeout>;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
 			const isochronesOpacity = isochronesOptions.opacity;

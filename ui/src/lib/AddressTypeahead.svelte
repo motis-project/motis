@@ -116,7 +116,7 @@
 		}
 	});
 
-	let timer: number;
+	let timer: ReturnType<typeof setTimeout>;
 	$effect(() => {
 		if (inputValue) {
 			clearTimeout(timer);
