@@ -59,9 +59,9 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@deck.gl/core": "~9.2.11",
-		"@deck.gl/layers": "~9.2.11",
-		"@deck.gl/mapbox": "~9.2.11",
+		"@deck.gl/core": "~9.4.0",
+		"@deck.gl/layers": "~9.4.0",
+		"@deck.gl/maplibre": "^9.4.0",
 		"@hey-api/client-fetch": "^0.4.4",
 		"@lucide/svelte": "^0.548.0",
 		"@mapbox/mapbox-gl-rtl-text": "0.2.3",

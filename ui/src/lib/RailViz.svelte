@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { lngLatToStr } from '$lib/lngLatToStr';
-	import { MapboxOverlay } from '@deck.gl/mapbox';
+	import { MapLibreOverlay } from '@deck.gl/maplibre';
 	import { IconLayer } from '@deck.gl/layers';
 	import { createTripIcon } from '$lib/map/createTripIcon';
 	import maplibregl from 'maplibre-gl';
@@ -178,7 +178,7 @@
 
 	//SETUP
 	let status = $state();
-	let overlay: MapboxOverlay;
+	let overlay: MapLibreOverlay;
 	let worker: Worker;
 	let metadata: MetaData | undefined = $state();
 
@@ -209,7 +209,7 @@
 				animationId = requestAnimationFrame(animate);
 			}
 		};
-		overlay = new MapboxOverlay({
+		overlay = new MapLibreOverlay({
 			interleaved: true
 		});
 	});
