@@ -33,8 +33,6 @@
 	let el: HTMLElement | null = null;
 	let currStyle: maplibregl.StyleSpecification | undefined = style;
 	let ctx = $state<{ map: maplibregl.Map | undefined }>({ map: undefined });
-	let touchStartTime = $state<number | null>(null);
-	let touchLocation = $state<{ x: number; y: number } | null>(null);
 	setContext('map', ctx);
 
 	const updateStyle = () => {
@@ -105,28 +103,6 @@
 				});
 				tmp.on('rotate', () => {
 					bearing = tmp.getBearing();
-				});
-				tmp.on('touchstart', (event) => {
-					touchStartTime = new Date().getTime();
-					touchLocation = { x: event.point.x, y: event.point.y };
-				});
-				tmp.on('touchend', (event) => {
-					const longTouchTimeMS = 500;
-					const acceptableMoveDistance = 20;
-
-					if (touchStartTime && touchLocation) {
-						const touchTime = new Date().getTime() - touchStartTime;
-						const didNotMoveMap =
-							Math.abs(event.point.x - touchLocation.x) < acceptableMoveDistance &&
-							Math.abs(event.point.y - touchLocation.y) < acceptableMoveDistance;
-
-						if (touchTime > longTouchTimeMS && didNotMoveMap) {
-							tmp.fire('contextmenu', { lngLat: event.lngLat });
-						}
-					}
-
-					touchStartTime = null;
-					touchLocation = null;
 				});
 			});
 		} catch (e) {

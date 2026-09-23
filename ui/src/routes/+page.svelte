@@ -1355,7 +1355,7 @@
 
 		{#if browser}
 			{#if isSmallScreen.current}
-				<Drawer class="fixed w-full z-10 h-full mt-3 flex flex-col" bind:showMap>
+				<Drawer class="relative z-10 h-full mt-3 flex flex-col" bind:showMap>
 					{@render resultContent()}
 				</Drawer>
 			{:else}
