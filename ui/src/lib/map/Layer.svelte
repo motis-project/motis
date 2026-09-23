@@ -222,10 +222,12 @@
 			map!.setFilter(id, nextFilter);
 		}
 		if (currLayout != nextLayout) {
+			// @ts-expect-error not assignable
 			applyProperties(currLayout, nextLayout, (k, v) => map!.setLayoutProperty(id, k, v));
 			currLayout = nextLayout;
 		}
 		if (currPaint != nextPaint) {
+			// @ts-expect-error not assignable
 			applyProperties(currPaint, nextPaint, (k, v) => map!.setPaintProperty(id, k, v));
 			currPaint = nextPaint;
 		}
