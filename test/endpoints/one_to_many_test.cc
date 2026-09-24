@@ -178,7 +178,8 @@ TEST(one_to_many, get_request_forward) {
                                        {},
                                        {},
                                        {.duration_ = 114.0},
-                                       {.duration_ = 239.0},
+                                       // Ground, not the level -1 way below
+                                       {.duration_ = 219.0},
                                        {.duration_ = 348.0},
                                        {.duration_ = 579.0},
                                        {},
@@ -204,7 +205,8 @@ TEST(one_to_many, get_request_forward) {
                     {{.duration_ = 1200.0, .transfers_ = 0}},
                     {{.duration_ = 1560.0, .transfers_ = 0}},
                     {},
-                    {{.duration_ = 2580.0, .transfers_ = 1}},
+                    // From the street, not the U-Bahn level below
+                    {{.duration_ = 2640.0, .transfers_ = 1}},
                     {{.duration_ = 2640.0, .transfers_ = 1}},
                     {{.duration_ = 2940.0, .transfers_ = 1}},
                     {{.duration_ = 2940.0, .transfers_ = 1}},
@@ -285,8 +287,7 @@ TEST(one_to_many, post_request_backward) {
               {{.duration_ = 1020.0, .transfers_ = 0}},
               {},
               {{.duration_ = 3360.0, .transfers_ = 1}},  // from DA_10: 3420.0
-              // Walk fits maxPreTransitTime, only its cost exceeds 300
-              {{.duration_ = 3420.0, .transfers_ = 1}},
+              {},
           }}}),
       durations);
 }
@@ -321,7 +322,7 @@ TEST(one_to_many,
   EXPECT_EQ((api::OneToManyIntermodalResponse{
                 .street_durations_ = {{
                     {},
-                    {.duration_ = 366.0},
+                    {.duration_ = 429.0},  // No level: street above the U4
                     {.duration_ = 366.0},  // Direct connection allowed
                     {.duration_ = 321.0},  // Valid for pre transit
                     {},
@@ -387,7 +388,7 @@ TEST(one_to_many, get_request_backward_with_wheelchair_and_short_post_transit) {
 
   ASSERT_EQ(5U, td.size());
   ASSERT_EQ(1U, td.at(0).size());
-  EXPECT_DOUBLE_EQ(1080.0, td.at(0).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1500.0, td.at(0).at(0).duration_);  // from the street
   EXPECT_EQ(0, td.at(0).at(0).transfers_);
   ASSERT_EQ(1U, td.at(1).size());
   EXPECT_DOUBLE_EQ(1080.0, td.at(1).at(0).duration_);
@@ -582,8 +583,10 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
                       {{.duration_ = 720.0, .transfers_ = 0}},
                       {{.duration_ = 780.0, .transfers_ = 0}},
                       {{.duration_ = 720.0, .transfers_ = 0}},
-                      {{.duration_ = 900.0, .transfers_ = 0}},
                       {{.duration_ = 1020.0, .transfers_ = 0}},
+                      {// FIXME Test location should be unreachable (U4, then
+                       // the transfer to FFM_HAUPT_S, then the last mile)
+                       {.duration_ = 1260.0, .transfers_ = 0}},
                   }}}),
               durations);
   }
@@ -607,7 +610,7 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
                       {{.duration_ = 1500.0, .transfers_ = 0}},
                       {{.duration_ = 1260.0, .transfers_ = 0}},
                       {{.duration_ = 1380.0, .transfers_ = 0}},
-                      {{.duration_ = 1500.0, .transfers_ = 0}},
+                      {{.duration_ = 1620.0, .transfers_ = 0}},
                   }}}),
               test_durations);
   }
@@ -845,7 +848,7 @@ TEST(one_to_many, street_routing) {
       auto const get_duration =
           one_to_many_get_durations.at(0).duration_.value();
       auto const plan_duration = plan_durations.direct_.at(0).duration_;
-      EXPECT_NEAR(557.0, post_duration, 0.1);
+      EXPECT_NEAR(654.0, post_duration, 0.1);
       EXPECT_DOUBLE_EQ(post_duration, get_duration);
       EXPECT_DOUBLE_EQ(post_duration, plan_duration);
       // Ensure same distance
@@ -855,7 +858,7 @@ TEST(one_to_many, street_routing) {
           one_to_many_get_durations.at(0).distance_.value();
       auto const plan_distance =
           plan_durations.direct_.at(0).legs_.at(0).distance_.value();
-      EXPECT_NEAR(667.8, post_distance, 0.1);
+      EXPECT_NEAR(678.4, post_distance, 0.1);
       EXPECT_DOUBLE_EQ(post_distance, get_distance);
       // Notice: plan_distance sums per-segment distances truncated to whole
       // metres (start connector, path, destination connector)

@@ -1,5 +1,7 @@
 #include "motis/gbfs/osr_mapping.h"
 
+#include <cstdint>
+
 #include <optional>
 #include <utility>
 #include <vector>
@@ -182,10 +184,19 @@ struct osr_mapping {
       return a.node_.dist_to_node_ < b.node_.dist_to_node_;
     });
 
-    auto connected_components = hash_set<osr::component_idx_t>{};
+    // Keep the closest node per foot component (the matches are walked to).
+    // A component that is a single way has no id; it is keyed by its way.
+    auto const* components =
+        w_.r_->get_class_components(osr::component_class::kFoot);
+    auto seen_components = hash_set<std::uint32_t>{};
+    auto seen_ways = hash_set<osr::way_idx_t>{};
     for (auto it = node_matches.begin(); it != node_matches.end();) {
-      auto const component = w_.r_->way_component_[it->way_];
-      if (!connected_components.insert(component).second) {
+      auto const component =
+          components == nullptr ? std::nullopt : components->get(it->way_);
+      auto const is_new = component.has_value()
+                              ? seen_components.insert(*component).second
+                              : seen_ways.insert(it->way_).second;
+      if (!is_new) {
         it = node_matches.erase(it);
       } else {
         ++it;
