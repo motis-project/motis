@@ -261,6 +261,73 @@ ticketing_deep_link_id,web_url,android_intent_uri,ios_universal_link_url
 link-1,https://example.com,https://example.com,https://example.com
 )";
 
+// stop_sequence numbers are irregular (not 0/1/10-based), forcing the
+// stop_seq_number_range fully-specified decode path instead of the compact
+// "based" markers exercised by the other feeds in this file.
+constexpr auto const kGTFSIrregularStopSequence = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone,ticketing_deep_link_id
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin,link-1
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+S1,S1,50.0,8.0,0,,
+S2,S2,50.1,8.1,0,,
+S3,S3,50.2,8.2,0,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,R1,R1,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+R1,S1,T1,S3,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+T1,10:00:00,10:00:00,S1,5,0,0
+T1,10:10:00,10:10:00,S2,12,0,0
+T1,10:20:00,10:20:00,S3,40,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+
+# ticketing_deep_links.txt
+ticketing_deep_link_id,web_url,android_intent_uri,ios_universal_link_url
+link-1,https://example.com,https://example.com,https://example.com
+)";
+
+TEST(motis, trip_ticketing_irregular_stop_sequence) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c = config{
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = kGTFSIrregularStopSequence}}}},
+      .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+
+  auto const trip_ep = utl::init_from<ep::trip>(d).value();
+
+  auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
+  ASSERT_EQ(1, res.legs_.size());
+  auto const& leg = res.legs_[0];
+  ASSERT_TRUE(leg.ticketUrls_.has_value());
+  // Without ticketing identifiers, the from/to ids fall back to the raw GTFS
+  // stop_sequence numbers, which must be reconstructed as-is (5 and 40), not
+  // misread as compact "based" markers or off-by-relative-index values.
+  EXPECT_NE(
+      std::string::npos,
+      leg.ticketUrls_->web_->find("from_ticketing_stop_time_id=%5B%225%22%5D"));
+  EXPECT_NE(std::string::npos, leg.ticketUrls_->web_->find(
+                                   "to_ticketing_stop_time_id=%5B%2240%22%5D"));
+}
+
 TEST(motis, trip_ticketing_interlined) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
