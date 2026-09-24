@@ -205,11 +205,10 @@ TEST(one_to_many, get_request_forward) {
                     {{.duration_ = 1200.0, .transfers_ = 0}},
                     {{.duration_ = 1560.0, .transfers_ = 0}},
                     {},
-                    // From the street, not the U-Bahn level below
-                    {{.duration_ = 2640.0, .transfers_ = 1}},
+                    {{.duration_ = 2700.0, .transfers_ = 1}},
                     {{.duration_ = 2640.0, .transfers_ = 1}},
                     {{.duration_ = 2940.0, .transfers_ = 1}},
-                    {{.duration_ = 2940.0, .transfers_ = 1}},
+                    {},
                 }}}),
             durations);
 }
@@ -341,7 +340,7 @@ TEST(one_to_many,
                     {{.duration_ = 1560.0, .transfers_ = 0}},  // Must take S3
                     {{.duration_ = 1680.0, .transfers_ = 0}},  // Must take S3
                     {},
-                    {{.duration_ = 1740.0, .transfers_ = 0}},
+                    {{.duration_ = 1800.0, .transfers_ = 0}},
                     {{.duration_ = 1740.0, .transfers_ = 0}},
                     {{.duration_ = 1740.0, .transfers_ = 0}},
                     {{.duration_ = 1680.0, .transfers_ = 0}},
@@ -380,7 +379,7 @@ TEST(one_to_many, get_request_backward_with_wheelchair_and_short_post_transit) {
   EXPECT_EQ(api::Duration{}, sd.at(1));
   // Not valid for post transit => unreachable from FFM_101
   EXPECT_DOUBLE_EQ(122.0, sd.at(2).duration_.value());
-  EXPECT_NEAR(99.3, sd.at(2).distance_.value(), 0.1);
+  EXPECT_NEAR(98.8, sd.at(2).distance_.value(), 0.1);
   EXPECT_DOUBLE_EQ(84.0, sd.at(3).duration_.value());
   EXPECT_NEAR(67.6, sd.at(3).distance_.value(), 0.1);
   EXPECT_DOUBLE_EQ(466.0, sd.at(4).duration_.value());
@@ -584,9 +583,8 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
                       {{.duration_ = 780.0, .transfers_ = 0}},
                       {{.duration_ = 720.0, .transfers_ = 0}},
                       {{.duration_ = 1020.0, .transfers_ = 0}},
-                      {// FIXME Test location should be unreachable (U4, then
-                       // the transfer to FFM_HAUPT_S, then the last mile)
-                       {.duration_ = 1260.0, .transfers_ = 0}},
+                      {// FIXME Test location should be unreachable
+                       {.duration_ = 1380.0, .transfers_ = 0}},
                   }}}),
               durations);
   }
@@ -607,10 +605,10 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
                   .street_durations_ = std::vector<api::Duration>(5),
                   .transit_durations_ = {{
                       {{.duration_ = 1260.0, .transfers_ = 0}},
-                      {{.duration_ = 1500.0, .transfers_ = 0}},
+                      {{.duration_ = 1620.0, .transfers_ = 0}},
                       {{.duration_ = 1260.0, .transfers_ = 0}},
                       {{.duration_ = 1380.0, .transfers_ = 0}},
-                      {{.duration_ = 1620.0, .transfers_ = 0}},
+                      {{.duration_ = 1740.0, .transfers_ = 0}},
                   }}}),
               test_durations);
   }
@@ -636,7 +634,8 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
                       {{.duration_ = 780.0, .transfers_ = 0}},
                       {{.duration_ = 720.0, .transfers_ = 0}},
                       {{.duration_ = 780.0, .transfers_ = 0}},
-                      {{.duration_ = 900.0, .transfers_ = 0}},
+                      {// FIXME Should start FFM_HAUPT_S => time > 1200
+                       {.duration_ = 960.0, .transfers_ = 0}},
                   }}}),
               walk_durations);
   }

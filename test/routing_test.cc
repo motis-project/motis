@@ -711,10 +711,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:15, end=02:28, duration=01:13, transfers=0, legs=[
+          R"(date=2019-05-01, start=01:15, end=02:30, duration=01:15, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:30),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:30)
 ])",
           to_str(res.itineraries_));
     }
@@ -734,10 +734,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=03:00, end=03:28, duration=00:28, transfers=0, legs=[
+          R"(date=2019-05-01, start=03:00, end=03:30, duration=00:30, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:00, mode="WALK", trip="-", end=2019-05-01 03:15),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:30)
 ])",
           to_str(res.itineraries_));
     }
@@ -757,10 +757,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:15, end=02:28, duration=01:13, transfers=0, legs=[
+          R"(date=2019-05-01, start=01:15, end=02:30, duration=01:15, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:30),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:30)
 ])",
           to_str(res.itineraries_));
     }
@@ -780,10 +780,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=03:00, end=03:28, duration=00:28, transfers=0, legs=[
+          R"(date=2019-05-01, start=03:00, end=03:30, duration=00:30, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:00, mode="WALK", trip="-", end=2019-05-01 03:15),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:30)
 ])",
           to_str(res.itineraries_));
     }
@@ -914,12 +914,12 @@ TEST(motis, routing) {
         "&numLegAlternatives=3");
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:28, end=02:28, duration=01:00, transfers=1, legs=[
+        R"(date=2019-05-01, start=01:28, end=02:29, duration=01:01, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:28, mode="WALK", trip="-", end=2019-05-01 01:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:01),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:29)
 ])",
         to_str(res.itineraries_));
   }
@@ -1130,8 +1130,8 @@ S,20190501,1
     ASSERT_NE(end(offsets), offset);
 
     auto const precomputed = one_to_many_view{&otm}.find(
-        n::get_special_station(n::special_station::kStart), stop, offset->mode(),
-        offset->target());
+        n::get_special_station(n::special_station::kStart), stop,
+        offset->mode(), offset->target());
     ASSERT_NE(nullptr, precomputed.state_);
 
     auto const from = forward ? pos : stop_pos;

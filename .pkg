@@ -49,7 +49,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=74b1587ddb920782516c3916b2372c7f924bfe17
+  commit=9c64dbb5d20042031f51d01818ea14e1cb29975f
 [prometheus-cpp]
   url=git@github.com:motis-project/prometheus-cpp.git
   branch=master
