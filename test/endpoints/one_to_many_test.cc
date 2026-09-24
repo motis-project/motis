@@ -170,8 +170,10 @@ TEST(one_to_many, get_request_forward) {
       "&maxPostTransitTime=420"
       "&arriveBy=false");
 
+  // [0] DA_10 without a level ends on the street ~90 m away: ground is
+  // preferred, and ways 84..105 m away are near-ties at that distance.
   EXPECT_EQ((api::OneToManyIntermodalResponse{
-                .street_durations_ = {{{.duration_ = 279.0},
+                .street_durations_ = {{{.duration_ = 194.0},
                                        {},
                                        {},
                                        {},
