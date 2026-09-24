@@ -199,8 +199,8 @@ api::ElevationProfile get_elevation_profile(
           .size_ = static_cast<int64_t>(profile.elevation_.size()),
           .resolution_ = profile.resolution_,
           .median_ = to_idx(profile.median()),
-          .min_ = to_idx(profile.min_),
-          .max_ = to_idx(profile.max_),
+          .min_ = static_cast<double>(to_idx(profile.min_)),
+          .max_ = static_cast<double>(to_idx(profile.max_)),
           .up_ = 0,
           .down_ = 0};
 }
