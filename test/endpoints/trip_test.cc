@@ -7,6 +7,7 @@
 #include "nigiri/common/parse_time.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/frun.h"
+#include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
 
 #include "net/not_found_exception.h"
@@ -19,9 +20,14 @@
 #include "motis/rt/auser.h"
 #include "motis/tag_lookup.h"
 
+#include "../util.h"
+
 using namespace std::string_view_literals;
+using namespace std::chrono_literals;
 using namespace motis;
+using namespace motis::test;
 using namespace date;
+namespace n = nigiri;
 
 constexpr auto const kGTFS = R"(
 # agency.txt
@@ -362,6 +368,48 @@ TEST(motis, trip_ticketing_interlined_mid_trip_plan) {
                 "from_ticketing_stop_time_id=%5B%223%22%5D"));
   EXPECT_NE(std::string::npos, legs[0].ticketUrls_->web_->find(
                                    "to_ticketing_stop_time_id=%5B%222%22%5D"));
+}
+
+// A GTFS-RT `ADDED` trip has no static counterpart, so its run has no
+// `trip_idx` and `get_ticketing_urls` must bail out via its `is_scheduled()`
+// guard rather than trying to look up GTFS stop_sequence numbers for it.
+// R1's agency (DB) has a ticketing deep link configured, so this only passes
+// because of that guard, not because ticketing is unconfigured.
+TEST(motis, trip_ticketing_rt_added) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto const t = [](int const h, int const m) {
+    return date::sys_seconds{date::sys_days{2019_y / May / 1} +
+                             std::chrono::hours{h} + std::chrono::minutes{m}};
+  };
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      to_feed_msg({trip_update{
+                      .trip_ = {.trip_id_ = "RT_ADDED", .route_id_ = {"R1"}},
+                      .stop_updates_ = {{.stop_id_ = "S1", .time_ = t(12, 0)},
+                                        {.stop_id_ = "S2", .time_ = t(12, 10)},
+                                        {.stop_id_ = "S3", .time_ = t(12, 20)}},
+                      .added_ = true}},
+                  date::sys_days{2019_y / May / 1} + 11h));
+  ASSERT_EQ(1U, stats.total_entities_success_);
+
+  auto const trip_ep = utl::init_from<ep::trip>(d).value();
+  auto const res =
+      trip_ep("?tripId=20190501_12%3A00_test_RT_ADDED&joinInterlinedLegs=true");
+  ASSERT_EQ(1, res.legs_.size());
+  EXPECT_FALSE(res.legs_[0].ticketUrls_.has_value());
 }
 
 constexpr auto kNetex = R"(
