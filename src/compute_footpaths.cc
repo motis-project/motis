@@ -216,10 +216,7 @@ elevator_footpath_map_t compute_footpaths(
           // few meters, and in the default profile also within one station.
           if (mode.extend_missing_ || mode.rebuild_default_profile_) {
             for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
-              if (r.has_value() ||
-                  utl::any_of(transfers[l], [&](n::footpath const fp) {
-                    return fp.target() == n;
-                  })) {
+              if (r.has_value()) {
                 continue;
               }
               auto const dist = geo::distance(tt.locations_.coordinates_[l],

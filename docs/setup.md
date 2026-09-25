@@ -70,6 +70,7 @@ timetable:                          # if not set, no timetable will be loaded
   max_matching_distance: 25.0       # maximum distance from geolocation to next OSM ways that will be found
   default_transfer_time: 2          # default transfer time applied when no transfer is found from datasets
   transfer_rule_hubs: true          # transfers.txt rules covering many stop pairs are stored compactly as hubs instead of one entry per pair
+  hubs: true                        # false = no hubs at all, every transfer is an explicit footpath (much larger; for trip-based routing and to check the hubs)
   preprocess_max_matching_distance: 250.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag

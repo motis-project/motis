@@ -226,17 +226,25 @@ def parse_time(s):
     return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
+# motis API modes that are no GTFS trip (openapi.yaml, Mode: "Street"; ODM
+# and RIDE_SHARING are both): transfers.txt says nothing about them
+STREET_MODES = {"WALK", "BIKE", "RENTAL", "CAR", "HGV", "CAR_PARKING",
+                "CAR_DROPOFF", "ODM", "RIDE_SHARING", "FLEX",
+                "DEBUG_BUS_ROUTE", "DEBUG_RAILWAY_ROUTE", "DEBUG_FERRY_ROUTE"}
+
+
 def transfers(path):
     """Yield (query index, arrival leg, departure leg) for every transfer
-    between two transit legs. Walk legs in between are part of the transfer,
-    not a break in it, so the gap is measured from vehicle to vehicle."""
+    between two transit legs. Street legs in between (walking, cycling, a car,
+    flex, ...) are part of the transfer, not a break in it, so the gap is
+    measured from vehicle to vehicle."""
     with open(path) as f:
         for query, line in enumerate(f):
             if not line.strip():
                 continue
             for itinerary in json.loads(line).get("itineraries", []):
                 legs = [l for l in itinerary.get("legs", [])
-                        if l.get("mode") != "WALK"]
+                        if l.get("mode") not in STREET_MODES]
                 for arrive, depart in zip(legs, legs[1:]):
                     yield query, arrive, depart
 

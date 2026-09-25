@@ -1,6 +1,8 @@
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <ranges>
 
 #include "conf/configuration.h"
 
@@ -10,21 +12,24 @@
 #include "nigiri/flex.h"
 #include "nigiri/routing/raptor/debug.h"
 #include "nigiri/routing/search.h"
+#include "nigiri/special_stations.h"
 #include "nigiri/timetable.h"
 
+#include "osr/routing/route.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/raii.h"
-#include "osr/routing/route.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
 #include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
+#include "motis/location_routes.h"
 #include "motis/odm/bounds.h"
-#include "motis/point_rtree.h"
 #include "motis/osr/parameters.h"
+#include "motis/point_rtree.h"
 #include "motis/tag_lookup.h"
 
 #include "./flags.h"
@@ -75,7 +80,7 @@ n::location_idx_t random_stop(n::timetable const& tt,
   auto s = n::location_idx_t::invalid();
   do {
     s = rand_in(stops);
-  } while (tt.location_routes_[s].empty());
+  } while (!has_routes(tt, s));
   return s;
 }
 
@@ -210,7 +215,8 @@ int generate(int ac, char** av) {
        "randomize locations within bounds, format: GeoJSON"
        "(shorthand for Europe \"-b europe\")")  //
       ("src", po::value<std::string>(),
-       "restrict from/to stops to the ones of this dataset tag");
+       "restrict from/to stops to the ones of these dataset tags (comma "
+       "separated)");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -318,16 +324,29 @@ int generate(int ac, char** av) {
     fmt::println("station-to-station");
   }
 
-  auto const src_filter =
-      vm.count("src") ? std::optional{d.tags_->get_src(vm["src"].as<std::string>())}
-                      : std::nullopt;
-  utl::verify(!src_filter || *src_filter != n::source_idx_t::invalid(),
-              "unknown dataset tag {}", vm.count("src") ? vm["src"].as<std::string>() : "");
+  auto const src_filter = [&]() -> std::optional<std::vector<n::source_idx_t>> {
+    if (!vm.count("src")) {
+      return std::nullopt;
+    }
+    auto srcs = std::vector<n::source_idx_t>{};
+    for (auto const tag : std::views::split(vm["src"].as<std::string>(), ',')) {
+      auto const t = std::string{tag.begin(), tag.end()};
+      srcs.push_back(d.tags_->get_src(t));
+      utl::verify(srcs.back() != n::source_idx_t::invalid(),
+                  "unknown dataset tag {}", t);
+    }
+    return srcs;
+  }();
   auto const master_stops = [&] {
     auto v = std::vector<n::location_idx_t>{};
     for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
-      if (src_filter && d.tt_->locations_.src_[l] != *src_filter) {
+      if (n::is_special(l)) {
+        continue;  // START, END, VIA0-6: no dataset, unreachable - a rank
+                   // near the end of the lower bound order would pick them
+      }
+      if (src_filter && utl::find(*src_filter, d.tt_->locations_.src_[l]) ==
+                            end(*src_filter)) {
         continue;
       }
 
@@ -416,6 +435,7 @@ int generate(int ac, char** av) {
     n::routing::raptor_state rs_;
     hash_map<n::location_idx_t, double> geo_distance_;
   };
+  auto n_rejected = std::atomic_uint{0U};
   utl::parallel_for_run_threadlocal<state>(ranks.size(), [&](state& s,
                                                              auto const i) {
     auto const r = ranks[i];
@@ -423,9 +443,9 @@ int generate(int ac, char** av) {
     s.stops_ = master_stops;
     s.geo_distance_.reserve(master_stops.size());
 
-    auto const get_place = [&](n::location_idx_t const l,
-                               geo::latlng& pos_out)
-        -> std::optional<std::string> {
+    auto const get_place =
+        [&](n::location_idx_t const l,
+            geo::latlng& pos_out) -> std::optional<std::string> {
       if (!modes) {
         pos_out = d.tt_->locations_.coordinates_[l];
         return d.tags_->id(*d.tt_, l);
@@ -456,8 +476,8 @@ int generate(int ac, char** av) {
       auto const p = osr::route(
           to_profile_parameters(osr::search_profile::kFoot, {}), *d.w_, *d.l_,
           osr::search_profile::kFoot, osr::location{from, osr::level_t{}},
-          osr::location{to, osr::level_t{}}, max_cost,
-          osr::direction::kForward, kMaxMatchingDistance);
+          osr::location{to, osr::level_t{}}, max_cost, osr::direction::kForward,
+          kMaxMatchingDistance);
       return p.has_value() && p->cost_ <= max_cost;
     };
 
@@ -517,8 +537,12 @@ int generate(int ac, char** av) {
         to_place.reset();
       }
 
+      if (!from_place.has_value() || !to_place.has_value()) {
+        return false;  // every pair drawn was rejected
+      }
       s.p_.fromPlace_ = *from_place;
       s.p_.toPlace_ = *to_place;
+      return true;
     };
 
     auto const random_time = [&] {
@@ -530,7 +554,10 @@ int generate(int ac, char** av) {
                    (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
     };
 
-    random_from_to();
+    if (!random_from_to()) {
+      ++n_rejected;
+      return;
+    }
     random_time();
 
     auto guard = std::lock_guard{mutex};
@@ -538,6 +565,13 @@ int generate(int ac, char** av) {
     progress_tracker->increment();
   });
 
+  if (n_rejected != 0U) {
+    std::cerr << fmt::format(
+        "{} of {} queries not written: every pair drawn (1000 per query) was "
+        "rejected, check --max_direct, --src, --bounds\n",
+        n_rejected.load(), ranks.size());
+    return 1;
+  }
   return 0;
 }
 

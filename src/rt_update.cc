@@ -388,6 +388,8 @@ void apply_canned_rt_update(config const& c, data& d) {
   auto rtt = std::make_unique<n::rt_timetable>(
       n::rt::create_rt_timetable(*d.tt_, today));
   apply_canned(d, endpoints, *rtt);
+  fmt::println("canned rt: {} real-time virtual locations",
+               rtt->rt_virts_.size());
   rtt->update_lbs(*d.tt_);
   upload_gpu_rtt(d, *rtt);
 

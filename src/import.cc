@@ -27,6 +27,7 @@
 #include "tiles/osm/load_osm.h"
 
 #include "nigiri/loader/assistance.h"
+#include "nigiri/loader/build_footpaths.h"
 #include "nigiri/loader/load.h"
 #include "nigiri/loader/loader_interface.h"
 #include "nigiri/clasz.h"
@@ -51,6 +52,7 @@
 #include "motis/compute_footpaths.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
+#include "motis/location_routes.h"
 #include "motis/route_shapes.h"
 #include "motis/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
@@ -199,7 +201,7 @@ void import(config const& c,
         t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
         t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
         t.max_footpath_length_, t.default_transfer_time_, t.transfer_rule_hubs_,
-        t.default_timezone_, t.assistance_times_);
+        t.hubs_, t.default_timezone_, t.assistance_times_);
   }
 
   auto osm_hash = std::pair{"osm"s, cista::BASE_HASH};
@@ -397,7 +399,10 @@ void import(config const& c,
              .merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_,
-             .merge_stats_dir_ = data_path},
+             .merge_stats_dir_ = data_path,
+             // with osr_footpath, the routed profiles come later and bring
+             // hubs of their own: materialized once they are done
+             .hubs_ = t.hubs_ || c.osr_footpath_},
             interval, assistance.get(), shapes.get(), false))};
 
         tt->write(data_path / "tt.bin");
@@ -520,10 +525,14 @@ void import(config const& c,
              .profile_idx_ = n::kCarProfile,
              .max_matching_distance_ = 250.0,
              .max_duration_ = 8h,
+             // the profile projects virtual locations onto their stop, so
+             // the routes moved there count for the stop
              .is_candidate_ = [&](n::location_idx_t const l) {
-               return utl::any_of(d.tt_->location_routes_[l], [&](auto r) {
-                 return d.tt_->is_flag_set(nigiri::kCarsAllowed, r);
+               auto cars = false;
+               for_each_route_at(*d.tt_, l, [&](n::route_idx_t const r) {
+                 cars = cars || d.tt_->is_flag_set(nigiri::kCarsAllowed, r);
                });
+               return cars;
              }}};
         auto const elevator_footpath_map = compute_footpaths(
             *d.w_, *d.l_, *d.pl_, *d.tt_, *d.matches_, d.way_matches_.get(),
@@ -531,6 +540,9 @@ void import(config const& c,
 
         cista::write(data_path / "elevator_footpath_map.bin",
                      elevator_footpath_map);
+        if (!c.timetable_->hubs_) {
+          n::loader::materialize_hubs(*d.tt_);
+        }
         d.tt_->write(data_path / "tt_ext.bin");
 
         cista::free_self_allocated(d.tt_.get());

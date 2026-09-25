@@ -6,6 +6,7 @@
 #include "adr/typeahead.h"
 
 #include "motis/adr_extend_tt.h"
+#include "motis/location_routes.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
 #include "motis/server.h"
@@ -38,9 +39,9 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   if (!grouped) {
     loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
       auto location_clasz_mask = n::routing::clasz_mask_t{0};
-      for (auto const r : tt_.location_routes_[l]) {
+      for_each_route_at(tt_, l, [&](n::route_idx_t const r) {
         location_clasz_mask |= n::routing::to_mask(tt_.route_clasz_[r]);
-      }
+      });
       if (location_clasz_mask == 0) {
         return;
       }

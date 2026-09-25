@@ -1027,7 +1027,9 @@ TEST(motis, routing) {
   // Accessible ICEs via B1 are slowest but only uses accessible transfer stops
   // Accessible ICEs via B2 are in between, but use inaccesisible transfer stops
   //
-  // Expected result: Accessible ICE via B1
+  // Expected result: Accessible ICE via B1. The routed wheelchair profile
+  // ignores transfers.txt (WCH_B1,WCH_B1,0,0): the change at B1 takes the
+  // stop's default 2 min.
   {
     auto const res = routing(
         "?fromPlace=test_WCH_A"
@@ -1042,7 +1044,7 @@ TEST(motis, routing) {
     EXPECT_EQ(
         R"(date=2019-05-01, start=08:00, end=11:00, duration=03:00, transfers=1, legs=[
     (from=test_WCH_A [track=-, scheduled_track=-, level=0], to=test_WCH_B1 [track=-, scheduled_track=-, level=0], start=2019-05-01 08:00, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 09:00),
-    (from=test_WCH_B1 [track=-, scheduled_track=-, level=0], to=test_WCH_B1 [track=-, scheduled_track=-, level=0], start=2019-05-01 09:00, mode="WALK", trip="-", end=2019-05-01 09:00),
+    (from=test_WCH_B1 [track=-, scheduled_track=-, level=0], to=test_WCH_B1 [track=-, scheduled_track=-, level=0], start=2019-05-01 09:00, mode="WALK", trip="-", end=2019-05-01 09:02),
     (from=test_WCH_B1 [track=-, scheduled_track=-, level=0], to=test_WCH_C [track=-, scheduled_track=-, level=0], start=2019-05-01 10:00, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 11:00)
 ])",
         to_str(res.itineraries_));

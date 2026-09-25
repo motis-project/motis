@@ -7,6 +7,8 @@
 #include "utl/pipes/transform.h"
 #include "utl/pipes/vec.h"
 
+#include "nigiri/routing/for_each_hub_source.h"
+
 #include "motis/constants.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/match_elevator.h"
@@ -34,26 +36,25 @@ api::transfers_response transfers::operator()(
       loc_rtree_.in_radius(tt_.locations_.coordinates_[l], kMaxDistance);
 
   auto footpaths = hash_map<n::location_idx_t, api::Transfer>{};
-
-  for (auto const fp : tt_.locations_.footpaths_out_[0].at(l)) {
-    footpaths[fp.target()].default_ = fp.duration().count();
-  }
-  if (!tt_.locations_.footpaths_out_[n::kFootProfile].empty()) {
-    for (auto const fp : tt_.locations_.footpaths_out_[n::kFootProfile].at(l)) {
-      footpaths[fp.target()].foot_ = fp.duration().count();
-    }
-  }
-  if (!tt_.locations_.footpaths_out_[n::kWheelchairProfile].empty()) {
-    for (auto const fp :
-         tt_.locations_.footpaths_out_[n::kWheelchairProfile].at(l)) {
-      footpaths[fp.target()].wheelchair_ = fp.duration().count();
-    }
-  }
-  if (!tt_.locations_.footpaths_out_[n::kCarProfile].empty()) {
-    for (auto const fp : tt_.locations_.footpaths_out_[n::kCarProfile].at(l)) {
-      footpaths[fp.target()].car_ = fp.duration().count();
-    }
-  }
+  auto const add = [&](n::profile_idx_t const prf, auto&& field) {
+    n::routing::for_each_transfer<n::direction::kForward>(
+        tt_, nullptr, prf, l, [&](n::footpath const fp) {
+          // a virtual location (transfers.txt rules) has no id of its own, it
+          // is its stop outside of the routing
+          if (tt_.locations_.types_[fp.target()] == n::location_type::kVirt) {
+            return;
+          }
+          // a pair can come as a footpath and from a hub: the shortest
+          auto& d = field(footpaths[fp.target()]);
+          d = std::min(d.value_or(fp.duration().count()),
+                       static_cast<double>(fp.duration().count()));
+        });
+  };
+  add(0U, [](api::Transfer& t) -> auto& { return t.default_; });
+  add(n::kFootProfile, [](api::Transfer& t) -> auto& { return t.foot_; });
+  add(n::kWheelchairProfile,
+      [](api::Transfer& t) -> auto& { return t.wheelchair_; });
+  add(n::kCarProfile, [](api::Transfer& t) -> auto& { return t.car_; });
 
   auto const loc = get_loc(tt_, w_, pl_, matches_, l);
   for (auto const mode :

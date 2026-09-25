@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <map>
+#include <tuple>
 #include <vector>
 
 #include "utl/verify.h"
@@ -158,18 +160,26 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   all.reserve(reachable.count());
   auto const all_ev =
       query.arriveBy_ ? n::event_type::kDep : n::event_type::kArr;
+  // A virtual location (transfers.txt rules) is its stop outside of the
+  // routing: the stop is reached as soon as one of them is.
+  auto fastest = std::map<n::location_idx_t, n::routing::fastest_offset>{};
   reachable.for_each_set_bit([&](auto const i) {
     auto const l = n::location_idx_t{i};
-    auto const fastest = n::routing::get_fastest_one_to_all_offsets(
+    auto const f = n::routing::get_fastest_one_to_all_offsets(
         tt_, state,
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward, l,
         time, q.max_transfers_);
-
-    all.push_back(api::ReachablePlace{
-        make_place(tt_location{l},
-                   time + std::chrono::minutes{fastest.duration_}, all_ev),
-        query.arriveBy_ ? -fastest.duration_ : fastest.duration_, fastest.k_});
+    auto& best = fastest[tt_.locations_.get_attribute_idx(l)];
+    if (std::tie(f.duration_, f.k_) < std::tie(best.duration_, best.k_)) {
+      best = f;
+    }
   });
+  for (auto const& [l, f] : fastest) {
+    all.push_back(api::ReachablePlace{
+        make_place(tt_location{l}, time + std::chrono::minutes{f.duration_},
+                   all_ev),
+        query.arriveBy_ ? -f.duration_ : f.duration_, f.k_});
+  }
 
   return {
       .one_ = make_place(

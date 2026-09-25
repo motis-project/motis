@@ -59,6 +59,7 @@ timetable:
   max_footpath_length: 15
   default_transfer_time: 2
   transfer_rule_hubs: true
+  hubs: true
   max_matching_distance: 25.000000
   preprocess_max_matching_distance: 250.000000
   datasets:
