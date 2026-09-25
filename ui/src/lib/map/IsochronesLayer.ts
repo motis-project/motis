@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import type { CustomRenderMethodInput, Map as MapLibreMap } from 'maplibre-gl';
 
 type GLContext = WebGLRenderingContext | WebGL2RenderingContext;

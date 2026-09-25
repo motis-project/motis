@@ -42,7 +42,7 @@
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import ItineraryGeoJson from '$lib/map/itineraries/ItineraryGeoJSON.svelte';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
 	import { getUrlArray, onClickStop, onClickTrip, pushStateWithQueryString } from '$lib/utils';
 	import Debug from '$lib/Debug.svelte';
@@ -754,7 +754,7 @@
 			: undefined
 	);
 
-	let searchDebounceTimer: number;
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
@@ -849,7 +849,7 @@
 			}
 		}
 	});
-	let isochronesQueryTimeout: number;
+	let isochronesQueryTimeout: ReturnType<typeof setTimeout>;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
 			const isochronesOpacity = isochronesOptions.opacity;
@@ -1355,7 +1355,7 @@
 
 		{#if browser}
 			{#if isSmallScreen.current}
-				<Drawer class="fixed w-full z-10 h-full mt-3 flex flex-col" bind:showMap>
+				<Drawer class="relative z-10 h-full mt-3 flex flex-col" bind:showMap>
 					{@render resultContent()}
 				</Drawer>
 			{:else}
