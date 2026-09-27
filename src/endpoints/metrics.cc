@@ -1,8 +1,11 @@
 #include "motis/endpoints/metrics.h"
 
+#include <array>
 #include <chrono>
 #include <functional>
 #include <iostream>
+
+#include "fmt/ostream.h"
 
 #include "prometheus/registry.h"
 #include "prometheus/text_serializer.h"
@@ -16,6 +19,7 @@
 #include "nigiri/types.h"
 
 #include "motis/data.h"
+#include "motis/place.h"
 #include "motis/tag_lookup.h"
 
 namespace n = nigiri;
@@ -37,6 +41,14 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
       tt.external_interval().to_);
   auto const time_interval = n::interval{start_time, end_time};
 
+  constexpr auto const kRtDataStates =
+      std::array{n::rt_data_state::kNoRtData, n::rt_data_state::kInconsistent,
+                 n::rt_data_state::kObserved, n::rt_data_state::kPropagated,
+                 n::rt_data_state::kPredicted};
+  auto rt_data_state_metric_by_agency =
+      std::vector<std::array<prometheus::Gauge*, kRtDataStates.size()>>{};
+  rt_data_state_metric_by_agency.reserve(tt.n_agencies());
+
   auto metric_by_agency =
       std::vector<std::pair<std::reference_wrapper<prometheus::Gauge>,
                             std::reference_wrapper<prometheus::Gauge>>>{};
@@ -54,12 +66,29 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
     sched.Set(0);
     real.Set(0);
     metric_by_agency.emplace_back(std::ref(sched), std::ref(real));
+
+    auto& rt_data_state_metrics = rt_data_state_metric_by_agency.emplace_back();
+    for (auto const state : kRtDataStates) {
+      auto state_labels = labels;
+      state_labels.emplace("rt_state",
+                           fmt::to_string(fmt::streamed(to_api(state))));
+      auto& g = metrics.total_rt_events_count_.Add(state_labels);
+      g.Set(0);
+      rt_data_state_metrics[static_cast<std::size_t>(state)] = &g;
+    }
   }
 
   if (rtt != nullptr) {
     for (auto rt_t = nigiri::rt_transport_idx_t{0};
          rt_t < rtt->n_rt_transports(); ++rt_t) {
       auto const fr = n::rt::frun::from_rt(tt, rtt, rt_t);
+      auto const provider_idx = fr[0].get_provider_idx(n::event_type::kDep);
+      if (provider_idx != n::provider_idx_t::invalid()) {
+        auto const& gauges = rt_data_state_metric_by_agency.at(provider_idx.v_);
+        for (auto const state : rtt->rt_transport_data_states_[rt_t]) {
+          gauges[static_cast<std::size_t>(state)]->Increment();
+        }
+      }
       if (!fr.is_scheduled()) {
         continue;
       }
@@ -69,7 +98,6 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
               n::event_type::kArr) +
               n::unixtime_t::duration{1}};
       if (active.overlaps(time_interval)) {
-        auto const provider_idx = fr[0].get_provider_idx(n::event_type::kDep);
         if (provider_idx != n::provider_idx_t::invalid()) {
           metric_by_agency.at(provider_idx.v_).first.get().Increment();
           metric_by_agency.at(provider_idx.v_).second.get().Increment();
