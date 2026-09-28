@@ -480,10 +480,11 @@ config make_gbfs_config_without_ttl_overwrite(fs::path const& dir,
   return c;
 }
 
-void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
+void run_update(config const& c,
+                std::shared_ptr<gbfs_data>& gbfs,
+                metrics_registry& metrics) {
   auto& d = street_data();
   auto ioc = boost::asio::io_context{};
-  auto metrics = metrics_registry{};
   boost::asio::co_spawn(
       ioc,
       [&]() -> boost::asio::awaitable<void> {
@@ -491,6 +492,25 @@ void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
       },
       boost::asio::detached);
   ioc.run();
+}
+
+void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
+  auto metrics = metrics_registry{};
+  run_update(c, gbfs, metrics);
+}
+
+bool has_feed_timestamp(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_feed_timestamp_seconds_.Has({{"provider_id", id}});
+}
+
+bool has_last_update(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_last_update_timestamp_seconds_.Has({{"provider_id", id}});
+}
+
+bool has_vehicle_count(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_vehicle_count_.Has({{"provider_id", id},
+                                    {"provider_group_id", "Test Bikes"},
+                                    {"form_factor", "BICYCLE"}});
 }
 
 provider_routing_data const& routing_data_for(gbfs_data& gbfs,
@@ -1233,4 +1253,50 @@ TEST(motis, gbfs_update_ignore_geofencing_takes_precedence_over_winding) {
   EXPECT_TRUE(provider.geofencing_zones_.zones_.empty());
   EXPECT_GT(count_additional_vehicle_nodes(routing_data_for(*gbfs, provider)),
             0U);
+}
+
+TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
+  auto const dir = make_temp_dir("manifest-metrics");
+  auto const c = make_gbfs_config(dir, "agg");
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  // initialization fails: type of feed unknown, report as never updated
+  run_update(c, gbfs, metrics);
+  ASSERT_TRUE(has_feed_timestamp(metrics, "agg"));
+  EXPECT_EQ(0.0,
+            metrics.gbfs_feed_timestamp_seconds_.Add({{"provider_id", "agg"}})
+                .Value());
+
+  write_default_feed(dir / "provider-a");
+  write_default_feed(dir / "provider-b");
+  write_manifest(dir, {"provider-a", "provider-b"});
+  run_update(c, gbfs, metrics);
+
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  EXPECT_TRUE(has_last_update(metrics, "agg"));
+  for (auto const id : {"agg:provider-a", "agg:provider-b"}) {
+    EXPECT_TRUE(has_feed_timestamp(metrics, id));
+    EXPECT_TRUE(has_last_update(metrics, id));
+    EXPECT_TRUE(has_vehicle_count(metrics, id));
+  }
+
+  // provider removed from manifest: its metrics are removed
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs, metrics);
+
+  EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_last_update(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_vehicle_count(metrics, "agg:provider-b"));
+
+  // manifest can't be loaded: keep previous provider feeds
+  write_file(dir / "manifest.json", "{");
+  run_update(c, gbfs, metrics);
+
+  auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
+  EXPECT_NE(nullptr, gbfs->providers_.at(idx));
+  EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_TRUE(has_vehicle_count(metrics, "agg:provider-a"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
 }
