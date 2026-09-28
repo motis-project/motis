@@ -1,5 +1,7 @@
 #include "motis/gbfs/osr_mapping.h"
 
+#include <cstdint>
+
 #include <optional>
 #include <utility>
 #include <vector>
@@ -192,7 +194,7 @@ struct osr_mapping {
     auto matches = osr::match_result{};
     l_.complete_match<footp>(footp::parameters{}, loc, false,
                              osr::direction::kForward, kMaxGbfsMatchingDistance,
-                             nullptr, std::nullopt, {}, matches);
+                             nullptr, false, std::nullopt, {}, matches);
     auto const m = matches[osr::match_idx_t{0U}];
     auto node_matches = std::vector<node_match>{};
     for (auto j = std::size_t{0U}; j != m.size(); ++j) {
@@ -206,10 +208,18 @@ struct osr_mapping {
       return a.node_.dist_to_node_ < b.node_.dist_to_node_;
     });
 
-    auto connected_components = hash_set<osr::component_idx_t>{};
+    // Keep only the closest node per foot component. Single-way components
+    // have no id; the way itself identifies them.
+    auto const& components =
+        w_.r_->get_class_components(osr::component_class::kFoot);
+    auto seen_components = hash_set<std::uint32_t>{};
+    auto seen_ways = hash_set<osr::way_idx_t>{};
     for (auto it = node_matches.begin(); it != node_matches.end();) {
-      auto const component = w_.r_->way_component_[it->way_];
-      if (!connected_components.insert(component).second) {
+      auto const component = components.get(it->way_);
+      auto const is_new = component.has_value()
+                              ? seen_components.insert(*component).second
+                              : seen_ways.insert(it->way_).second;
+      if (!is_new) {
         it = node_matches.erase(it);
       } else {
         ++it;
