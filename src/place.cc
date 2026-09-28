@@ -76,12 +76,13 @@ std::optional<double> get_level(osr::ways const* w,
 }
 
 osr::location get_location(api::Place const& p) {
-  return {{p.lat_, p.lon_},
-          p.level_
-              .transform([](auto const lvl) {
-                return osr::level_t{static_cast<float>(lvl)};
-              })
-              .value_or(osr::kNoLevel)};
+  return {.pos_ = {p.lat_, p.lon_},
+          .lvl_ = p.level_
+                      .transform([](auto const lvl) {
+                        return osr::level_t{static_cast<float>(lvl)};
+                      })
+                      .value_or(osr::kNoLevel),
+          .must_reach_ = p.stopId_.has_value()};
 }
 
 osr::location get_location(n::timetable const* tt,
@@ -111,8 +112,9 @@ osr::location get_location(n::timetable const* tt,
             }
             utl::verify(tt != nullptr,
                         "resolving stop coordinates: timetable not set");
-            return osr::location{tt->locations_.coordinates_.at(l_idx),
-                                 get_lvl(w, pl, matches, l_idx)};
+            return osr::location{.pos_ = tt->locations_.coordinates_.at(l_idx),
+                                 .lvl_ = get_lvl(w, pl, matches, l_idx),
+                                 .must_reach_ = true};
           }},
       loc);
 }

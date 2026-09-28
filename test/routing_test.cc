@@ -24,8 +24,14 @@
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
+#include "motis/gbfs/gbfs_output.h"
+#include "motis/gbfs/routing_data.h"
 #include "motis/gbfs/update.h"
 #include "motis/import.h"
+#include "motis/osr/one_to_many_searches.h"
+#include "motis/place.h"
+#include "motis/tag_lookup.h"
+#include "motis/transport_mode.h"
 
 #include "./util.h"
 
@@ -622,22 +628,20 @@ TEST(motis, routing) {
     EXPECT_FALSE(steps[0].osmWay_.has_value());
     EXPECT_FALSE(steps[0].fromOsmNode_.has_value());
     EXPECT_TRUE(steps[0].toOsmNode_.has_value());
-    EXPECT_EQ(2624559589, steps[0].toOsmNode_);
+    EXPECT_EQ(533673, steps[0].toOsmNode_);
 
-    EXPECT_TRUE(steps[1].osmWay_.has_value());
+    EXPECT_FALSE(steps[1].osmWay_.has_value());
     EXPECT_TRUE(steps[1].fromOsmNode_.has_value());
-    EXPECT_TRUE(steps[1].toOsmNode_.has_value());
-    EXPECT_EQ(150003465, steps[1].osmWay_);
-    EXPECT_EQ(2624559589, steps[1].fromOsmNode_);
-    EXPECT_EQ(533673, steps[1].toOsmNode_);
+    EXPECT_FALSE(steps[1].toOsmNode_.has_value());
+    EXPECT_EQ(533673, steps[1].fromOsmNode_);
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:25, end=01:36, duration=00:11, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:26),
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:26, mode="RENTAL", trip="-", end=2019-05-01 01:27),
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:27, mode="WALK", trip="-", end=2019-05-01 01:36)
-]date=2019-05-01, start=01:25, end=01:36, duration=00:11, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:36)
+        R"(date=2019-05-01, start=01:25, end=01:34, duration=00:09, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:25),
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:25, mode="RENTAL", trip="-", end=2019-05-01 01:26),
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:26, mode="WALK", trip="-", end=2019-05-01 01:34)
+]date=2019-05-01, start=01:25, end=01:35, duration=00:10, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:35)
 ])",
         to_str(res.direct_));
 
@@ -671,8 +675,8 @@ TEST(motis, routing) {
         "&numLegAlternatives=3");
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:21, end=02:15, duration=00:54, transfers=1, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:21, mode="WALK", trip="-", end=2019-05-01 01:23),
+        R"(date=2019-05-01, start=01:23, end=02:15, duration=00:52, transfers=1, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:23, mode="WALK", trip="-", end=2019-05-01 01:23),
     (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:23, mode="RENTAL", trip="-", end=2019-05-01 01:24),
     (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:24, mode="WALK", trip="-", end=2019-05-01 01:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
@@ -707,10 +711,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:16, end=02:29, duration=01:13, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:16, mode="WALK", trip="-", end=2019-05-01 01:30),
+          R"(date=2019-05-01, start=01:15, end=02:30, duration=01:15, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:30),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:29)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:30)
 ])",
           to_str(res.itineraries_));
     }
@@ -730,10 +734,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=03:01, end=03:29, duration=00:28, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:01, mode="WALK", trip="-", end=2019-05-01 03:15),
+          R"(date=2019-05-01, start=03:00, end=03:30, duration=00:30, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:00, mode="WALK", trip="-", end=2019-05-01 03:15),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:29)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:30)
 ])",
           to_str(res.itineraries_));
     }
@@ -753,10 +757,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:16, end=02:29, duration=01:13, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:16, mode="WALK", trip="-", end=2019-05-01 01:30),
+          R"(date=2019-05-01, start=01:15, end=02:30, duration=01:15, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:30),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:29)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:30)
 ])",
           to_str(res.itineraries_));
     }
@@ -776,10 +780,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=03:01, end=03:29, duration=00:28, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:01, mode="WALK", trip="-", end=2019-05-01 03:15),
+          R"(date=2019-05-01, start=03:00, end=03:30, duration=00:30, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:00, mode="WALK", trip="-", end=2019-05-01 03:15),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:29)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:30)
 ])",
           to_str(res.itineraries_));
     }
@@ -799,10 +803,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:34, end=02:38, duration=01:04, transfers=0, legs=[
+          R"(date=2019-05-01, start=01:34, end=02:39, duration=01:05, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34, mode="WALK", trip="-", end=2019-05-01 01:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
-    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01 02:38)
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01 02:39)
 ])",
           to_str(res.itineraries_));
     }
@@ -845,10 +849,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:34, end=02:38, duration=01:04, transfers=0, legs=[
+          R"(date=2019-05-01, start=01:34, end=02:39, duration=01:05, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34, mode="WALK", trip="-", end=2019-05-01 01:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
-    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01 02:38)
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01 02:39)
 ])",
           to_str(res.itineraries_));
     }
@@ -910,12 +914,12 @@ TEST(motis, routing) {
         "&numLegAlternatives=3");
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:29, end=02:28, duration=00:59, transfers=1, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:35),
+        R"(date=2019-05-01, start=01:28, end=02:29, duration=01:01, transfers=1, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:28, mode="WALK", trip="-", end=2019-05-01 01:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:01),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
-    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:29)
 ])",
         to_str(res.itineraries_));
   }
@@ -1046,5 +1050,122 @@ TEST(motis, routing) {
     (from=test_WCH_B1 [track=-, scheduled_track=-, level=0], to=test_WCH_C [track=-, scheduled_track=-, level=0], start=2019-05-01 10:00, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 11:00)
 ])",
         to_str(res.itineraries_));
+  }
+}
+
+// Offsets are produced by a one-to-many search; the leg for such an offset is
+// reconstructed from that retained search. Without it the leg is routed again
+// with a budget derived from the offset duration, which does not cover the
+// routing penalties the cost carries - so the same leg comes back cancelled.
+TEST(motis, rental_offset_reconstructs_from_retained_search) {
+  auto const path = std::filesystem::path{"test/data_rental_offset_retained"};
+  auto ec = std::error_code{};
+  std::filesystem::remove_all(path, ec);
+  auto const c = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ = config::timetable{.first_day_ = "2019-05-01",
+                                      .num_days_ = 2,
+                                      .extend_missing_footpaths_ = false,
+                                      .datasets_ = {{"test", {.path_ = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,DB,https://example.com,Europe/Berlin
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+A,A,49.875258,8.62775
+B,B,49.87249,8.628198
+# routes.txt
+route_id,agency_id,route_short_name,route_type
+R,DB,R,3
+# trips.txt
+route_id,service_id,trip_id
+R,S,T
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+T,12:00:00,12:00:00,A,1
+T,12:01:00,12:01:00,B,2
+# calendar_dates.txt
+service_id,date,exception_type
+S,20190501,1
+)"}}}},
+      .gbfs_ = {{.feeds_ = {{"CAB", {.url_ = "./test/resources/gbfs"}}}}},
+      .street_routing_ = true};
+  import(c, path);
+  auto d = data{path, c};
+  auto ioc = boost::asio::io_context{};
+  boost::asio::co_spawn(
+      ioc,
+      [&]() -> boost::asio::awaitable<void> {
+        co_await gbfs::update(c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
+      },
+      boost::asio::detached);
+  ioc.run();
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto gbfs_rd = gbfs::gbfs_routing_data{d.w_.get(), d.l_.get(), d.gbfs_};
+  auto blocked_mem = osr::bitvec<osr::node_idx_t>{d.w_->n_nodes()};
+
+  for (auto const dir : {osr::direction::kForward, osr::direction::kBackward}) {
+    SCOPED_TRACE(osr::to_str(dir));
+    auto const forward = dir == osr::direction::kForward;
+    auto const pos = forward
+                         ? osr::location{{49.875258, 8.62775}, osr::kNoLevel}
+                         : osr::location{{49.87249, 8.628198}, osr::kNoLevel};
+    auto const stop =
+        d.tags_->get_location(*d.tt_, forward ? "test_B" : "test_A");
+    auto const stop_pos = get_location(d.tt_.get(), d.w_.get(), d.pl_.get(),
+                                       d.matches_.get(), tt_location{stop});
+
+    auto otm = one_to_many_searches{};
+    auto stats = ep::stats_map_t{};
+    auto const offsets = routing.get_offsets(
+        d.rt_->rtt_.get(), pos, dir, {api::ModeEnum::RENTAL},
+        rental_options{.ignore_return_constraints_ = true}, {},
+        api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE, 3600s,
+        250.0, gbfs_rd, stats, &otm[n::special_station::kStart]);
+    auto const offset =
+        std::find_if(begin(offsets), end(offsets), [&](auto const& o) {
+          return o.target() == stop &&
+                 to_mode(o.mode()) == api::ModeEnum::RENTAL;
+        });
+    ASSERT_NE(end(offsets), offset);
+
+    auto const precomputed = one_to_many_view{&otm}.find(
+        n::get_special_station(n::special_station::kStart), stop,
+        offset->mode(), offset->target());
+    ASSERT_NE(nullptr, precomputed.state_);
+
+    auto const from = forward ? pos : stop_pos;
+    auto const to = forward ? stop_pos : pos;
+    auto const out = gbfs::gbfs_output{
+        *d.w_, gbfs_rd, gbfs_rd.get_products_ref(offset->mode().payload_),
+        true};
+    auto const start = n::unixtime_t{date::sys_days{2019_y / May / 1}};
+    // A budget this small cannot produce the leg on its own.
+    auto const reconstruct = [&](precomputed_route const& p) {
+      auto cache = street_routing_cache_t{};
+      return street_routing(*d.w_, *d.l_, nullptr, nullptr, {},
+                            to_place(from, "", {}), to_place(to, "", {}), out,
+                            start, start + offset->duration(), 250.0, {}, cache,
+                            blocked_mem, 6U, true, 1s, p);
+    };
+
+    auto const restored = reconstruct(precomputed);
+    ASSERT_FALSE(restored.legs_.empty());
+    auto has_rental = false;
+    for (auto const& leg : restored.legs_) {
+      EXPECT_FALSE(leg.cancelled_.value_or(false));
+      EXPECT_FALSE(leg.legGeometry_.points_.empty());
+      if (leg.mode_ == api::ModeEnum::RENTAL) {
+        ASSERT_TRUE(leg.rental_.has_value());
+        EXPECT_EQ("CAB", leg.rental_->providerId_);
+        has_rental = true;
+      }
+    }
+    EXPECT_TRUE(has_rental);
+
+    auto const routed_again = reconstruct({});
+    ASSERT_EQ(1U, routed_again.legs_.size());
+    EXPECT_TRUE(routed_again.legs_.front().cancelled_.value_or(false));
+    EXPECT_TRUE(routed_again.legs_.front().legGeometry_.points_.empty());
   }
 }
