@@ -1133,16 +1133,13 @@ struct gbfs_update {
       boost::json::object const& root,
       std::map<std::string, unsigned> const& default_ttl = {},
       std::map<std::string, unsigned> const& overwrite_ttl = {}) {
-    auto af = aggregated_feed{
-        .id_ = prefix,
-        .url_ = url,
-        .headers_ = headers,
-        .dir_ = dir,
-        .expiry_ = get_expiry(root, std::chrono::hours{1}, default_ttl,
-                              overwrite_ttl, "manifest"),
-        .oauth_ = std::move(oauth),
-        .default_ttl_ = default_ttl,
-        .overwrite_ttl_ = overwrite_ttl};
+    auto af = aggregated_feed{.id_ = prefix,
+                              .url_ = url,
+                              .headers_ = headers,
+                              .dir_ = dir,
+                              .oauth_ = std::move(oauth),
+                              .default_ttl_ = default_ttl,
+                              .overwrite_ttl_ = overwrite_ttl};
 
     process_aggregated_feed(af, root);
     // an aggregated feed has no last_updated field itself
@@ -1281,6 +1278,8 @@ struct gbfs_update {
     add_skipped_entries(af.id_, "manifest", skipped_entries);
 
     af.feeds_ = std::move(feeds);
+    af.expiry_ = get_expiry(root, std::chrono::hours{1}, af.default_ttl_,
+                            af.overwrite_ttl_, "manifest");
 
     metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", af.id_}})
         .SetToCurrentTime();
