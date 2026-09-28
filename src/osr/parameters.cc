@@ -5,6 +5,7 @@
 #include <limits>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 #include "utl/verify.h"
 
@@ -350,8 +351,10 @@ osr_parameters get_osr_parameters(
   return to_osr_parameters(params);
 }
 
-osr::profile_parameters to_profile_parameters(osr::search_profile const p,
-                                              osr_parameters const& params) {
+osr::profile_parameters to_profile_parameters(
+    osr::search_profile const p,
+    osr_parameters const& params,
+    std::function<bool(geo::latlng const&)> vehicle_return_allowed) {
   // Ensure correct speed is used when using default parameters
   auto const wheelchair_speed = params.use_wheelchair_
                                     ? params.pedestrian_speed_
@@ -410,11 +413,13 @@ osr::profile_parameters to_profile_parameters(osr::search_profile const p,
     case osr::search_profile::kBikeSharing:
       return osr::bike_sharing::parameters{
           .bike_ = {.speed_meters_per_second_ = params.cycling_speed_},
-          .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_}};
+          .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_},
+          .vehicle_return_allowed_ = std::move(vehicle_return_allowed)};
     case osr::search_profile::kCarSharing:
       return osr::car_sharing<osr::track_node_tracking>::parameters{
           .car_ = {},
-          .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_}};
+          .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_},
+          .vehicle_return_allowed_ = std::move(vehicle_return_allowed)};
     case osr::search_profile::kBus: return osr::bus::parameters{};
     case osr::search_profile::kRailway: return osr::railway::parameters{};
     case osr::search_profile::kFerry: return osr::ferry::parameters{};
