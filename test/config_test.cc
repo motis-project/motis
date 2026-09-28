@@ -210,3 +210,11 @@ street_routing: {}
 )"s));
   }
 }
+
+TEST(motis, config_gbfs_cache_size) {
+  EXPECT_ANY_THROW(config::read(R"(
+osm: europe-latest.osm.pbf
+gbfs:
+  cache_size: 0
+)"s));
+}
