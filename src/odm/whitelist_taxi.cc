@@ -9,7 +9,7 @@
 
 #include "motis/http_req.h"
 #include "motis/odm/odm.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 namespace n = nigiri;
 namespace nr = nigiri::routing;
@@ -31,7 +31,7 @@ void extract_taxis(std::vector<nr::journey> const& journeys,
                    std::vector<nr::start>& last_mile_taxi_rides) {
   for (auto const& j : journeys) {
     if (!j.legs_.empty()) {
-      if (is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
+      if (is_odm_leg(j.legs_.front(), kOdmTransportMode)) {
         first_mile_taxi_rides.push_back({
             .time_at_start_ = j.legs_.front().dep_time_,
             .time_at_stop_ = j.legs_.front().arr_time_,
@@ -41,7 +41,7 @@ void extract_taxis(std::vector<nr::journey> const& journeys,
     }
 
     if (j.legs_.size() > 1) {
-      if (is_odm_leg(j.legs_.back(), kOdmTransportModeId)) {
+      if (is_odm_leg(j.legs_.back(), kOdmTransportMode)) {
         last_mile_taxi_rides.push_back({
             .time_at_start_ = j.legs_.back().arr_time_,
             .time_at_stop_ = j.legs_.back().dep_time_,
@@ -65,11 +65,11 @@ void prima::extract_taxis_for_persisting(
       continue;
     }
 
-    if (is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
+    if (is_odm_leg(j.legs_.front(), kOdmTransportMode)) {
       whitelist_first_mile_locations_.push_back(j.legs_.front().to_);
     }
 
-    if (is_odm_leg(j.legs_.back(), kOdmTransportModeId)) {
+    if (is_odm_leg(j.legs_.back(), kOdmTransportMode)) {
       whitelist_last_mile_locations_.push_back(j.legs_.back().from_);
     }
   }
@@ -117,7 +117,7 @@ bool prima::consume_whitelist_taxi_response(
       }
     }
     fix_first_mile_duration(journeys, first_mile_taxi_rides, prev_first_mile,
-                            kOdmTransportModeId);
+                            kOdmTransportMode);
     return false;
   };
 
@@ -156,7 +156,7 @@ bool prima::consume_whitelist_taxi_response(
     }
 
     fix_last_mile_duration(journeys, last_mile_taxi_rides, prev_last_mile,
-                           kOdmTransportModeId);
+                           kOdmTransportMode);
     return false;
   };
 

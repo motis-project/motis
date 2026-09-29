@@ -9,7 +9,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=427f0a873be43f1de94289bd53d5678e07cd243f
+  commit=f89fd090dadf63db8b6aa651c20336eea7186464
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -37,7 +37,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=152ada03bb48a226519e95b5becfd552e861b48f
+  commit=fbdc1090e016218111e1cbcb202888198211bb33
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
@@ -49,7 +49,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=5b0f1bfa6c552b8cebc067919066f388c3a1d06e
+  commit=9ac40410a5b191c876e2bf9ccc3ae9b9ea284d12
 [prometheus-cpp]
   url=git@github.com:motis-project/prometheus-cpp.git
   branch=master

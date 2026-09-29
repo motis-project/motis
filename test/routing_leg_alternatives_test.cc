@@ -396,6 +396,68 @@ BUS T3 C 08:30->D 09:00
   }
 }
 
+// arriveBy alternatives are computed with a direction-flipped query, so the
+// special stations of the alternative journeys refer to the opposite places.
+// Their access/egress legs have to be rendered from the query's own
+// coordinates with a real street path (not a dummy leg from the other end).
+TEST(motis, routing_leg_alternatives_arrive_by_access_legs) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_leg_alts_arrive_by", ec);
+
+  auto const c = make_base_config(/*with_osr=*/true);
+  import(c, "test/data_leg_alts_arrive_by");
+  auto d = data{"test/data_leg_alts_arrive_by", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+  auto const routing = utl::init_from<ep::routing>(d).value();
+
+  constexpr auto const kFromLat = 49.87526849014631,
+                       kFromLon = 8.62771903392948;
+  constexpr auto const kToLat = 50.11347, kToLon = 8.67664;
+  auto const res = routing(
+      "?fromPlace=49.87526849014631,8.62771903392948"
+      "&toPlace=50.11347,8.67664"
+      "&time=2019-05-01T09:02Z"
+      "&searchWindow=7200"
+      "&preTransitModes=BIKE"
+      "&postTransitModes=BIKE"
+      "&requireBikeTransport=true"
+      "&arriveBy=true"
+      "&numLegAlternatives=5");
+  ASSERT_EQ(res.itineraries_.size(), 1U);
+
+  auto const expect_routed = [](api::Leg const& l) {
+    EXPECT_EQ(api::ModeEnum::BIKE, l.mode_);
+    EXPECT_GT(l.distance_, 0.0);
+    EXPECT_GT(l.legGeometry_.length_, 0);
+    EXPECT_FALSE(l.legGeometry_.points_.empty());
+  };
+
+  auto n_access = 0U, n_egress = 0U;
+  for (auto const& leg : res.itineraries_.front().legs_) {
+    if (!is_transit(leg)) {
+      continue;
+    }
+    ASSERT_TRUE(leg.alternatives_.has_value());
+    for (auto const& alt : *leg.alternatives_) {
+      ASSERT_FALSE(alt.empty());
+      if (alt.front().from_.name_ == "START") {
+        ++n_access;
+        EXPECT_DOUBLE_EQ(kFromLat, alt.front().from_.lat_);
+        EXPECT_DOUBLE_EQ(kFromLon, alt.front().from_.lon_);
+        expect_routed(alt.front());
+      }
+      if (alt.back().to_.name_ == "END") {
+        ++n_egress;
+        EXPECT_DOUBLE_EQ(kToLat, alt.back().to_.lat_);
+        EXPECT_DOUBLE_EQ(kToLon, alt.back().to_.lon_);
+        expect_routed(alt.back());
+      }
+    }
+  }
+  EXPECT_EQ(3U, n_access);
+  EXPECT_EQ(2U, n_egress);
+}
+
 // Block-id-concatenated trip: T_PART1 (A → MID) and T_PART2 (MID → B)
 // share the same block_id, so a passenger stays on board across both.
 // nigiri models this as a single transit leg; motis splits it into two

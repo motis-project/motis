@@ -4,7 +4,7 @@
 
 #include "nigiri/routing/journey.h"
 
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 namespace motis::odm {
 
@@ -16,25 +16,24 @@ bool by_stop(nr::start const& a, nr::start const& b) {
          std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
 }
 
-bool is_odm_leg(nr::journey::leg const& l,
-                nigiri::transport_mode_id_t const mode) {
+bool is_odm_leg(nr::journey::leg const& l, transport_mode_t const mode) {
   return std::holds_alternative<nr::offset>(l.uses_) &&
-         std::get<nr::offset>(l.uses_).transport_mode_id_ == mode;
+         std::get<nr::offset>(l.uses_).mode() == mode;
 }
 
-bool uses_odm(nr::journey const& j, nigiri::transport_mode_id_t const mode) {
+bool uses_odm(nr::journey const& j, transport_mode_t const mode) {
   return utl::any_of(j.legs_,
                      [&](auto const& l) { return is_odm_leg(l, mode); });
 }
 
 bool is_pure_pt(nr::journey const& j) {
-  return !uses_odm(j, kOdmTransportModeId) &&
-         !uses_odm(j, kRideSharingTransportModeId);
+  return !uses_odm(j, kOdmTransportMode) &&
+         !uses_odm(j, kRideSharingTransportMode);
 };
 
 n::duration_t odm_time(nr::journey::leg const& l) {
-  return is_odm_leg(l, kOdmTransportModeId) ||
-                 is_odm_leg(l, kRideSharingTransportModeId)
+  return is_odm_leg(l, kOdmTransportMode) ||
+                 is_odm_leg(l, kRideSharingTransportMode)
              ? std::get<nr::offset>(l.uses_).duration()
              : n::duration_t{0};
 }

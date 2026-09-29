@@ -11,7 +11,7 @@ namespace motis::odm {
 std::pair<nr::td_offsets_t, nr::td_offsets_t> get_td_offsets_split(
     std::vector<nr::offset> const& offsets,
     std::vector<service_times_t> const& times,
-    n::transport_mode_id_t const mode) {
+    transport_mode_t const mode) {
   auto const split =
       offsets.empty()
           ? 0
@@ -33,9 +33,10 @@ std::pair<nr::td_offsets_t, nr::td_offsets_t> get_td_offsets_split(
     for (auto const [o, t] : std::views::zip(offsets_split, times_split)) {
       td_offsets.emplace(o.target_, std::vector<nr::td_offset>{});
       for (auto const& i : t) {
-        td_offsets[o.target_].emplace_back(i.from_, o.duration_, mode);
-        td_offsets[o.target_].emplace_back(i.to_ - o.duration_ + 1min,
-                                           n::footpath::kMaxDuration, mode);
+        td_offsets[o.target_].push_back(
+            nr::td_offset::make(i.from_, o.duration_, mode));
+        td_offsets[o.target_].push_back(nr::td_offset::make(
+            i.to_ - o.duration_ + 1min, n::footpath::kMaxDuration, mode));
       }
     }
     return td_offsets;

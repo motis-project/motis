@@ -5,7 +5,7 @@
 	import Control from '$lib/map/Control.svelte';
 	import { levels } from '@motis-project/motis-client';
 	import type { LngLatBoundsLike } from 'maplibre-gl';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import { LEVEL_MIN_ZOOM } from './constants';
 
 	let {
