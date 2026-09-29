@@ -256,7 +256,7 @@
 		{#if showMinimizeOptions}
 			<div class="space-y-2">
 				<div class="text-sm font-medium">{t.minimize.title}</div>
-				<div class="grid grid-cols-2 items-center gap-2">
+				<div class="grid grid-cols-2 items-center">
 					<Switch
 						bind:checked={minimizeNonTransit}
 						label={t.minimize.nonTransitTime}
