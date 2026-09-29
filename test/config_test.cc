@@ -51,6 +51,7 @@ timetable:
   merge_dupes_intra_src: false
   merge_dupes_inter_src: false
   link_stop_distance: 100
+  hotel_night_trains: false
   update_interval: 60
   http_timeout: 30
   canned_rt: false

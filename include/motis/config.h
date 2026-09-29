@@ -138,6 +138,9 @@ struct config {
     bool merge_dupes_intra_src_{false};
     bool merge_dupes_inter_src_{false};
     unsigned link_stop_distance_{100U};
+    // add stationary night trips (hotel stays) at stations with a hotel nearby;
+    // needs osm data
+    bool hotel_night_trains_{false};
     unsigned update_interval_{60};
     unsigned http_timeout_{30};
     bool canned_rt_{false};
