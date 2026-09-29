@@ -998,6 +998,7 @@ paths:
               - TB
               - MCRAPTOR
               - BMRAPP
+              - BMRAP
             default: PONG
 
         - name: minimizeNonTransit
