@@ -164,4 +164,36 @@ TEST(motis, routing_slow_direct) {
     EXPECT_EQ(res.itineraries_.at(1).legs_.at(1).tripId_,
               "20190501_04:35_test_ICE2");
   }
+  {
+    // BMRAP (range BM-RAPTOR) runs as requested and agrees with BMRAPP
+    auto const plan = [&](std::string_view const algo) {
+      return routing(
+          "?fromPlace=test_DA_10"
+          "&toPlace=test_FFM_10"
+          "&time=2019-05-01T01:30Z"
+          "&algorithm=" +
+          std::string{algo});
+    };
+    auto const trips = [](api::plan_response const& res) {
+      auto ids = std::vector<std::string>{};
+      for (auto const& it : res.itineraries_) {
+        for (auto const& l : it.legs_) {
+          if (l.tripId_.has_value()) {
+            ids.push_back(*l.tripId_);
+          }
+        }
+      }
+      return ids;
+    };
+    auto const range = plan("BMRAP");
+    auto const profile = plan("BMRAPP");
+    EXPECT_EQ(range.debugOutput_.at("algorithm"),
+              static_cast<std::uint64_t>(api::algorithmEnum::BMRAP));
+    // only written once the bounded main search has run
+    EXPECT_TRUE(range.debugOutput_.contains("bmrap_trip_budget"));
+    EXPECT_EQ(profile.debugOutput_.at("algorithm"),
+              static_cast<std::uint64_t>(api::algorithmEnum::BMRAPP));
+    ASSERT_FALSE(range.itineraries_.empty());
+    EXPECT_EQ(trips(profile), trips(range));
+  }
 }

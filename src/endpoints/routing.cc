@@ -1208,9 +1208,10 @@ api::plan_response routing::route(api::plan_params const& query,
     }
     auto const mc_criteria_on =
         min_non_transit || min_mode_switches || min_mode_filter;
-    // An explicit BMRAPP/MCRAPTOR still runs the mc engine even with no extra
-    // criteria (arr only) - useful for benchmarking against PONG.
+    // An explicit BMRAPP/BMRAP/MCRAPTOR still runs the mc engine even with no
+    // extra criteria (arr only) - useful for benchmarking against PONG.
     auto const mc_engine_requested = algorithm == api::algorithmEnum::BMRAPP ||
+                                     algorithm == api::algorithmEnum::BMRAP ||
                                      algorithm == api::algorithmEnum::MCRAPTOR;
     auto const mc_requested = mc_engine_requested || mc_criteria_on;
     auto const mc_g_rt = rtt == nullptr || rtt->n_rt_transports() == 0U;
@@ -1268,7 +1269,7 @@ api::plan_response routing::route(api::plan_params const& query,
         // minimizeModeSwitches). They compose freely (see arr_with in
         // mcraptor.h); the eight aliases below are just the dispatched
         // combinations. With none set the engine runs arrival-only (only
-        // reachable via an explicit algorithm=BMRAPP/MCRAPTOR).
+        // reachable via an explicit algorithm=BMRAPP/BMRAP/MCRAPTOR).
         //   non_transit    minutes not on transit: offsets + transfer footpaths
         //   mode_filter    binary "uses an avoided vehicle class" (flights) -
         //                  keeps both the fast option that flies and the best
@@ -1278,7 +1279,9 @@ api::plan_response routing::route(api::plan_params const& query,
         // BMRAPP takes the SCALAR state (its ping/pong/pruning searches),
         // like pong_search does, so it can run those on the GPU; its
         // multicriteria phases allocate their own CPU state internally.
-        // MCRAPTOR still takes the multicriteria state.
+        // BMRAP (the range variant with one bound matrix for the whole
+        // window, kept for benchmarking against BMRAPP) and MCRAPTOR take the
+        // multicriteria state and run on the CPU only.
         auto const run = [&]<typename Criteria>(std::type_identity<Criteria>) {
           if (algorithm == api::algorithmEnum::BMRAPP) {
 #if defined(NIGIRI_CUDA)
@@ -1300,6 +1303,10 @@ api::plan_response routing::route(api::plan_params const& query,
                 *tt_, rtt, search_state, scalar_state, q, dir, mc_timeout);
           }
           auto mc_state = n::routing::basic_mcraptor_state<Criteria>{};
+          if (algorithm == api::algorithmEnum::BMRAP) {
+            return n::routing::bmrap_range_search(*tt_, rtt, search_state,
+                                                  mc_state, q, dir, mc_timeout);
+          }
           return n::routing::raptor_search(*tt_, rtt, search_state, mc_state, q,
                                            dir, mc_timeout);
         };
@@ -1366,7 +1373,8 @@ api::plan_response routing::route(api::plan_params const& query,
         }
       } else if (algorithm == api::algorithmEnum::RAPTOR ||
                  algorithm == api::algorithmEnum::MCRAPTOR ||
-                 algorithm == api::algorithmEnum::BMRAPP || tbd_ == nullptr ||
+                 algorithm == api::algorithmEnum::BMRAPP ||
+                 algorithm == api::algorithmEnum::BMRAP || tbd_ == nullptr ||
                  (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
