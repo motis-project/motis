@@ -1,5 +1,8 @@
 #include <algorithm>
+#include <array>
+#include <cstdio>
 #include <fstream>
+#include <optional>
 #include <iostream>
 #include <limits>
 #include <mutex>
@@ -18,6 +21,8 @@
 #include "nigiri/routing/raptor/debug.h"
 #include "nigiri/routing/search.h"
 #include "nigiri/timetable.h"
+
+#include "geo/box.h"
 
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
@@ -188,6 +193,21 @@ int generate(int ac, char** av) {
     }
   };
 
+  // --bbox min_lat,min_lon,max_lat,max_lon: restrict both endpoints of every
+  // generated query to a geographic box, so a run can target one city.
+  auto bbox_filter = std::optional<geo::box>{};
+  auto const parse_bbox = [&](std::string const& str) {
+    auto v = std::array<double, 4>{};
+    utl::verify(std::sscanf(str.c_str(), "%lf,%lf,%lf,%lf", &v[0], &v[1], &v[2],
+                            &v[3]) == 4,
+                "--bbox needs min_lat,min_lon,max_lat,max_lon, got \"{}\"",
+                str);
+    bbox_filter =
+        geo::box{geo::latlng{std::min(v[0], v[2]), std::min(v[1], v[3])},
+                 geo::latlng{std::max(v[0], v[2]), std::max(v[1], v[3])}};
+  };
+
+
   auto const parse_time_of_day = [&](std::uint32_t const h) {
     time_of_day = h % 24U;
   };
@@ -267,6 +287,8 @@ int generate(int ac, char** av) {
        po::value(&master_params.fastestDirectFactor_)
            ->default_value(master_params.fastestDirectFactor_),
        "sets fastest direct factor of the queries")  //
+      ("bbox", po::value<std::string>()->notifier(parse_bbox),
+       "restrict both endpoints to min_lat,min_lon,max_lat,max_lon")  //
       ("lb_rank", po::value(&lb_rank)->default_value(lb_rank),
        "emit queries uniformly distributed over the lower bounds (lb) ranks, "
        "lb rank n:  2^n-th stop when sorting all stops by their lb value from "
@@ -414,7 +436,8 @@ int generate(int ac, char** av) {
     };
 
     auto const in_odm_bounds = [&](auto const& pos) {
-      return !use_odm_bounds || d.odm_bounds_->contains(pos);
+      return (!use_odm_bounds || d.odm_bounds_->contains(pos)) &&
+             (!bbox_filter.has_value() || bbox_filter->contains(pos));
     };
 
     for (auto i = osr::node_idx_t{0U}; i < d.w_->n_nodes(); ++i) {
@@ -431,10 +454,10 @@ int generate(int ac, char** av) {
     auto v = std::vector<n::location_idx_t>{};
     for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
+      auto const pos = d.tt_->locations_.coordinates_[l];
 
-      if (!in_bounds(d.tt_->locations_.coordinates_[l]) ||
-          (use_odm_bounds &&
-           !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l]))) {
+      if (!in_bounds(pos) || (use_odm_bounds && !d.odm_bounds_->contains(pos)) ||
+          (bbox_filter.has_value() && !bbox_filter->contains(pos))) {
         continue;
       }
       v.emplace_back(l);

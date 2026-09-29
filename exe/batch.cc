@@ -131,13 +131,19 @@ int batch(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto queries_path = fs::path{"queries.txt"};
   auto responses_path = fs::path{"responses.txt"};
-  auto n_threads = std::thread::hardware_concurrency();
   auto rt = false;
+  auto mt = true;
+  auto n_threads = 0U;  // 0 = hardware_concurrency
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
-      ("n_threads,nt", po::value(&n_threads)->default_value(n_threads))  //
+      ("multithreading,mt", po::value(&mt)->default_value(mt))  //
+      ("threads,j", po::value(&n_threads)->default_value(n_threads),
+       "worker threads (0 = all cores). Responses are collected in query "
+       "order, so results completed behind a slow query are buffered in "
+       "memory - lowering this bounds that buffer as well as the per-thread "
+       "search state, which is what makes large multicriteria runs fit")  //
       ("queries,q", po::value(&queries_path)->default_value(queries_path),
        "queries file")  //
       ("responses,r", po::value(&responses_path)->default_value(responses_path),
@@ -216,14 +222,24 @@ int batch(int ac, char** av) {
   auto const pt = utl::activate_progress_tracker("batch");
   pt->in_high(queries.size());
   auto const start_batch = std::chrono::steady_clock::now();
-  utl::parallel_ordered_collect_threadlocal<state>(
-      queries.size(), compute_response,
-      [&](std::size_t const id,
-          std::pair<std::uint64_t, std::string> const& s) {
-        response_time.add(id, s.first);
-        out << s.second << "\n";
-      },
-      pt->update_fn(), utl::parallel_error_strategy::QUIT_EXEC, n_threads);
+  if (mt) {
+    utl::parallel_ordered_collect_threadlocal<state>(
+        queries.size(), compute_response,
+        [&](std::size_t const id,
+            std::pair<std::uint64_t, std::string> const& s) {
+          response_time.add(id, s.first);
+          out << s.second << "\n";
+        },
+        pt->update_fn(), utl::parallel_error_strategy::QUIT_EXEC, n_threads);
+  } else {
+    auto s = state{};
+    for (auto i = 0U; i != queries.size(); ++i) {
+      auto const [ms, response] = compute_response(s, i);
+      response_time.add(i, static_cast<std::uint64_t>(ms));
+      out << response << "\n";
+      pt->increment();
+    }
+  }
   fmt::println("Processed {} queries in {:%T}", queries.size(),
                std::chrono::steady_clock::now() - start_batch);
 
