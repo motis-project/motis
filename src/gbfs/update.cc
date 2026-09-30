@@ -371,7 +371,7 @@ struct gbfs_update {
       }
 
       remove_feeds_with_changed_type();
-      remove_metrics_of_removed_providers();
+      cleanup_removed_providers();
       co_await init_missing_config_feeds();
     }
 
@@ -418,12 +418,13 @@ struct gbfs_update {
     }
   }
 
-  // providers that were removed from their aggregated feed
-  void remove_metrics_of_removed_providers() {
+  void cleanup_removed_providers() {
     for (auto const& [id, idx] : prev_d_->provider_by_id_) {
       auto const& prev = prev_d_->providers_[idx];
       if (prev != nullptr && d_->providers_[idx] == nullptr) {
         remove_gbfs_metrics(*prev);
+        remove_from_rtrees(*prev);
+        d_->cache_.remove(idx);
       }
     }
   }
@@ -1106,6 +1107,19 @@ struct gbfs_update {
       } else {
         product_rtree(provider, prod.idx_).remove(st.info_.pos_, ref);
       }
+    }
+  }
+
+  void remove_from_rtrees(gbfs_provider const& provider) {
+    auto const vt_to_product = build_vehicle_type_to_product(provider);
+    for (auto const& vs : provider.vehicle_status_) {
+      mod_vehicle(provider, vt_to_product, vs, false);
+    }
+    for (auto const& st : provider.stations_ | std::views::values) {
+      mod_station(provider, st, false);
+    }
+    for (auto const& zone : provider.geofencing_zones_.zones_) {
+      d_->provider_zone_rtree_.remove(zone.bounding_box(), provider.idx_);
     }
   }
 
