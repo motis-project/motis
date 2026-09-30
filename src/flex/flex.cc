@@ -347,12 +347,15 @@ void add_flex_td_offsets(osr::ways const& w,
                          std::map<std::string, std::uint64_t>& stats,
                          one_to_many_side* const states) {
   UTL_START_TIMING(flex_lookup_timer);
+  auto const record_lookup_time = [&]() {
+    stats.emplace(fmt::format("prepare_{}_FLEX_lookup", to_str(dir)),
+                  UTL_GET_TIMING_MS(flex_lookup_timer));
+  };
 
   auto const routings = get_flex_routings(tt, loc_rtree, start_time, pos.pos_,
                                           dir, max, osr_params);
   if (routings.empty()) {
-    stats.emplace(fmt::format("prepare_{}_FLEX_lookup", to_str(dir)),
-                  UTL_GET_TIMING_MS(flex_lookup_timer));
+    record_lookup_time();
     return;
   }
 
@@ -382,8 +385,7 @@ void add_flex_td_offsets(osr::ways const& w,
       lookup, way_matches, osr::search_profile::kCarSharing, near_stops,
       near_stop_locations, dir, max_matching_distance);
 
-  stats.emplace(fmt::format("prepare_{}_FLEX_lookup", to_str(dir)),
-                UTL_GET_TIMING_MS(flex_lookup_timer));
+  record_lookup_time();
 
   for (auto const& [stop_seq, transports] : routings) {
     UTL_START_TIMING(routing_timer);
