@@ -361,7 +361,7 @@ void add_flex_td_offsets(osr::ways const& w,
   auto const targets = get_flex_targets(
       tt, loc_rtree, routings, pos.pos_,
       get_max_distance(osr::search_profile::kFoot, osr_params, max) +
-          max_matching_distance + kMaxGbfsMatchingDistance + 50.0);
+          max_matching_distance + kMaxGbfsMatchingDistance);
   auto const max_dist =
       get_max_distance(osr::search_profile::kCarSharing, osr_params, max);
   auto near_stops = std::vector<n::location_idx_t>{};
