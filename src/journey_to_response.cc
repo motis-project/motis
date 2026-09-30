@@ -162,8 +162,7 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     n::source_idx_t src,
     tag_lookup const& tags,
     n::rt::run_stop const& enter_stop,
-    n::rt::run_stop const& exit_stop,
-    n::interval<n::stop_idx_t> const trip_range) {
+    n::rt::run_stop const& exit_stop) {
   if (!enter_stop.fr_->is_scheduled()) {
     return std::nullopt;
   }
@@ -223,21 +222,31 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     auto const from_id = location_ticketing_id(enter_stop);
     auto const to_id = location_ticketing_id(exit_stop);
 
-    auto const seq_nums = nigiri::loader::gtfs::stop_seq_number_range{
-        {tt.trip_stop_seq_numbers_[enter_stop.get_trip_idx(
-            n::event_type::kDep)]},
-        static_cast<nigiri::stop_idx_t>(trip_range.size())};
-    auto const seq_num = [&](n::rt::run_stop const& s) {
+    auto const seq_num = [&](n::rt::run_stop const& s,
+                             n::event_type const ev) -> std::string {
+      auto const trip = s.get_trip_idx(ev);
+      auto const trip_stops = [&]() {
+        for (auto const& [t, stops] : tt.trip_transport_ranges_[trip]) {
+          if (t == s.fr_->t_.t_idx_) {
+            return stops;
+          }
+        }
+        throw utl::fail("trip not part of transport");
+      }();
+      auto const seq_nums = nigiri::loader::gtfs::stop_seq_number_range{
+          {tt.trip_stop_seq_numbers_[trip]},
+          static_cast<n::stop_idx_t>(trip_stops.size())};
       return std::to_string(
           *(seq_nums.begin() +
-            static_cast<unsigned>(s.stop_idx_ - trip_range.from_)));
+            static_cast<unsigned>(s.stop_idx_ - trip_stops.from_)));
     };
 
-    auto const from =
-        from_id.has_value() ? std::string{*from_id} : seq_num(enter_stop);
+    auto const from = from_id.has_value()
+                          ? std::string{*from_id}
+                          : seq_num(enter_stop, n::event_type::kDep);
 
-    auto const to =
-        to_id.has_value() ? std::string{*to_id} : seq_num(exit_stop);
+    auto const to = to_id.has_value() ? std::string{*to_id}
+                                      : seq_num(exit_stop, n::event_type::kArr);
 
     auto const to_json_array = [](std::string elem) -> std::string {
       auto array = boost::json::array{};
@@ -684,9 +693,8 @@ api::Itinerary journey_to_response(
                             ? api::ReservationEnum::NONE
                             : api::ReservationEnum::COMPULSORY,
 
-                    .ticketUrls_ =
-                        get_ticketing_urls(tt, fr.id().src_, tags, enter_stop,
-                                           exit_stop, subrange)});
+                    .ticketUrls_ = get_ticketing_urls(tt, fr.id().src_, tags,
+                                                      enter_stop, exit_stop)});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
