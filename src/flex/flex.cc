@@ -277,12 +277,16 @@ namespace {
 // so all areas / groups of a stop sequence are taken, not only the ones after
 // the boarding stop. `margin` has to cover that walk plus the matching.
 struct flex_targets {
-  bool contains(n::location_idx_t const l, geo::latlng const& p) const {
+  explicit flex_targets(n::timetable const& tt) : tt_{tt} {}
+
+  bool contains(n::location_idx_t const l) const {
+    auto const& p = tt_.locations_.coordinates_[l];
     return near_stops_.contains(l) ||
            utl::any_of(area_boxes_,
                        [&](geo::box const& b) { return b.contains(p); });
   }
 
+  n::timetable const& tt_;
   std::vector<geo::box> area_boxes_;
   hash_set<n::location_idx_t> near_stops_;
 };
@@ -368,7 +372,7 @@ void add_flex_td_offsets(osr::ways const& w,
       get_max_distance(osr::search_profile::kCarSharing, osr_params, max);
   auto near_stops = loc_rtree.in_radius(pos.pos_, max_dist);
   utl::erase_if(near_stops, [&](n::location_idx_t const l) {
-    return !targets.contains(l, tt.locations_.coordinates_[l]);
+    return !targets.contains(l);
   });
   auto const near_stop_locations =
       utl::to_vec(near_stops, [&](n::location_idx_t const l) {
