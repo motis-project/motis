@@ -308,9 +308,8 @@ flex_targets get_flex_targets(n::timetable const& tt,
     for (auto const& stop : tt.flex_stop_seq_[key.first]) {
       stop.apply(utl::overloaded{[&](n::flex_area_idx_t const a) {
                                    if (areas.emplace(a).second) {
-                                     auto const& bb = tt.flex_area_bbox_[a];
-                                     auto b = geo::box{bb.min_, margin};
-                                     b.extend(geo::box{bb.max_, margin});
+                                     auto b = tt.flex_area_bbox_[a];
+                                     b.extend(margin);
                                      t.area_boxes_.push_back(b);
                                    }
                                  },
