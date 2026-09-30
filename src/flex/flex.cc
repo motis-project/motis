@@ -364,16 +364,14 @@ void add_flex_td_offsets(osr::ways const& w,
           max_matching_distance + kMaxGbfsMatchingDistance);
   auto const max_dist =
       get_max_distance(osr::search_profile::kCarSharing, osr_params, max);
-  auto near_stops = std::vector<n::location_idx_t>{};
-  auto near_stop_locations = std::vector<osr::location>{};
-  loc_rtree.in_radius(pos.pos_, max_dist, [&](n::location_idx_t const l) {
-    auto const loc = get_location(&tt, &w, pl, matches, tt_location{l});
-    if (targets.contains(l, loc.pos_)) {
-      near_stops.push_back(l);
-      near_stop_locations.push_back(loc);
-    }
-    return true;
+  auto near_stops = loc_rtree.in_radius(pos.pos_, max_dist);
+  utl::erase_if(near_stops, [&](n::location_idx_t const l) {
+    return !targets.contains(l, tt.locations_.coordinates_[l]);
   });
+  auto const near_stop_locations =
+      utl::to_vec(near_stops, [&](n::location_idx_t const l) {
+        return get_location(&tt, &w, pl, matches, tt_location{l});
+      });
 
   auto const params =
       to_profile_parameters(osr::search_profile::kCarSharing, osr_params);
