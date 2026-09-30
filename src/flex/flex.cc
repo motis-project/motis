@@ -361,7 +361,7 @@ void add_flex_td_offsets(osr::ways const& w,
   // hour's drive: street matching dominates the preparation otherwise.
   auto const targets = get_flex_targets(
       tt, loc_rtree, routings, pos.pos_,
-      get_max_distance(osr::search_profile::kFoot, osr_params, max) +
+      get_distance_upper_bound(osr::search_profile::kFoot, osr_params, max) +
           max_matching_distance + kMaxGbfsMatchingDistance);
   auto const max_dist =
       get_max_distance(osr::search_profile::kCarSharing, osr_params, max);
