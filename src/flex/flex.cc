@@ -212,8 +212,9 @@ flex_routings_t get_flex_routings(
       }
     }
   };
-  auto const box = geo::box{
-      pos, get_max_distance(osr::search_profile::kFoot, osr_params, max)};
+  auto const walk_dist =
+      get_max_distance(osr::search_profile::kFoot, osr_params, max);
+  auto const box = geo::box{pos, walk_dist};
   tt.flex_area_rtree_.search(box.min_.lnglat_float(), box.max_.lnglat_float(),
                              [&](auto&&, auto&&, n::flex_area_idx_t const a) {
                                add_area_flex_transports(a);
@@ -222,14 +223,12 @@ flex_routings_t get_flex_routings(
 
   // Collect location group transports.
   auto location_groups = hash_set<n::location_group_idx_t>{};
-  loc_rtree.in_radius(
-      pos, get_max_distance(osr::search_profile::kFoot, osr_params, max),
-      [&](n::location_idx_t const l) {
-        for (auto const lg : tt.location_location_groups_[l]) {
-          location_groups.emplace(lg);
-        }
-        return true;
-      });
+  loc_rtree.in_radius(pos, walk_dist, [&](n::location_idx_t const l) {
+    for (auto const lg : tt.location_location_groups_[l]) {
+      location_groups.emplace(lg);
+    }
+    return true;
+  });
   for (auto const& lg : location_groups) {
     for (auto const t : tt.location_group_transports_[lg]) {
       if (!is_active(t)) {
