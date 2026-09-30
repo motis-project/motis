@@ -10,6 +10,7 @@
 
 #include "cista/free_self_allocated.h"
 #include "cista/io.h"
+#include "cista/serialization.h"
 
 #include "adr/area_database.h"
 
@@ -32,6 +33,7 @@
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
 #include "nigiri/routing/tb/preprocess.h"
+#include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
@@ -63,6 +65,15 @@ using std::chrono_literals::operator""min;
 using std::chrono_literals::operator""h;
 
 namespace motis {
+
+template <typename T>
+bool has_outdated_layout(fs::path const& p) {
+  auto h = cista::hash_t{};
+  auto in = std::ifstream{p, std::ios::binary};
+  in.read(reinterpret_cast<char*>(&h), sizeof(h));
+  return in && cista::convert_endian<cista::kDefaultMode>(h) !=
+                   cista::static_type_hash<T>();
+}
 
 struct task {
   friend std::ostream& operator<<(std::ostream& out, task const& t) {
@@ -670,6 +681,22 @@ void import(config const& c,
     }
   } else {
     todo.insert(begin(all_tasks), end(all_tasks));
+  }
+
+  auto const invalidate = [&](meta_entry_t const& version) {
+    std::cout << version.first << ": outdated binary layout\n";
+    for (auto const* t : all_tasks) {
+      auto h = read_hashes(data_path, t->name_);
+      if (h.erase(version.first) != 0U) {
+        write_hashes(data_path, t->name_, h);
+      }
+    }
+  };
+  if (has_outdated_layout<n::timetable>(data_path / "tt.bin")) {
+    invalidate(n_version());
+  }
+  if (has_outdated_layout<n::routing::tb::tb_data>(data_path / "tbd.bin")) {
+    invalidate(tbd_version());
   }
 
   auto tasks = std::vector<task*>{begin(todo), end(todo)};
