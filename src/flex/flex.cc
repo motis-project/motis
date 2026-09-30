@@ -6,6 +6,7 @@
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
+#include "utl/erase_if.h"
 #include "utl/to_vec.h"
 
 #include "osr/lookup.h"
