@@ -75,9 +75,10 @@ std::optional<std::pair<nodes_t, states_t>> get_states_at(
   if (e_nodes.empty()) {
     return std::pair{nodes_t{}, states_t{}};
   }
-  auto const it = std::lower_bound(
+  // The last state change at or before `t`.
+  auto const it = std::upper_bound(
       begin(e_state_changes), end(e_state_changes), t,
-      [&](auto&& a, n::unixtime_t const b) { return a.first < b; });
+      [&](n::unixtime_t const a, auto&& b) { return a < b.first; });
   if (it == begin(e_state_changes)) {
     return std::nullopt;
   }
