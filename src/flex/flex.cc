@@ -296,7 +296,7 @@ flex_targets get_flex_targets(n::timetable const& tt,
                               flex_routings_t const& routings,
                               geo::latlng const& pos,
                               double const margin) {
-  auto t = flex_targets{};
+  auto t = flex_targets{tt};
   auto const add_near = [&](geo::latlng const& x) {
     loc_rtree.in_radius(x, margin, [&](n::location_idx_t const l) {
       t.near_stops_.emplace(l);
