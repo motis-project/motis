@@ -18,10 +18,10 @@ namespace motis::flex {
 
 // Key: stop sequence, boarding and alighting stop index (travel order).
 // All transports of one key share the same street routing.
-using flex_routings_t = hash_map<
-    std::pair<nigiri::flex_stop_seq_idx_t,
-              std::pair<nigiri::stop_idx_t, nigiri::stop_idx_t>>,
-    std::vector<mode_payload>>;
+using flex_routings_t =
+    hash_map<std::pair<nigiri::flex_stop_seq_idx_t,
+                       std::pair<nigiri::stop_idx_t, nigiri::stop_idx_t>>,
+             std::vector<mode_payload>>;
 
 // Logs how much of the mode payload's capacity (transports, stop rows per
 // flex transport) the timetable uses; throws if it does not fit.

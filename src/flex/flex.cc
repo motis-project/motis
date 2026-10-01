@@ -37,8 +37,8 @@ void verify_flex_limits(n::timetable const& tt) {
       static_cast<std::size_t>(tt.flex_transport_stop_seq_.size());
   auto max_stops = std::size_t{0U};
   for (auto const t : tt.flex_transport_stop_seq_) {
-    max_stops = std::max(
-        max_stops, static_cast<std::size_t>(tt.flex_stop_seq_[t].size()));
+    max_stops = std::max(max_stops,
+                         static_cast<std::size_t>(tt.flex_stop_seq_[t].size()));
   }
   auto const pct = [](std::size_t const n, std::size_t const limit) {
     return 100.0 * static_cast<double>(n) / static_cast<double>(limit);
@@ -335,38 +335,36 @@ void add_flex_td_offsets(osr::ways const& w,
     auto const& paths = state->results();
 
     // Per destination: when the ride starts and ends, relative to the start
-    // of the whole path in travel direction (search costs count from the
-    // query position, which is the travel start forward, the end backward).
-    // Seconds from the start of the path to where the output timeline
-    // (street_routing over osr's reconstruct) shows the ride start and end.
-    // Reconstruct lays out the label costs of the chain; the matching piece
-    // at the stop is shown with its candidate cost (the search charged
-    // more). A switch edge is shown with the mode of its target in search
-    // order: forward, the ride starts at the foot label before the first
-    // rental label and ends at the last one; backward, it starts at the last
-    // rental label and ends at the foot label after it (travel order). Shown
-    // times are truncated to minutes from a whole-minute departure, so
-    // flooring matches them exactly. Paths without a ride (car_sharing may
-    // walk all the way) are no flex offer: WALK covers them, and as FLEX
-    // offers they used to beat the WALK offset by the truncated minute.
+    // of the whole path in travel direction. osr reports the tracked
+    // durations of the search chain from the search start (the travel start
+    // forward, the travel end backward): the same times the output timeline
+    // (street_routing over osr's reconstruct) lays out, with the matching
+    // piece at the stop as reconstruct shows it. A switch edge is shown with
+    // the mode of its target in search order: forward, the ride starts at
+    // the foot label before the first rental label and ends at the last one;
+    // backward, it starts at the last rental label and ends at the foot label
+    // after it (travel order). Shown times are truncated to minutes from a
+    // whole-minute departure, so flooring matches them exactly. Paths without
+    // a ride (car_sharing may walk all the way) are no flex offer: WALK
+    // covers them, and as FLEX offers they used to beat the WALK offset by
+    // the truncated minute.
     auto rides = std::vector<std::optional<flex_ride>>(paths.size());
     for (auto i = 0U; i != paths.size(); ++i) {
       if (!paths[i].has_value()) {
         continue;
       }
-      auto const rental = state->rental_costs(i);
+      auto const rental = state->rental_durations(i);
       if (!rental.has_value()) {
         continue;
       }
-      using rep = n::duration_t::rep;
-      auto const& rc = *rental;
+      auto const& rd = *rental;
       auto const fwd = dir == osr::direction::kForward;
-      auto const total = rc.dest_node_ + rc.dest_match_;
-      auto const pickup = fwd ? rc.before_min_ : total - rc.max_;
-      auto const drop_off = fwd ? rc.max_ : total - rc.before_min_;
-      rides[i] =
-          flex_ride{.pickup_ = n::duration_t{static_cast<rep>(pickup / 60)},
-                    .drop_off_ = n::duration_t{static_cast<rep>(drop_off / 60)}};
+      auto const total = rd.dest_node_ + rd.dest_match_;
+      auto const pickup = fwd ? rd.before_min_ : total - rd.max_;
+      auto const drop_off = fwd ? rd.max_ : total - rd.before_min_;
+      rides[i] = flex_ride{
+          .pickup_ = std::chrono::duration_cast<n::duration_t>(pickup),
+          .drop_off_ = std::chrono::duration_cast<n::duration_t>(drop_off)};
     }
 
     // Store osr routing state for later path reconstruction.
@@ -428,16 +426,15 @@ void add_flex_td_offsets(osr::ways const& w,
 
     auto const& [seq_idx, stop_pair] = stop_seq;
     stats.emplace(
-        fmt::format("prepare_{}_FLEX_{}", to_str(dir),
-                    tt.flex_stop_seq_[seq_idx][stop_pair.first].apply(
-                        utl::overloaded{[&](n::location_group_idx_t const g) {
-                                          return tt.get_default_translation(
-                                              tt.location_group_name_[g]);
-                                        },
-                                        [&](n::flex_area_idx_t const a) {
-                                          return tt.get_default_translation(
-                                              tt.flex_area_name_[a]);
-                                        }})),
+        fmt::format(
+            "prepare_{}_FLEX_{}", to_str(dir),
+            tt.flex_stop_seq_[seq_idx][stop_pair.first].apply(utl::overloaded{
+                [&](n::location_group_idx_t const g) {
+                  return tt.get_default_translation(tt.location_group_name_[g]);
+                },
+                [&](n::flex_area_idx_t const a) {
+                  return tt.get_default_translation(tt.flex_area_name_[a]);
+                }})),
         UTL_GET_TIMING_MS(routing_timer));
   }
 }
@@ -505,16 +502,16 @@ bool fit_direct_to_windows(n::timetable const& tt,
   auto const flex_leg = utl::find_if(itinerary.legs_, [](api::Leg const& l) {
     return l.mode_ == api::ModeEnum::FLEX;
   });
-  auto const ride = flex_ride{
-      .pickup_ = std::chrono::duration_cast<n::duration_t>(
-          to_min(flex_leg->startTime_) - start),
-      .drop_off_ = std::chrono::duration_cast<n::duration_t>(
-          to_min(flex_leg->endTime_) - start)};
+  auto const ride =
+      flex_ride{.pickup_ = std::chrono::duration_cast<n::duration_t>(
+                    to_min(flex_leg->startTime_) - start),
+                .drop_off_ = std::chrono::duration_cast<n::duration_t>(
+                    to_min(flex_leg->endTime_) - start)};
 
   // Same window as for the offsets (add_flex_td_offsets), over the departure
   // time of the whole itinerary. Waiting is limited like in nigiri's td lookup.
-  auto best = std::optional<std::tuple<n::unixtime_t, mode_payload,
-                                       date::sys_days>>{};
+  auto best =
+      std::optional<std::tuple<n::unixtime_t, mode_payload, date::sys_days>>{};
   for (auto const id : ids) {
     auto const t = id.get_flex_transport();
     for (auto const day_idx : get_relevant_days(tt, time)) {

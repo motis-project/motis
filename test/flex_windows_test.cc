@@ -98,8 +98,8 @@ flex::flex_routings_t routings(data const& d,
                                geo::latlng const& pos,
                                osr::direction const dir,
                                std::chrono::seconds const max = 15min) {
-  return flex::get_flex_routings(*d.tt_, *d.location_rtree_, utc(1, 7, 30),
-                                 pos, dir, max, osr_parameters{});
+  return flex::get_flex_routings(*d.tt_, *d.location_rtree_, utc(1, 7, 30), pos,
+                                 dir, max, osr_parameters{});
 }
 
 // The only flex transport; operating on 2019-05-01 (UTC traffic day).
@@ -149,13 +149,13 @@ TEST(motis, flex_limits) {
                                 "10:00:00,13:00:00", "10:00:00,13:00:00");
   auto const begin = gtfs.find("FLEX_DA,,,,,da_pickup");
   auto const end = gtfs.find("\n# calendar.txt");
-  auto const cfg = config{
-      .timetable_ = config::timetable{
-          .first_day_ = "2019-05-01",
-          .num_days_ = 3,
-          .datasets_ = {{"test",
-                         {.path_ = gtfs.substr(0, begin) + rows +
-                                   gtfs.substr(end)}}}}};
+  auto const cfg =
+      config{.timetable_ = config::timetable{
+                 .first_day_ = "2019-05-01",
+                 .num_days_ = 3,
+                 .datasets_ = {{"test",
+                                {.path_ = gtfs.substr(0, begin) + rows +
+                                          gtfs.substr(end)}}}}};
   EXPECT_THROW(import(cfg, path), std::runtime_error);
 }
 
@@ -238,8 +238,8 @@ TEST(motis, flex_zero_length_window_is_fixed_departure) {
   // Direct, depart 07:30: moved to the fixed departure.
   {
     auto j = itinerary(utc(1, 7, 30), utc(1, 7, 45), api::ModeEnum::FLEX);
-    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
-                                            false, j));
+    ASSERT_TRUE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30), false, j));
     EXPECT_EQ(utc(1, 8, 10), *j.startTime_);
     EXPECT_EQ(utc(1, 8, 25), *j.endTime_);
     auto const& l = j.legs_.front();
@@ -257,8 +257,8 @@ TEST(motis, flex_zero_length_window_is_fixed_departure) {
   // Depart at 08:11: the next departure is the next day's.
   {
     auto j = itinerary(utc(1, 8, 11), utc(1, 8, 26), api::ModeEnum::FLEX);
-    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 8, 11),
-                                            false, j));
+    ASSERT_TRUE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 8, 11), false, j));
     EXPECT_EQ(utc(2, 8, 10), *j.startTime_);
   }
 }
@@ -271,8 +271,8 @@ TEST(motis, flex_direct_respects_windows) {
   // Depart at 07:30: moved to the first departure, 08:10.
   {
     auto j = itinerary(utc(1, 7, 30), utc(1, 7, 45), api::ModeEnum::FLEX);
-    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
-                                            false, j));
+    ASSERT_TRUE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30), false, j));
     EXPECT_EQ(utc(1, 8, 10), *j.startTime_);
     EXPECT_EQ(utc(1, 8, 25), *j.endTime_);
     auto const& l = j.legs_.front();
@@ -289,16 +289,16 @@ TEST(motis, flex_direct_respects_windows) {
   // Depart at 08:20, inside the window: unchanged.
   {
     auto j = itinerary(utc(1, 8, 20), utc(1, 8, 35), api::ModeEnum::FLEX);
-    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 8, 20),
-                                            false, j));
+    ASSERT_TRUE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 8, 20), false, j));
     EXPECT_EQ(utc(1, 8, 20), *j.startTime_);
   }
 
   // Depart at 08:41: the window has closed, the next day's departure.
   {
     auto j = itinerary(utc(1, 8, 41), utc(1, 8, 56), api::ModeEnum::FLEX);
-    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 8, 41),
-                                            false, j));
+    ASSERT_TRUE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 8, 41), false, j));
     EXPECT_EQ(utc(2, 8, 10), *j.startTime_);
     EXPECT_EQ(utc(2, 8, 10),
               **j.legs_.front().from_.flexStartPickupDropOffWindow_);
@@ -324,8 +324,8 @@ TEST(motis, flex_direct_respects_windows) {
         itinerary(utc(1, 10, 5), utc(1, 11, 5), api::ModeEnum::WALK)
             .legs_.front());
     j.endTime_ = utc(1, 11, 5);
-    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
-                                            false, j));
+    ASSERT_TRUE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30), false, j));
     EXPECT_EQ(utc(1, 8, 5), *j.startTime_);
     EXPECT_EQ(utc(1, 8, 10), *j.legs_[1].startTime_);
     EXPECT_EQ(utc(1, 10, 40), *j.legs_[1].endTime_);
@@ -335,22 +335,22 @@ TEST(motis, flex_direct_respects_windows) {
   // Too long to end inside the drop-off window.
   {
     auto j = itinerary(utc(1, 7, 30), utc(1, 10, 30), api::ModeEnum::FLEX);
-    EXPECT_FALSE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
-                                             false, j));
+    EXPECT_FALSE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30), false, j));
   }
 
   // No ride (car_sharing walked all the way): not a flex connection.
   {
     auto j = itinerary(utc(1, 7, 30), utc(1, 7, 45), api::ModeEnum::WALK);
-    EXPECT_FALSE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
-                                             false, j));
+    EXPECT_FALSE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30), false, j));
   }
 
   // Not operating on 2019-05-04 (outside the calendar).
   {
     auto j = itinerary(utc(4, 7, 30), utc(4, 7, 45), api::ModeEnum::FLEX);
-    EXPECT_FALSE(flex::fit_direct_to_windows(*d.tt_, ids, utc(4, 7, 30),
-                                             false, j));
+    EXPECT_FALSE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(4, 7, 30), false, j));
   }
 }
 
@@ -369,8 +369,8 @@ TEST(motis, flex_service_day) {
   auto leg = api::Leg{};
   leg.mode_ = api::ModeEnum::FLEX;
   flex::set_flex_windows(
-      *d.tt_, id,
-      flex::get_service_day(*d.tt_, id, sys_seconds{utc(2, 1, 0)}), leg);
+      *d.tt_, id, flex::get_service_day(*d.tt_, id, sys_seconds{utc(2, 1, 0)}),
+      leg);
   EXPECT_EQ(utc(1, 8, 10), **leg.from_.flexStartPickupDropOffWindow_);
   EXPECT_EQ(utc(1, 8, 40), **leg.from_.flexEndPickupDropOffWindow_);
   EXPECT_EQ(utc(1, 8, 0), **leg.to_.flexStartPickupDropOffWindow_);

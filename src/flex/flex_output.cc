@@ -107,9 +107,9 @@ void flex_output::annotate_leg(n::lang_t const& lang,
 
   // Windows of the service day the ride belongs to, not of the calendar day
   // of the leg (differs for windows past midnight).
-  set_flex_windows(
-      tt_, mode_payload_,
-      get_service_day(tt_, mode_payload_, leg.startTime_.time_), leg);
+  set_flex_windows(tt_, mode_payload_,
+                   get_service_day(tt_, mode_payload_, leg.startTime_.time_),
+                   leg);
 }
 
 api::Place flex_output::get_place(n::lang_t const& lang,
