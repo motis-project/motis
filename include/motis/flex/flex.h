@@ -44,11 +44,19 @@ flex_routings_t get_flex_routings(nigiri::timetable const&,
                                   std::chrono::seconds max,
                                   osr_parameters const&);
 
-// Departure times (start of the whole access / egress of `duration`) at
-// which transport `id` operating on service `day` (midnight UTC of its
-// traffic day) can be used: the ride starts inside the boarding stop's window
-// and ends inside the alighting stop's window,
-//   W = [a_from, b_from] ∩ [a_to - duration, b_to - duration].
+// When the ride starts (pickup) and ends (drop-off), relative to the start
+// of the whole access / egress / direct path in travel direction.
+struct flex_ride {
+  nigiri::duration_t pickup_;
+  nigiri::duration_t drop_off_;
+};
+
+// Departure times (start of the whole path) at which transport `id`
+// operating on service `day` (midnight UTC of its traffic day) can be used:
+// the ride starts inside the boarding stop's window and ends inside the
+// alighting stop's window,
+//   W = [a_from - pickup, b_from - pickup]
+//       ∩ [a_to - drop_off, b_to - drop_off].
 // Both window ends are inclusive. A zero-length window [T, T] is a fixed
 // departure at minute T (the Austrian feeds encode call-taxis with a fixed
 // departure this way; GTFS-Flex has no valid encoding for it). Returned
@@ -57,7 +65,7 @@ nigiri::interval<nigiri::unixtime_t> get_departure_window(
     nigiri::timetable const&,
     mode_payload id,
     nigiri::unixtime_t day,
-    nigiri::duration_t duration);
+    flex_ride);
 
 // Sets the pickup / drop-off windows of a FLEX leg for service day `day`.
 void set_flex_windows(nigiri::timetable const&,

@@ -107,6 +107,10 @@ flex::mode_payload offer() {
   return flex::mode_payload{n::flex_transport_idx_t{0U}, 0U, 1U};
 }
 
+flex::flex_ride ride(n::duration_t const pickup, n::duration_t const drop_off) {
+  return flex::flex_ride{.pickup_ = pickup, .drop_off_ = drop_off};
+}
+
 api::Itinerary itinerary(n::unixtime_t const start,
                          n::unixtime_t const end,
                          api::ModeEnum const mode) {
@@ -186,7 +190,7 @@ TEST(motis, flex_routings_travel_order) {
   EXPECT_TRUE(routings(d, kPickup, osr::direction::kBackward, 1min).empty());
 }
 
-// W = [a_from, b_from] ∩ [a_to - l, b_to - l], with the windows of both ends,
+// W = [a_from - pickup, b_from - pickup] ∩ [a_to - drop_off, b_to - drop_off],
 // both ends inclusive, returned as [start, end + 1 min).
 // Pickup 08:10-08:40Z, drop-off 08:00-11:00Z.
 TEST(motis, flex_departure_window) {
@@ -195,11 +199,16 @@ TEST(motis, flex_departure_window) {
   auto const id = offer();
 
   EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 41)}),
-            flex::get_departure_window(*d.tt_, id, day, 20min));
-  // The drop-off window closes first.
+            flex::get_departure_window(*d.tt_, id, day, ride(0min, 20min)));
+  // Walking 5 min to the vehicle: leave 5 min before the pickup window.
+  EXPECT_EQ((n::interval{utc(1, 8, 5), utc(1, 8, 36)}),
+            flex::get_departure_window(*d.tt_, id, day, ride(5min, 25min)));
+  // The drop-off window closes first. A walk after the drop-off does not
+  // count.
   EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 31)}),
-            flex::get_departure_window(*d.tt_, id, day, 150min));
-  auto const none = flex::get_departure_window(*d.tt_, id, day, 180min);
+            flex::get_departure_window(*d.tt_, id, day, ride(0min, 150min)));
+  auto const none =
+      flex::get_departure_window(*d.tt_, id, day, ride(0min, 180min));
   EXPECT_GE(none.from_, none.to_);
 }
 
@@ -211,13 +220,18 @@ TEST(motis, flex_zero_length_window_is_fixed_departure) {
   auto const id = offer();
   auto const day = utc(1, 0, 0);
 
-  // Exactly one departure minute: 08:10Z.
+  // Exactly one departure minute: pickup at 08:10Z.
   EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 11)}),
-            flex::get_departure_window(*d.tt_, id, day, 10min));
+            flex::get_departure_window(*d.tt_, id, day, ride(0min, 10min)));
+  // 3 min walk to the vehicle: leave at 08:07Z.
+  EXPECT_EQ((n::interval{utc(1, 8, 7), utc(1, 8, 8)}),
+            flex::get_departure_window(*d.tt_, id, day, ride(3min, 13min)));
   // Drop-off until 28:59 local = 02:59Z the next day, inclusive.
   EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 11)}),
-            flex::get_departure_window(*d.tt_, id, day, 1129min));  // 02:59Z
-  auto const late = flex::get_departure_window(*d.tt_, id, day, 1130min);
+            flex::get_departure_window(*d.tt_, id, day,
+                                       ride(0min, 1129min)));  // 02:59Z
+  auto const late =
+      flex::get_departure_window(*d.tt_, id, day, ride(0min, 1130min));
   EXPECT_GE(late.from_, late.to_);
 
   auto const ids = std::vector{id};
@@ -297,6 +311,25 @@ TEST(motis, flex_direct_respects_windows) {
         flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 12, 0), true, j));
     EXPECT_EQ(utc(1, 8, 40), *j.startTime_);
     EXPECT_EQ(utc(1, 8, 55), *j.endTime_);
+  }
+
+  // Only the ride has to fit: walk 5 min to the vehicle, ride 150 min, walk
+  // 60 min after the drop-off (past the end of the drop-off window).
+  {
+    auto j = itinerary(utc(1, 7, 30), utc(1, 7, 35), api::ModeEnum::WALK);
+    j.legs_.push_back(
+        itinerary(utc(1, 7, 35), utc(1, 10, 5), api::ModeEnum::FLEX)
+            .legs_.front());
+    j.legs_.push_back(
+        itinerary(utc(1, 10, 5), utc(1, 11, 5), api::ModeEnum::WALK)
+            .legs_.front());
+    j.endTime_ = utc(1, 11, 5);
+    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
+                                            false, j));
+    EXPECT_EQ(utc(1, 8, 5), *j.startTime_);
+    EXPECT_EQ(utc(1, 8, 10), *j.legs_[1].startTime_);
+    EXPECT_EQ(utc(1, 10, 40), *j.legs_[1].endTime_);
+    EXPECT_EQ(utc(1, 11, 40), *j.endTime_);
   }
 
   // Too long to end inside the drop-off window.
