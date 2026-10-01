@@ -440,7 +440,7 @@ std::vector<n::routing::offset> get_offsets(
             if (p.has_value()) {
               offsets.emplace_back(l,
                                    n::duration_t{static_cast<unsigned>(
-                                       std::ceil(p->cost_ / 60.0))},
+                                       std::ceil(p->duration_.count() / 60.0))},
                                    mode);
             }
           }
@@ -456,10 +456,11 @@ std::vector<n::routing::offset> get_offsets(
       auto const paths = route(profile, nullptr, mode);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
-          offsets.emplace_back(
-              l,
-              n::duration_t{static_cast<unsigned>(std::ceil(p->cost_ / 60.0))},
-              mode);
+          // travel time, not the search cost (which includes penalties)
+          offsets.emplace_back(l,
+                               n::duration_t{static_cast<unsigned>(
+                                   std::ceil(p->duration_.count() / 60.0))},
+                               mode);
         }
       }
     }

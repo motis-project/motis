@@ -407,10 +407,11 @@ void add_flex_td_offsets(osr::ways const& w,
             tt.internal_interval().from_ + to_idx(day_idx) * date::days{1U};
         for (auto const [p, ride, l] : utl::zip(paths, rides, near_stops)) {
           if (ride.has_value()) {
-            // Rounded up like every other offset (GBFS, walk, bike, car):
-            // an offset promises the stop can be reached after this time.
-            auto const duration = n::duration_t{
-                static_cast<n::duration_t::rep>(std::ceil(p->cost_ / 60.0))};
+            // Travel time (not the search cost, which includes penalties),
+            // rounded up like every other offset: an offset promises the
+            // stop can be reached after this time.
+            auto const duration = n::duration_t{static_cast<n::duration_t::rep>(
+                std::ceil(p->duration_.count() / 60.0))};
             auto const dep_iv = get_departure_window(tt, id, day, *ride);
 
             if (dep_iv.from_ < dep_iv.to_ &&

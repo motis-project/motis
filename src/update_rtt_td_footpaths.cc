@@ -114,10 +114,11 @@ std::vector<n::td_footpath> get_td_footpaths(
         &blocked_mem);
 
     for (auto const [to, p] : utl::zip(neighbors, results)) {
-      // Rounded up like every other offset and footpath.
+      // Travel time (not the search cost, which includes penalties), rounded
+      // up like every other offset and footpath.
       auto const minutes = p.has_value()
                                ? n::duration_t{static_cast<n::duration_t::rep>(
-                                     std::ceil(p->cost_ / 60.0))}
+                                     std::ceil(p->duration_.count() / 60.0))}
                                : n::footpath::kMaxDuration;
       auto const duration = minutes < n::footpath::kMaxDuration
                                 ? minutes
