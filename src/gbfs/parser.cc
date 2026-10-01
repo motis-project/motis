@@ -823,6 +823,7 @@ void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
 
   provider.geofencing_zones_.zones_ = std::move(zones);
   provider.geofencing_zones_.global_rules_ = std::move(global_rules);
+  provider.geofencing_zones_.build_index();
 }
 
 }  // namespace motis::gbfs

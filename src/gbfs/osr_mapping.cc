@@ -53,18 +53,6 @@ struct osr_mapping {
     };
 
     auto const& zones = provider_.geofencing_zones_;
-    auto exterior_indices = std::vector<std::size_t>{};
-    auto zone_rtree = box_rtree<std::size_t>{};
-    for (auto const [i, z] : utl::enumerate(zones.zones_)) {
-      if (z.is_global() && zones.zones_.size() != 1U) {
-        continue;
-      }
-      if (z.has_exterior()) {
-        exterior_indices.push_back(i);
-      } else {
-        zone_rtree.add(z.bounding_box(), i);
-      }
-    }
 
     auto const defaults =
         utl::to_vec(provider_.products_, [&](auto const& prod) {
@@ -74,8 +62,8 @@ struct osr_mapping {
          utl::zip(provider_.products_, products_data_, defaults)) {
       // Away from every polygon, only exterior rules apply. Near polygons
       // we recompute from the original defaults, preserving rule precedence.
-      auto const restrictions =
-          zones.get_restrictions(prod.vehicle_types_, def, exterior_indices);
+      auto const restrictions = zones.get_restrictions(prod.vehicle_types_, def,
+                                                       zones.exterior_zones_);
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
       rd.through_allowed_ = make_loc_bitvec();
@@ -94,13 +82,7 @@ struct osr_mapping {
     zone_indices.reserve(zones.zones_.size());
     auto const handle_point = [&](osr::node_idx_t const n,
                                   geo::latlng const& pos) {
-      zone_indices = exterior_indices;
-      zone_rtree.find(
-          pos, [&](std::size_t const idx) { zone_indices.push_back(idx); });
-      std::erase_if(zone_indices, [&](auto const idx) {
-        return !zones.zones_[idx].contains(pos);
-      });
-      utl::sort(zone_indices);
+      zones.get_zones_at(pos, zone_indices);
       for (auto [prod, rd, def] :
            utl::zip(provider_.products_, products_data_, defaults)) {
         auto const restrictions =

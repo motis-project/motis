@@ -224,10 +224,22 @@ struct zone {
 };
 
 struct geofencing_zones {
+  // Fills the lookup structures below; call after setting zones_ and
+  // global_rules_.
+  void build_index();
+
+  // Indices of the zones that contain pos, in rule precedence order.
+  void get_zones_at(geo::latlng const& pos,
+                    std::vector<std::size_t>& out) const;
+
   std::vector<zone> zones_;
   std::vector<rule> global_rules_;
 
-  void clear();
+  // Rules of the global zones and global_rules_, in precedence order.
+  std::vector<rule> default_rules_;
+  std::vector<std::size_t> exterior_zones_;
+  box_rtree<std::size_t> zone_rtree_;
+
   geofencing_restrictions get_restrictions(
       std::vector<vehicle_type_idx_t> const&,
       geofencing_restrictions,

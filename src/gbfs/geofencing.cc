@@ -1,5 +1,6 @@
 #include "motis/gbfs/geofencing.h"
 
+#include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 
 #include "tg.h"
@@ -55,17 +56,8 @@ geofencing_restrictions get_default_restrictions(
 
 geofencing_restrictions get_default_restrictions(
     gbfs_provider const& provider, provider_products const& product) {
-  auto global_rules = std::vector<rule>{};
-  for (auto const& zone : provider.geofencing_zones_.zones_) {
-    if (zone.is_global() && provider.geofencing_zones_.zones_.size() != 1U) {
-      global_rules.insert(global_rules.begin(), zone.rules_.begin(),
-                          zone.rules_.end());
-    }
-  }
-  global_rules.insert(global_rules.end(),
-                      provider.geofencing_zones_.global_rules_.begin(),
-                      provider.geofencing_zones_.global_rules_.end());
-  return get_default_restrictions(provider, product, global_rules);
+  return get_default_restrictions(provider, product,
+                                  provider.geofencing_zones_.default_rules_);
 }
 
 geofencing_restrictions get_restrictions(gbfs_provider const& provider,
@@ -73,15 +65,7 @@ geofencing_restrictions get_restrictions(gbfs_provider const& provider,
                                          geo::latlng const& pos) {
   auto const& zones = provider.geofencing_zones_;
   auto indices = std::vector<std::size_t>{};
-  for (auto i = std::size_t{0}; i != zones.zones_.size(); ++i) {
-    auto const& zone = zones.zones_[i];
-    if (zone.is_global() && zones.zones_.size() != 1U) {
-      continue;
-    }
-    if (zone.contains(pos)) {
-      indices.push_back(i);
-    }
-  }
+  zones.get_zones_at(pos, indices);
   return zones.get_restrictions(product.vehicle_types_,
                                 get_default_restrictions(provider, product),
                                 indices);
@@ -108,6 +92,33 @@ bool vehicle_is_rentable(gbfs_provider const& provider,
   }
   auto const restrictions = get_restrictions(provider, product, vehicle.pos_);
   return restrictions.ride_start_allowed_ && restrictions.ride_through_allowed_;
+}
+
+void geofencing_zones::build_index() {
+  default_rules_.clear();
+  exterior_zones_.clear();
+  zone_rtree_ = box_rtree<std::size_t>{};
+  for (auto const [i, z] : utl::enumerate(zones_)) {
+    if (z.is_global() && zones_.size() != 1U) {
+      default_rules_.insert(begin(default_rules_), begin(z.rules_),
+                            end(z.rules_));
+    } else if (z.has_exterior()) {
+      exterior_zones_.push_back(i);
+    } else {
+      zone_rtree_.add(z.bounding_box(), i);
+    }
+  }
+  default_rules_.insert(end(default_rules_), begin(global_rules_),
+                        end(global_rules_));
+}
+
+void geofencing_zones::get_zones_at(geo::latlng const& pos,
+                                    std::vector<std::size_t>& out) const {
+  out = exterior_zones_;
+  zone_rtree_.find(pos, [&](std::size_t const idx) { out.push_back(idx); });
+  std::erase_if(
+      out, [&](std::size_t const idx) { return !zones_[idx].contains(pos); });
+  utl::sort(out);
 }
 
 geofencing_restrictions geofencing_zones::get_restrictions(
