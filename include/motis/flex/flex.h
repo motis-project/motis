@@ -55,6 +55,24 @@ nigiri::interval<nigiri::unixtime_t> get_departure_window(
     nigiri::unixtime_t day,
     nigiri::duration_t duration);
 
+// Sets the pickup / drop-off windows of a FLEX leg for service day `day`.
+void set_flex_windows(nigiri::timetable const&,
+                      mode_payload id,
+                      date::sys_days day,
+                      api::Leg&);
+
+// Moves a direct FLEX itinerary (routed for `ids.front()`, starting or - for
+// arrive_by - ending at `time`) to the first departure (latest for arrive_by)
+// that one of the transports `ids` offers on a traffic day: the ride has to
+// start inside the window of the boarding stop and end inside the window of
+// the alighting stop. Returns false if there is none, or if the itinerary
+// contains no ride (the car_sharing profile may walk all the way).
+bool fit_direct_to_windows(nigiri::timetable const&,
+                           std::vector<mode_payload> const& ids,
+                           nigiri::unixtime_t time,
+                           bool arrive_by,
+                           api::Itinerary&);
+
 void add_flex_td_offsets(osr::ways const&,
                          osr::lookup const&,
                          osr::platforms const*,

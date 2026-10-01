@@ -107,6 +107,24 @@ flex::mode_payload offer() {
   return flex::mode_payload{n::flex_transport_idx_t{0U}, 0U, 1U};
 }
 
+api::Itinerary itinerary(n::unixtime_t const start,
+                         n::unixtime_t const end,
+                         api::ModeEnum const mode) {
+  auto leg = api::Leg{};
+  leg.mode_ = mode;
+  leg.startTime_ = start;
+  leg.endTime_ = end;
+  leg.scheduledStartTime_ = start;
+  leg.scheduledEndTime_ = end;
+  leg.from_.departure_ = start;
+  leg.to_.arrival_ = end;
+  auto j = api::Itinerary{};
+  j.startTime_ = start;
+  j.endTime_ = end;
+  j.legs_ = {leg};
+  return j;
+}
+
 }  // namespace
 
 // The small timetable fits the payload; a transport with more stop rows than
@@ -182,4 +200,76 @@ TEST(motis, flex_departure_window) {
             flex::get_departure_window(*d.tt_, id, day, 150min));
   auto const none = flex::get_departure_window(*d.tt_, id, day, 180min);
   EXPECT_GE(none.from_, none.to_);
+}
+
+// Pickup 08:10-08:40Z, drop-off 08:00-11:00Z, operating 2019-05-01..03.
+TEST(motis, flex_direct_respects_windows) {
+  auto const d = load("direct", "10:10:00,10:40:00");
+  auto const ids = std::vector{offer()};
+
+  // Depart at 07:30: moved to the first departure, 08:10.
+  {
+    auto j = itinerary(utc(1, 7, 30), utc(1, 7, 45), api::ModeEnum::FLEX);
+    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
+                                            false, j));
+    EXPECT_EQ(utc(1, 8, 10), *j.startTime_);
+    EXPECT_EQ(utc(1, 8, 25), *j.endTime_);
+    auto const& l = j.legs_.front();
+    EXPECT_EQ(utc(1, 8, 10), *l.startTime_);
+    EXPECT_EQ(utc(1, 8, 25), *l.endTime_);
+    EXPECT_EQ(utc(1, 8, 10), **l.from_.departure_);
+    EXPECT_EQ(utc(1, 8, 25), **l.to_.arrival_);
+    EXPECT_EQ(utc(1, 8, 10), **l.from_.flexStartPickupDropOffWindow_);
+    EXPECT_EQ(utc(1, 8, 40), **l.from_.flexEndPickupDropOffWindow_);
+    EXPECT_EQ(utc(1, 8, 0), **l.to_.flexStartPickupDropOffWindow_);
+    EXPECT_EQ(utc(1, 11, 0), **l.to_.flexEndPickupDropOffWindow_);
+  }
+
+  // Depart at 08:20, inside the window: unchanged.
+  {
+    auto j = itinerary(utc(1, 8, 20), utc(1, 8, 35), api::ModeEnum::FLEX);
+    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 8, 20),
+                                            false, j));
+    EXPECT_EQ(utc(1, 8, 20), *j.startTime_);
+  }
+
+  // Depart at 08:41: the window has closed, the next day's departure.
+  {
+    auto j = itinerary(utc(1, 8, 41), utc(1, 8, 56), api::ModeEnum::FLEX);
+    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 8, 41),
+                                            false, j));
+    EXPECT_EQ(utc(2, 8, 10), *j.startTime_);
+    EXPECT_EQ(utc(2, 8, 10),
+              **j.legs_.front().from_.flexStartPickupDropOffWindow_);
+  }
+
+  // Arrive by 12:00: latest departure 08:39 (window end is exclusive).
+  {
+    auto j = itinerary(utc(1, 11, 45), utc(1, 12, 0), api::ModeEnum::FLEX);
+    ASSERT_TRUE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 12, 0), true, j));
+    EXPECT_EQ(utc(1, 8, 39), *j.startTime_);
+    EXPECT_EQ(utc(1, 8, 54), *j.endTime_);
+  }
+
+  // Too long to end inside the drop-off window.
+  {
+    auto j = itinerary(utc(1, 7, 30), utc(1, 10, 30), api::ModeEnum::FLEX);
+    EXPECT_FALSE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
+                                             false, j));
+  }
+
+  // No ride (car_sharing walked all the way): not a flex connection.
+  {
+    auto j = itinerary(utc(1, 7, 30), utc(1, 7, 45), api::ModeEnum::WALK);
+    EXPECT_FALSE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
+                                             false, j));
+  }
+
+  // Not operating on 2019-05-04 (outside the calendar).
+  {
+    auto j = itinerary(utc(4, 7, 30), utc(4, 7, 45), api::ModeEnum::FLEX);
+    EXPECT_FALSE(flex::fit_direct_to_windows(*d.tt_, ids, utc(4, 7, 30),
+                                             false, j));
+  }
 }

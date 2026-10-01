@@ -622,22 +622,34 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   auto cache = street_routing_cache_t{};
   auto itineraries = std::vector<api::Itinerary>{};
 
-  auto const route_with_profile = [&](output const& out) {
+  // `adjust` may modify the itinerary or reject it (returns false).
+  auto const route_with_adjusted_profile = [&](output const& out,
+                                               auto&& adjust) {
     auto itinerary = street_routing(
         *w_, *l_, e, elevations_, lang, from, to, out,
         arrive_by ? std::nullopt : std::optional{time},
         arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
         osr_params, cache, *blocked, api_version, detailed_legs, max);
-    if (itinerary.legs_.empty()) {
+    if (itinerary.legs_.empty() || !adjust(itinerary)) {
       return false;
     }
-    auto const duration = std::chrono::duration_cast<n::duration_t>(
-        std::chrono::seconds{itinerary.duration_});
+    // Including waiting for a later departure (flex windows): a short ride
+    // hours after `time` must not tighten the transit search.
+    auto const span = arrive_by ? time - *itinerary.startTime_
+                                : *itinerary.endTime_ - time;
+    auto const duration = std::max(
+        std::chrono::duration_cast<n::duration_t>(
+            std::chrono::seconds{itinerary.duration_}),
+        std::chrono::duration_cast<n::duration_t>(span));
     if (duration < fastest_direct) {
       fastest_direct = duration;
     }
     itineraries.emplace_back(std::move(itinerary));
     return true;
+  };
+  auto const route_with_profile = [&](output const& out) {
+    return route_with_adjusted_profile(
+        out, [](api::Itinerary const&) { return true; });
   };
 
   for (auto const& m : modes) {
@@ -652,9 +664,14 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         auto frd = flex::flex_routing_data{};
         auto sharing = flex::prepare_sharing_data(
             *tt_, *w_, *l_, pl_, *fa_, matches_, ids.front(), frd);
-        route_with_profile(flex::flex_output{
-            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, *fa_, ids.front(),
-            frd.additional_nodes_, std::move(sharing)});
+        route_with_adjusted_profile(
+            flex::flex_output{*w_, pl_, matches_, ae_, tz_, *tags_, *tt_, *fa_,
+                              ids.front(), frd.additional_nodes_,
+                              std::move(sharing)},
+            [&](api::Itinerary& itinerary) {
+              return flex::fit_direct_to_windows(*tt_, ids, time, arrive_by,
+                                                 itinerary);
+            });
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
                m == api::ModeEnum::BIKE || m == api::ModeEnum::CAR_PARKING ||

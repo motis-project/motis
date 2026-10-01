@@ -6,6 +6,7 @@
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/to_vec.h"
 
 #include "nigiri/logging.h"
@@ -399,6 +400,112 @@ void add_flex_td_offsets(osr::ways const& w,
                                         }})),
         UTL_GET_TIMING_MS(routing_timer));
   }
+}
+
+void set_flex_windows(n::timetable const& tt,
+                      mode_payload const id,
+                      date::sys_days const day,
+                      api::Leg& leg) {
+  auto const windows =
+      tt.flex_transport_stop_time_windows_[id.get_flex_transport()];
+  auto const from = windows[id.get_from_stop()];
+  auto const to = windows[id.get_to_stop()];
+  leg.from_.flexStartPickupDropOffWindow_ = day + from.from_;
+  leg.from_.flexEndPickupDropOffWindow_ = day + from.to_;
+  leg.to_.flexStartPickupDropOffWindow_ = day + to.from_;
+  leg.to_.flexEndPickupDropOffWindow_ = day + to.to_;
+}
+
+bool fit_direct_to_windows(n::timetable const& tt,
+                           std::vector<mode_payload> const& ids,
+                           n::unixtime_t const time,
+                           bool const arrive_by,
+                           api::Itinerary& itinerary) {
+  // A walk without a ride (car_sharing also reaches the destination on foot)
+  // is no flex connection; WALK covers it.
+  if (utl::none_of(itinerary.legs_, [](api::Leg const& l) {
+        return l.mode_ == api::ModeEnum::FLEX;
+      })) {
+    return false;
+  }
+
+  auto const start = std::chrono::time_point_cast<n::i32_minutes>(
+      itinerary.startTime_.time_);
+  auto const end =
+      std::chrono::time_point_cast<n::i32_minutes>(itinerary.endTime_.time_);
+  auto const duration = std::chrono::duration_cast<n::duration_t>(end - start);
+
+  // Same window as for the offsets (add_flex_td_offsets), over the departure
+  // time of the whole itinerary. Waiting is limited like in nigiri's td lookup.
+  auto best = std::optional<std::tuple<n::unixtime_t, mode_payload,
+                                       date::sys_days>>{};
+  for (auto const id : ids) {
+    auto const t = id.get_flex_transport();
+    for (auto const day_idx : get_relevant_days(tt, time)) {
+      if (!tt.bitfields_[tt.flex_transport_traffic_days_[t]].test(
+              to_idx(day_idx))) {
+        continue;
+      }
+      auto const day =
+          tt.internal_interval().from_ + to_idx(day_idx) * date::days{1U};
+      auto const dep_iv = get_departure_window(tt, id, day, duration);
+      if (dep_iv.from_ >= dep_iv.to_) {
+        continue;
+      }
+      if (arrive_by) {
+        auto const dep =
+            std::min(dep_iv.to_ - n::duration_t{1}, time - duration);
+        if (dep < dep_iv.from_ || time - dep > n::routing::kMaxTravelTime) {
+          continue;
+        }
+        if (!best.has_value() || dep > std::get<0>(*best)) {
+          best = std::tuple{dep, id, std::chrono::floor<date::days>(day)};
+        }
+      } else {
+        auto const dep = std::max(dep_iv.from_, time);
+        if (dep >= dep_iv.to_ || dep - time > n::routing::kMaxTravelTime) {
+          continue;
+        }
+        if (!best.has_value() || dep < std::get<0>(*best)) {
+          best = std::tuple{dep, id, std::chrono::floor<date::days>(day)};
+        }
+      }
+    }
+  }
+
+  if (!best.has_value()) {
+    return false;
+  }
+
+  auto const& [dep, id, day] = *best;
+  auto const shift =
+      std::chrono::duration_cast<std::chrono::seconds>(dep - start);
+  auto const move = [&](openapi::date_time_t& x) { x.time_ += shift; };
+  auto const move_opt = [&](std::optional<openapi::date_time_t>& x) {
+    if (x.has_value()) {
+      move(*x);
+    }
+  };
+  auto const move_place = [&](api::Place& p) {
+    move_opt(p.arrival_);
+    move_opt(p.departure_);
+    move_opt(p.scheduledArrival_);
+    move_opt(p.scheduledDeparture_);
+  };
+  move(itinerary.startTime_);
+  move(itinerary.endTime_);
+  for (auto& leg : itinerary.legs_) {
+    move(leg.startTime_);
+    move(leg.endTime_);
+    move(leg.scheduledStartTime_);
+    move(leg.scheduledEndTime_);
+    move_place(leg.from_);
+    move_place(leg.to_);
+    if (leg.mode_ == api::ModeEnum::FLEX) {
+      set_flex_windows(tt, id, day, leg);
+    }
+  }
+  return true;
 }
 
 }  // namespace motis::flex
