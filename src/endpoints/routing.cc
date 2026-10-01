@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -332,12 +333,13 @@ std::vector<n::routing::offset> get_offsets(
     auto const route = [&](osr::search_profile const p,
                            osr::sharing_data const* sharing,
                            transport_mode_t const mode,
-                           bool const exact_return_at_from = false) {
-      auto const params = to_profile_parameters(p, osr_params);
-      auto from = pos;
-      from.exact_return_allowed_ = exact_return_at_from;
+                           std::function<bool(geo::latlng const&)>
+                               vehicle_return_allowed = {}) {
+      auto params = to_profile_parameters(p, osr_params);
+      osr::set_vehicle_return_allowed(params,
+                                      std::move(vehicle_return_allowed));
       auto pos_match = osr::match_result{};
-      r.l_->match(params, from, false, dir, max_matching_distance, nullptr, p,
+      r.l_->match(params, pos, false, dir, max_matching_distance, nullptr, p,
                   {}, pos_match);
 
       auto cached_near_stop_matches =
@@ -353,7 +355,7 @@ std::vector<n::routing::offset> get_offsets(
       }
 
       auto state = osr::route_one_to_many(
-          params, *r.w_, *r.l_, p, from, near_stop_locations,
+          params, *r.w_, *r.l_, p, pos, near_stop_locations,
           pos_match[osr::match_idx_t{0U}], cached_near_stop_matches->matches_,
           max, dir, nullptr, sharing, elevations);
       auto const& paths = state->results();
@@ -439,15 +441,23 @@ std::vector<n::routing::offset> get_offsets(
             auto const sharing = prod_rd->get_sharing_data(
                 r.w_->n_nodes(), ignore_rental_return_constraints);
 
-            auto const exact_return_at_from =
-                dir == osr::direction::kBackward &&
-                gbfs::allows_free_floating_return_at(
-                    *provider, prod, pos.pos_,
-                    ignore_rental_return_constraints);
+            // Forward searches end at the near stops: no return there.
+            auto vehicle_return_allowed =
+                std::function<bool(geo::latlng const&)>{};
+            if (dir == osr::direction::kBackward) {
+              vehicle_return_allowed =
+                  [&provider = *provider, &prod,
+                   ignore =
+                       ignore_rental_return_constraints](geo::latlng const& x) {
+                    return gbfs::allows_free_floating_return_at(provider, prod,
+                                                                x, ignore);
+                  };
+            }
 
             auto const mode = gbfs_rd.get_transport_mode(prod_ref);
-            auto const paths = route(gbfs::get_osr_profile(prod.form_factor_),
-                                     &sharing, mode, exact_return_at_from);
+            auto const paths =
+                route(gbfs::get_osr_profile(prod.form_factor_), &sharing, mode,
+                      std::move(vehicle_return_allowed));
             ignore_walk = true;
             for (auto const [p, l] : utl::zip(paths, near_stops)) {
               if (p.has_value()) {

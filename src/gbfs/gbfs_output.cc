@@ -49,10 +49,9 @@ osr::sharing_data const* gbfs_output::get_sharing_data() const {
   return &sharing_data_;
 }
 
-bool gbfs_output::allows_free_floating_return_at(
-    osr::location const& location) const {
+bool gbfs_output::allows_free_floating_return_at(geo::latlng const& pos) const {
   return gbfs::allows_free_floating_return_at(
-      provider_, products_, location.pos_, ignore_rental_return_constraints_);
+      provider_, products_, pos, ignore_rental_return_constraints_);
 }
 
 void gbfs_output::annotate_leg(nigiri::lang_t const&,

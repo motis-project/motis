@@ -19,7 +19,7 @@ struct gbfs_output final : public output {
   transport_mode_t get_cache_key() const override;
 
   osr::sharing_data const* get_sharing_data() const override;
-  bool allows_free_floating_return_at(osr::location const&) const override;
+  bool allows_free_floating_return_at(geo::latlng const&) const override;
 
   void annotate_leg(nigiri::lang_t const&,
                     osr::node_idx_t const from_node,
