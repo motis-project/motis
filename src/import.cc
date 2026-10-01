@@ -48,6 +48,7 @@
 
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
+#include "motis/flex/flex.h"
 #include "motis/compute_footpaths.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
@@ -398,6 +399,8 @@ void import(config const& c,
              .max_footpath_length_ = t.max_footpath_length_,
              .merge_stats_dir_ = data_path},
             interval, assistance.get(), shapes.get(), false))};
+
+        flex::verify_flex_limits(*tt);
 
         tt->write(data_path / "tt.bin");
         tags->write(data_path / "tags.bin");
