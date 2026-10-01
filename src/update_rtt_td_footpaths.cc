@@ -1,5 +1,7 @@
 #include "motis/update_rtt_td_footpaths.h"
 
+#include <cmath>
+
 #include <map>
 
 #include "utl/equal_ranges_linear.h"
@@ -112,9 +114,13 @@ std::vector<n::td_footpath> get_td_footpaths(
         &blocked_mem);
 
     for (auto const [to, p] : utl::zip(neighbors, results)) {
-      auto const duration = p.has_value() && (n::duration_t{p->cost_ / 60U} <
-                                              n::footpath::kMaxDuration)
-                                ? n::duration_t{p->cost_ / 60U}
+      // Rounded up like every other offset and footpath.
+      auto const minutes = p.has_value()
+                               ? n::duration_t{static_cast<n::duration_t::rep>(
+                                     std::ceil(p->cost_ / 60.0))}
+                               : n::footpath::kMaxDuration;
+      auto const duration = minutes < n::footpath::kMaxDuration
+                                ? minutes
                                 : n::footpath::kMaxDuration;
       fps.push_back(n::td_footpath{
           to, t,
