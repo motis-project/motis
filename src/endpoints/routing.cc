@@ -334,9 +334,11 @@ std::vector<n::routing::offset> get_offsets(
                            transport_mode_t const mode,
                            bool const exact_return_at_from = false) {
       auto const params = to_profile_parameters(p, osr_params);
+      auto from = pos;
+      from.exact_return_allowed_ = exact_return_at_from;
       auto pos_match = osr::match_result{};
-      r.l_->match(params, pos, false, dir, max_matching_distance, nullptr,
-                  exact_return_at_from, p, {}, pos_match);
+      r.l_->match(params, from, false, dir, max_matching_distance, nullptr, p,
+                  {}, pos_match);
 
       auto cached_near_stop_matches =
           utl::find_if(near_stop_match_cache, [&](auto const& entry) {
@@ -351,11 +353,9 @@ std::vector<n::routing::offset> get_offsets(
       }
 
       auto state = osr::route_one_to_many(
-          params, *r.w_, *r.l_, p, pos, near_stop_locations,
+          params, *r.w_, *r.l_, p, from, near_stop_locations,
           pos_match[osr::match_idx_t{0U}], cached_near_stop_matches->matches_,
-          max, dir, nullptr, sharing, elevations,
-          [](osr::path const&) { return false; }, std::nullopt,
-          osr::route_options{.exact_return_at_from_ = exact_return_at_from});
+          max, dir, nullptr, sharing, elevations);
       auto const& paths = state->results();
 
       if (states != nullptr) {

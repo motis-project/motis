@@ -170,8 +170,8 @@ api::Itinerary street_routing(osr::ways const& w,
           ? std::optional<osr::routing_time_t>{to_osr_time(bound_time)}
           : std::optional<osr::routing_time_t>{};
   auto const from = get_location(from_place);
-  auto const to = get_location(to_place);
-  auto const exact_return_allowed = out.allows_free_floating_return_at(to);
+  auto to = get_location(to_place);
+  to.exact_return_allowed_ = out.allows_free_floating_return_at(to);
   auto const s = e ? get_states_at(w, l, *e, bound_time, from.pos_)
                    : std::optional{std::pair<nodes_t, states_t>{}};
   auto const cache_key = street_routing_cache_key_t{
@@ -180,7 +180,6 @@ api::Itinerary street_routing(osr::ways const& w,
       out.get_cache_key(),
       out.is_time_dependent() ? bound_time : n::unixtime_t{n::i32_minutes{0}},
       out.is_time_dependent() ? osr_dir : osr::direction::kForward,
-      exact_return_allowed,
       max};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
     if (precomputed.state_ != nullptr) {
@@ -197,8 +196,7 @@ api::Itinerary street_routing(osr::ways const& w,
         max, osr_dir, max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
         out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi,
-        osr_start_time,
-        osr::route_options{.exact_return_at_to_ = {exact_return_allowed}});
+        osr_start_time);
   });
 
   if (!path.has_value()) {

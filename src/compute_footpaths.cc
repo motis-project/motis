@@ -110,8 +110,8 @@ elevator_footpath_map_t compute_footpaths(
               lookup.match(to_profile_parameters(mode.profile_, {}),
                            get_loc(tt, w, pl, matches, l), false,
                            osr::direction::kForward,
-                           mode.max_matching_distance_, nullptr, false,
-                           mode.profile_, raw, tmp);
+                           mode.max_matching_distance_, nullptr, mode.profile_,
+                           raw, tmp);
             } else {
               tmp.start(osr::kNoLevel);
               tmp.finish();

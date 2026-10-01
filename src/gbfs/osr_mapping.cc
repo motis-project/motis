@@ -170,7 +170,7 @@ struct osr_mapping {
     auto matches = osr::match_result{};
     l_.complete_match<footp>(footp::parameters{}, loc, false,
                              osr::direction::kForward, kMaxGbfsMatchingDistance,
-                             nullptr, false, std::nullopt, {}, matches);
+                             nullptr, std::nullopt, {}, matches);
     auto const m = matches[osr::match_idx_t{0U}];
     auto node_matches = std::vector<node_match>{};
     for (auto j = std::size_t{0U}; j != m.size(); ++j) {

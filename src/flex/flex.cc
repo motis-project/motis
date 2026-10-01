@@ -80,7 +80,7 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
     auto matches = osr::match_result{};
     lookup.complete_match<osr::foot<false>>(
         osr::foot<false>::parameters{}, pos, false, osr::direction::kForward,
-        kMaxGbfsMatchingDistance, nullptr, false, std::nullopt, {}, matches);
+        kMaxGbfsMatchingDistance, nullptr, std::nullopt, {}, matches);
 
     auto const m = matches[osr::match_idx_t{0U}];
     for (auto j = std::size_t{0U}; j != m.size(); ++j) {
@@ -298,7 +298,7 @@ void add_flex_td_offsets(osr::ways const& w,
   auto const params =
       to_profile_parameters(osr::search_profile::kCarSharing, osr_params);
   auto pos_match = osr::match_result{};
-  lookup.match(params, pos, false, dir, max_matching_distance, nullptr, false,
+  lookup.match(params, pos, false, dir, max_matching_distance, nullptr,
                osr::search_profile::kCarSharing, {}, pos_match);
   auto const near_stop_matches = get_reverse_platform_way_matches(
       lookup, way_matches, osr::search_profile::kCarSharing, near_stops,
