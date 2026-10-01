@@ -89,11 +89,14 @@ void flex_output::annotate_leg(n::lang_t const& lang,
   auto const from_stop = mode_payload_.get_from_stop();
   auto const to_stop = mode_payload_.get_to_stop();
 
+  // A location group stop is an additional node: show it as the timetable
+  // location. Keep the timezone the leg's place already carries: without the
+  // geocoding extension a location has none of its own.
   auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
     if (w_.is_additional_node(n)) {
       auto const l = additional_nodes_.get(n);
       p = to_place(&tt_, &tags_, &w_, pl_, matches_, ae_, tz_, lang,
-                   tt_location{l});
+                   tt_location{l}, osr::location{}, osr::location{}, "", p.tz_);
     }
   };
   write_node_info(leg.from_, from);

@@ -682,10 +682,15 @@ TEST(motis, refresh_itinerary_reconstructs_added_trip_by_trip_id_only) {
 
 // GTFS-Flex dataset: a geojson area ("da_flex", service day 2019-05-01) and a
 // location group ("da_group" -> "da_flex", service day 2019-05-02), both used
-// as a flex first mile to board the ICE at DA_10 -> FFM_10. The start
-// (DA_FLEX) is on a street (Traubenweg) west of DA Hbf, so the car drives
-// part of the way: the test extract has no road up to the platform. Same
-// timetable, different service days select the area- vs group-based flex.
+// as a flex first mile to board the ICE at DA_10 -> FFM_10, and a last mile
+// from an area around FFM Hbf to a location group ("ffm_area" -> "ffm_group",
+// service day 2019-05-03) at Münchener Straße. The start (DA_FLEX) is on a
+// street (Traubenweg) west of DA Hbf, so the car drives part of the way: the
+// test extract has no road up to the platform. Same timetable, different
+// service days select the variants. The group stop at FFM is on a residential
+// street far enough from FFM_10 (800 m) for the car to beat walking. No group
+// stop works in the DA part: every stop there inherits a level -1 platform of
+// DA Hbf (platform search radius 0.01 deg), so the car cannot reach it.
 constexpr auto kFlexGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -698,6 +703,7 @@ DA_10,DA Hbf,49.87336,8.62926,0,DA,10
 DA_FLEX,Traubenweg,49.87331,8.62300,0,,
 FFM,FFM Hbf,50.10701,8.66341,1,,
 FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10
+FFM_FLEX,Münchener Straße,50.10830,8.67165,0,,
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
@@ -711,6 +717,7 @@ ICE,S_ALL,ICE,,
 ICE,S_ALL,ICE_LATE,,
 FLEXA,S_AREA,FLEX_AREA,,
 FLEXG,S_GROUP,FLEX_GROUP,,
+FLEXG,S_GROUP_FFM,FLEX_GROUP_FFM,,
 
 # booking_rules.txt
 booking_rule_id,booking_type,prior_notice_duration_min,prior_notice_duration_max
@@ -726,32 +733,44 @@ FLEX_AREA,,,,,da_flex,0,00:00:00,24:00:00,BR,BR,2,2
 FLEX_AREA,,,,,da_flex,1,00:00:00,24:00:00,BR,BR,2,2
 FLEX_GROUP,,,,da_group,,0,00:00:00,24:00:00,BR,BR,2,2
 FLEX_GROUP,,,,,da_flex,1,00:00:00,24:00:00,BR,BR,2,2
+FLEX_GROUP_FFM,,,,,ffm_area,0,00:00:00,24:00:00,BR,BR,2,2
+FLEX_GROUP_FFM,,,,ffm_group,,1,00:00:00,24:00:00,BR,BR,2,2
 
 # calendar.txt
 service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
 S_ALL,1,1,1,1,1,1,1,20190501,20190503
 S_AREA,1,1,1,1,1,1,1,20190501,20190501
 S_GROUP,1,1,1,1,1,1,1,20190502,20190502
+S_GROUP_FFM,1,1,1,1,1,1,1,20190503,20190503
 
 # locations.geojson
-{"type":"FeatureCollection","features":[{"id":"da_flex","type":"Feature","geometry":{"type":"Polygon","coordinates":[[[8.620,49.865],[8.640,49.865],[8.640,49.880],[8.620,49.880],[8.620,49.865]]]},"properties":{"stop_name":"DA Flex Area"}}]}
+{"type":"FeatureCollection","features":[{"id":"da_flex","type":"Feature","geometry":{"type":"Polygon","coordinates":[[[8.620,49.865],[8.640,49.865],[8.640,49.880],[8.620,49.880],[8.620,49.865]]]},"properties":{"stop_name":"DA Flex Area"}},{"id":"ffm_area","type":"Feature","geometry":{"type":"Polygon","coordinates":[[[8.655,50.100],[8.672,50.100],[8.672,50.112],[8.655,50.112],[8.655,50.100]]]},"properties":{"stop_name":"FFM Flex Area"}}]}
 
 # location_groups.txt
 location_group_id,location_group_name
 da_group,DA Flex Group
+ffm_group,FFM Flex Group
 
 # location_group_stops.txt
 location_group_id,stop_id
 da_group,DA_FLEX
 da_group,DA_10
+ffm_group,FFM_FLEX
 )";
 
+struct flex_leg_test {
+  std::string_view sub_dir_;
+  std::string_view day_;
+  bool last_mile_;  // false: FLEX first mile, true: FLEX last mile
+};
+
 // Plans a FLEX first mile to board the ICE on `day` (area on 2019-05-01,
-// location group on 2019-05-02), asserts the id encodes the access as a single
-// FLEX leg, and that reconstruction re-routes it (round-trips) via the
-// time-dependent flex offsets.
-void run_flex_first_mile_test(std::string_view const sub_dir,
-                              std::string_view const day) {
+// location group on 2019-05-02) or a FLEX last mile from it (location group
+// on 2019-05-03), asserts the id encodes the access as a single FLEX leg, and
+// that reconstruction re-routes it (round-trips) via the time-dependent flex
+// offsets.
+void run_flex_test(flex_leg_test const& t) {
+  auto const [sub_dir, day, last_mile] = t;
   auto ec = std::error_code{};
   auto const path = fs::path{"test/data/itinerary_id"} / sub_dir;
   fs::remove_all(path, ec);
@@ -776,27 +795,31 @@ void run_flex_first_mile_test(std::string_view const sub_dir,
   // `numLegAlternatives` so the boarding leg also gets earlier/later departures
   // as leg alternatives -- each of those must reproduce the FLEX first mile
   // too, not just the main leg.
-  auto const res =
-      routing(fmt::format("/api/v6/plan"
-                          "?fromPlace=49.87331,8.62300"
-                          "&toPlace=50.10593,8.66118"
-                          "&time={}T05:00Z"
-                          "&timetableView=true"
-                          "&searchWindow=10800"
-                          "&preTransitModes=FLEX"
-                          "&maxPreTransitTime=3600"
-                          "&postTransitModes=WALK"
-                          "&numLegAlternatives=3"
-                          "&detailedLegs=true",
-                          day));
+  auto const res = routing(
+      fmt::format("/api/v6/plan"
+                  "?fromPlace={}"
+                  "&toPlace={}"
+                  "&time={}T05:00Z"
+                  "&timetableView=true"
+                  "&searchWindow=10800"
+                  "&preTransitModes={}"
+                  "&maxPreTransitTime=3600"
+                  "&postTransitModes={}"
+                  "&maxPostTransitTime=3600"
+                  "&numLegAlternatives=3"
+                  "&detailedLegs=true",
+                  last_mile ? "49.87336,8.62926" : "49.87331,8.62300",
+                  last_mile ? "50.10830,8.67165" : "50.10593,8.66118", day,
+                  last_mile ? "WALK" : "FLEX", last_mile ? "FLEX" : "WALK"));
   ASSERT_FALSE(res.itineraries_.empty());
   auto const& original = res.itineraries_.front();
 
-  // The flex access is one journey offset leg, encoded as a single FLEX leg.
+  // The flex access / egress is one journey offset leg, encoded as a single
+  // FLEX leg.
   auto proto = motis::ItineraryId{};
   ASSERT_TRUE(proto.ParseFromString(net::decode_base64(original.id_)));
   ASSERT_GE(proto.legs_size(), 1);
-  EXPECT_EQ("FLEX", proto.legs(0).mode());
+  EXPECT_EQ("FLEX", proto.legs(last_mile ? proto.legs_size() - 1 : 0).mode());
   // A real ride, not a walk the car_sharing profile found on its own.
   EXPECT_TRUE(utl::any_of(original.legs_, [](api::Leg const& l) {
     return l.mode_ == api::ModeEnum::FLEX;
@@ -817,8 +840,13 @@ void run_flex_first_mile_test(std::string_view const sub_dir,
   // access modes must be supplied (preTransitModes=FLEX) for the alternatives'
   // boundary offsets to be recomputed as flex (not a bare boarding-stop walk).
   auto refresh_q = api::refreshItinerary_params{};
-  refresh_q.preTransitModes_ = {api::ModeEnum::FLEX};
-  refresh_q.maxPreTransitTime_ = 3600;
+  if (last_mile) {
+    refresh_q.postTransitModes_ = {api::ModeEnum::FLEX};
+    refresh_q.maxPostTransitTime_ = 3600;
+  } else {
+    refresh_q.preTransitModes_ = {api::ModeEnum::FLEX};
+    refresh_q.maxPreTransitTime_ = 3600;
+  }
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
   auto const reconstructed = reconstruct_itinerary(
       routing, stop_times, *d.rt_, original.id_,
@@ -834,18 +862,17 @@ void run_flex_first_mile_test(std::string_view const sub_dir,
 }
 
 TEST(motis, itinerary_id_reconstruct_flex_area_first_mile) {
-  run_flex_first_mile_test("flex_area", "2019-05-01");
+  run_flex_test(
+      {.sub_dir_ = "flex_area", .day_ = "2019-05-01", .last_mile_ = false});
 }
 
-TEST(motis, itinerary_id_reconstruct_flex_location_group_first_mile) {
-  // No flex ride can start at a location group stop in test_case.osm.pbf:
-  // every stop in the DA part of the extract is matched to a level -1 platform
-  // of DA Hbf (platform search radius +-0.01 deg, no distance cap), so its
-  // street matching sees only the platform level and the car cannot pick it
-  // up. The test used to pass only because car_sharing walks without a ride,
-  // which are no flex offers anymore.
-  GTEST_SKIP() << "no drivable location group stop in the test extract";
-  run_flex_first_mile_test("flex_group", "2019-05-02");
+// The DA location group (2019-05-02) cannot be tested on the first mile: no
+// flex ride can start at a location group stop in the DA part of
+// test_case.osm.pbf (see kFlexGtfs). The location group path is covered on
+// the last mile at FFM instead.
+TEST(motis, itinerary_id_reconstruct_flex_location_group_last_mile) {
+  run_flex_test(
+      {.sub_dir_ = "flex_group", .day_ = "2019-05-03", .last_mile_ = true});
 }
 
 constexpr auto kMultiHopGtfs = R"(
