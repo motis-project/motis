@@ -3,10 +3,13 @@ import { twMerge } from 'tailwind-merge';
 import { browser } from '$app/environment';
 import { pushState, replaceState } from '$app/navigation';
 import { page } from '$app/state';
-import { trip } from '@motis-project/motis-client';
+import { trip, type RealTimeState } from '@motis-project/motis-client';
 import { joinInterlinedLegs } from './preprocessItinerary';
 import { language } from './i18n/translation';
 import { tick } from 'svelte';
+
+export const isRealtime = (state: RealTimeState | undefined, fallback: boolean): boolean =>
+	state === undefined ? fallback : state !== 'NO_RT_DATA' && state !== 'INCONSISTENT';
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
