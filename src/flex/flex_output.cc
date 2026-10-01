@@ -105,21 +105,11 @@ void flex_output::annotate_leg(n::lang_t const& lang,
   leg.to_.flex_ = get_flex_stop_name(tt_, lang, stop_seq[to_stop]);
   leg.to_.flexId_ = get_flex_id(tt_, stop_seq[to_stop]);
 
-  auto const time_windows = tt_.flex_transport_stop_time_windows_[t];
-
-  leg.from_.flexStartPickupDropOffWindow_ =
-      std::chrono::time_point_cast<std::chrono::days>(leg.startTime_.time_) +
-      time_windows[from_stop].from_;
-  leg.from_.flexEndPickupDropOffWindow_ =
-      std::chrono::time_point_cast<std::chrono::days>(leg.startTime_.time_) +
-      time_windows[from_stop].to_;
-
-  leg.to_.flexStartPickupDropOffWindow_ =
-      std::chrono::time_point_cast<std::chrono::days>(leg.endTime_.time_) +
-      time_windows[to_stop].from_;
-  leg.to_.flexEndPickupDropOffWindow_ =
-      std::chrono::time_point_cast<std::chrono::days>(leg.endTime_.time_) +
-      time_windows[to_stop].to_;
+  // Windows of the service day the ride belongs to, not of the calendar day
+  // of the leg (differs for windows past midnight).
+  set_flex_windows(
+      tt_, mode_payload_,
+      get_service_day(tt_, mode_payload_, leg.startTime_.time_), leg);
 }
 
 api::Place flex_output::get_place(n::lang_t const& lang,

@@ -442,6 +442,32 @@ void add_flex_td_offsets(osr::ways const& w,
   }
 }
 
+date::sys_days get_service_day(n::timetable const& tt,
+                               mode_payload const id,
+                               std::chrono::sys_seconds const t) {
+  auto const transport = id.get_flex_transport();
+  auto const& traffic_days =
+      tt.bitfields_[tt.flex_transport_traffic_days_[transport]];
+  auto const window_start =
+      tt.flex_transport_stop_time_windows_[transport][id.get_from_stop()].from_;
+  auto const t_day = std::chrono::floor<date::days>(t);
+  auto const first_day =
+      std::chrono::floor<date::days>(tt.internal_interval().from_);
+  // Windows may start up to a few days before the ride (GTFS times past
+  // 24:00 of the service day).
+  for (auto i = 0; i != 4; ++i) {
+    auto const day = t_day - date::days{i};
+    auto const day_idx = (day - first_day).count();
+    if (day_idx >= 0 &&
+        static_cast<std::size_t>(day_idx) < traffic_days.size() &&
+        traffic_days.test(static_cast<std::size_t>(day_idx)) &&
+        day + window_start <= t) {
+      return day;
+    }
+  }
+  return t_day;
+}
+
 void set_flex_windows(n::timetable const& tt,
                       mode_payload const id,
                       date::sys_days const day,

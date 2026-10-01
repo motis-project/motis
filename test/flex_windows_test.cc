@@ -353,3 +353,26 @@ TEST(motis, flex_direct_respects_windows) {
                                              false, j));
   }
 }
+
+// Leg shown with the windows of its own service day. Pickup 08:10-08:40Z.
+TEST(motis, flex_service_day) {
+  auto const d = load("service_day", "10:10:00,10:40:00");
+  auto const id = offer();
+  EXPECT_EQ(sys_days{2019_y / May / 1},
+            flex::get_service_day(*d.tt_, id, sys_seconds{utc(1, 8, 20)}));
+  // 2019-05-02, before that day's window opened: 2019-05-01's window.
+  EXPECT_EQ(sys_days{2019_y / May / 1},
+            flex::get_service_day(*d.tt_, id, sys_seconds{utc(2, 1, 0)}));
+  EXPECT_EQ(sys_days{2019_y / May / 2},
+            flex::get_service_day(*d.tt_, id, sys_seconds{utc(2, 8, 15)}));
+
+  auto leg = api::Leg{};
+  leg.mode_ = api::ModeEnum::FLEX;
+  flex::set_flex_windows(
+      *d.tt_, id,
+      flex::get_service_day(*d.tt_, id, sys_seconds{utc(2, 1, 0)}), leg);
+  EXPECT_EQ(utc(1, 8, 10), **leg.from_.flexStartPickupDropOffWindow_);
+  EXPECT_EQ(utc(1, 8, 40), **leg.from_.flexEndPickupDropOffWindow_);
+  EXPECT_EQ(utc(1, 8, 0), **leg.to_.flexStartPickupDropOffWindow_);
+  EXPECT_EQ(utc(1, 11, 0), **leg.to_.flexEndPickupDropOffWindow_);
+}

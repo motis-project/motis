@@ -67,6 +67,14 @@ nigiri::interval<nigiri::unixtime_t> get_departure_window(
     nigiri::unixtime_t day,
     flex_ride);
 
+// Service day of `id`'s transport whose pickup window at the boarding stop
+// opened last at or before the ride start `t` (falls back to the day of `t`).
+// A leg's windows belong to that day, not to the calendar day of the leg: for
+// windows past midnight they differ.
+date::sys_days get_service_day(nigiri::timetable const&,
+                               mode_payload id,
+                               std::chrono::sys_seconds t);
+
 // Sets the pickup / drop-off windows of a FLEX leg for service day `day`.
 void set_flex_windows(nigiri::timetable const&,
                       mode_payload id,
