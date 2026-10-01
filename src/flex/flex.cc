@@ -269,8 +269,12 @@ n::interval<n::unixtime_t> get_departure_window(n::timetable const& tt,
       tt.flex_transport_stop_time_windows_[id.get_flex_transport()];
   auto const from = windows[id.get_from_stop()];
   auto const to = windows[id.get_to_stop()];
-  return n::interval{day + from.from_, day + from.to_}.intersect(
-      n::interval{day + to.from_ - duration, day + to.to_ - duration});
+  // Both window ends inclusive; [T, T] is a fixed departure at minute T.
+  // Closed at minute resolution -> half-open by one minute at the end.
+  auto const one = n::duration_t{1};
+  return n::interval{day + from.from_, day + from.to_ + one}
+      .intersect(n::interval{day + to.from_ - duration,
+                             day + to.to_ - duration + one});
 }
 
 void add_flex_td_offsets(osr::ways const& w,

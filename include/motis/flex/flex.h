@@ -48,7 +48,11 @@ flex_routings_t get_flex_routings(nigiri::timetable const&,
 // which transport `id` operating on service `day` (midnight UTC of its
 // traffic day) can be used: the ride starts inside the boarding stop's window
 // and ends inside the alighting stop's window,
-//   W = [a_from, b_from) ∩ [a_to - duration, b_to - duration).
+//   W = [a_from, b_from] ∩ [a_to - duration, b_to - duration].
+// Both window ends are inclusive. A zero-length window [T, T] is a fixed
+// departure at minute T (the Austrian feeds encode call-taxis with a fixed
+// departure this way; GTFS-Flex has no valid encoding for it). Returned
+// half-open at minute resolution: [start, end + 1 min).
 nigiri::interval<nigiri::unixtime_t> get_departure_window(
     nigiri::timetable const&,
     mode_payload id,

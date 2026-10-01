@@ -186,20 +186,67 @@ TEST(motis, flex_routings_travel_order) {
   EXPECT_TRUE(routings(d, kPickup, osr::direction::kBackward, 1min).empty());
 }
 
-// W = [a_from, b_from) ∩ [a_to - l, b_to - l), with the windows of both ends.
+// W = [a_from, b_from] ∩ [a_to - l, b_to - l], with the windows of both ends,
+// both ends inclusive, returned as [start, end + 1 min).
 // Pickup 08:10-08:40Z, drop-off 08:00-11:00Z.
 TEST(motis, flex_departure_window) {
   auto const d = load("window", "10:10:00,10:40:00");
   auto const day = utc(1, 0, 0);
   auto const id = offer();
 
-  EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 40)}),
+  EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 41)}),
             flex::get_departure_window(*d.tt_, id, day, 20min));
   // The drop-off window closes first.
-  EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 30)}),
+  EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 31)}),
             flex::get_departure_window(*d.tt_, id, day, 150min));
   auto const none = flex::get_departure_window(*d.tt_, id, day, 180min);
   EXPECT_GE(none.from_, none.to_);
+}
+
+// Zero-length pickup window [T, T]: a fixed departure at minute T (call-taxi
+// encoding of the Austrian feeds), here with a drop-off window from the same
+// minute to the end of the service day (28:59).
+TEST(motis, flex_zero_length_window_is_fixed_departure) {
+  auto const d = load("zero_window", "10:10:00,10:10:00", "10:10:00,28:59:00");
+  auto const id = offer();
+  auto const day = utc(1, 0, 0);
+
+  // Exactly one departure minute: 08:10Z.
+  EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 11)}),
+            flex::get_departure_window(*d.tt_, id, day, 10min));
+  // Drop-off until 28:59 local = 02:59Z the next day, inclusive.
+  EXPECT_EQ((n::interval{utc(1, 8, 10), utc(1, 8, 11)}),
+            flex::get_departure_window(*d.tt_, id, day, 1129min));  // 02:59Z
+  auto const late = flex::get_departure_window(*d.tt_, id, day, 1130min);
+  EXPECT_GE(late.from_, late.to_);
+
+  auto const ids = std::vector{id};
+  // Direct, depart 07:30: moved to the fixed departure.
+  {
+    auto j = itinerary(utc(1, 7, 30), utc(1, 7, 45), api::ModeEnum::FLEX);
+    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30),
+                                            false, j));
+    EXPECT_EQ(utc(1, 8, 10), *j.startTime_);
+    EXPECT_EQ(utc(1, 8, 25), *j.endTime_);
+    auto const& l = j.legs_.front();
+    EXPECT_EQ(utc(1, 8, 10), **l.from_.flexStartPickupDropOffWindow_);
+    EXPECT_EQ(utc(1, 8, 10), **l.from_.flexEndPickupDropOffWindow_);
+    EXPECT_EQ(utc(2, 2, 59), **l.to_.flexEndPickupDropOffWindow_);
+  }
+  // Direct, arrive by 12:00: still the 08:10 departure.
+  {
+    auto j = itinerary(utc(1, 11, 45), utc(1, 12, 0), api::ModeEnum::FLEX);
+    ASSERT_TRUE(
+        flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 12, 0), true, j));
+    EXPECT_EQ(utc(1, 8, 10), *j.startTime_);
+  }
+  // Depart at 08:11: the next departure is the next day's.
+  {
+    auto j = itinerary(utc(1, 8, 11), utc(1, 8, 26), api::ModeEnum::FLEX);
+    ASSERT_TRUE(flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 8, 11),
+                                            false, j));
+    EXPECT_EQ(utc(2, 8, 10), *j.startTime_);
+  }
 }
 
 // Pickup 08:10-08:40Z, drop-off 08:00-11:00Z, operating 2019-05-01..03.
@@ -243,13 +290,13 @@ TEST(motis, flex_direct_respects_windows) {
               **j.legs_.front().from_.flexStartPickupDropOffWindow_);
   }
 
-  // Arrive by 12:00: latest departure 08:39 (window end is exclusive).
+  // Arrive by 12:00: latest departure 08:40 (window end is inclusive).
   {
     auto j = itinerary(utc(1, 11, 45), utc(1, 12, 0), api::ModeEnum::FLEX);
     ASSERT_TRUE(
         flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 12, 0), true, j));
-    EXPECT_EQ(utc(1, 8, 39), *j.startTime_);
-    EXPECT_EQ(utc(1, 8, 54), *j.endTime_);
+    EXPECT_EQ(utc(1, 8, 40), *j.startTime_);
+    EXPECT_EQ(utc(1, 8, 55), *j.endTime_);
   }
 
   // Too long to end inside the drop-off window.
