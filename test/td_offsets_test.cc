@@ -9,6 +9,7 @@
 #include "nigiri/footpath.h"
 #include "nigiri/td_footpath.h"
 
+#include "motis/endpoints/routing.h"
 #include "motis/flex/mode_payload.h"
 #include "motis/td_offsets.h"
 
@@ -256,4 +257,47 @@ TEST(motis, td_offsets_preserve_mode_payload) {
   EXPECT_EQ(n::flex_transport_idx_t{42U}, restored.get_flex_transport());
   EXPECT_EQ(static_cast<n::stop_idx_t>(0U), restored.get_from_stop());
   EXPECT_EQ(static_cast<n::stop_idx_t>(3U), restored.get_to_stop());
+}
+
+// remove_slower_than_fastest_direct prunes single entries of a td offset
+// sequence. An entry is valid until the next one, so erasing it stretches its
+// predecessor over the erased span: with touching windows
+//     [10: 5 min, A] [20: 100 min, B] [30: closed]
+// erasing the 100-min entry leaves the 5-min offer of A valid until 30, an
+// offer nobody published. Pruning may only take options away; it must never
+// yield an arrival the unpruned sequence does not reach.
+TEST(motis, td_offsets_pruning_does_not_stretch_windows) {
+  auto const a = flex_payload(1U, 0U);
+  auto const b = flex_payload(2U, 0U);
+  auto const l = n::location_idx_t{7U};
+
+  auto offsets = raw({
+      {10, 20, n::duration_t{5}, a},
+      {20, 30, n::duration_t{100}, b},
+  });
+  motis::normalize_td_offsets(offsets);
+  ASSERT_EQ((std::vector{inactive(0), active(10, 5, a), active(20, 100, b),
+                         inactive(30)}),
+            offsets);
+
+  auto q = n::routing::query{};
+  q.fastest_direct_ = n::duration_t{50};
+  // Destination reachable in 0 min, so every start offset of >= 50 min loses
+  // against the direct connection and is pruned.
+  q.destination_.emplace_back(n::location_idx_t{8U}, n::duration_t{0}, 0U);
+  q.td_start_[l] = offsets;
+  motis::ep::remove_slower_than_fastest_direct(q);
+  auto const& pruned = q.td_start_.at(l);
+
+  // B is closed, not erased; the closer at 30 collapses into it.
+  EXPECT_EQ((std::vector{inactive(0), active(10, 5, a), inactive(20)}), pruned);
+
+  for (auto dep = 0; dep <= 40; ++dep) {
+    auto const want = arrival(offsets, dep);
+    auto const got = arrival(pruned, dep);
+    EXPECT_FALSE(got.has_value() && (!want.has_value() || *got < *want))
+        << "at minute " << dep;
+  }
+  // Departing inside B's window: A is gone, nothing is left.
+  EXPECT_FALSE(arrival(pruned, 25).has_value());
 }

@@ -781,11 +781,33 @@ void remove_slower_than_fastest_direct(n::routing::query& q) {
 
   utl::erase_if(q.start_, worse_than_fastest_direct(min_dest));
   utl::erase_if(q.destination_, worse_than_fastest_direct(min_start));
+
+  // A td offset entry is valid until the next entry. Erasing one would
+  // stretch its predecessor over the erased span and offer it at times nobody
+  // published. Close the entry instead (duration kMaxDuration, no mode) and
+  // collapse runs of closed entries into one.
+  auto const close_td = [](std::vector<n::routing::td_offset>& v,
+                           auto&& worse) {
+    for (auto& o : v) {
+      if (worse(o)) {
+        o = {.valid_from_ = o.valid_from_,
+             .duration_ = n::footpath::kMaxDuration};
+      }
+    }
+    auto const is_closed = [](n::routing::td_offset const& o) {
+      return o.duration_ == n::footpath::kMaxDuration;
+    };
+    v.erase(std::unique(begin(v), end(v),
+                        [&](auto const& a, auto const& b) {
+                          return is_closed(a) && is_closed(b);
+                        }),
+            end(v));
+  };
   for (auto& [k, v] : q.td_start_) {
-    utl::erase_if(v, worse_than_fastest_direct(min_dest));
+    close_td(v, worse_than_fastest_direct(min_dest));
   }
   for (auto& [k, v] : q.td_dest_) {
-    utl::erase_if(v, worse_than_fastest_direct(min_start));
+    close_td(v, worse_than_fastest_direct(min_start));
   }
 }
 
