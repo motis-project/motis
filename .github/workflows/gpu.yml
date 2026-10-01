@@ -75,6 +75,9 @@ jobs:
           cd "$HOME/ci-data/ch"
           "$GITHUB_WORKSPACE/build/cpu/motis" import -c config_ch.yml -d data
 
+      - name: Transfer rule checker test
+        run: python3 tools/test_check_transfer_rules.py
+
       - name: Validate Germany
         run: |
           # compute-sanitizer slows every kernel down by an order of

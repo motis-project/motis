@@ -11,6 +11,8 @@ import subprocess
 import sys
 import time
 
+from transfer_rules import Checker, format_violation
+
 ALL_MODES = ["AIRPLANE", "HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH",
              "NIGHT_RAIL", "RIDE_SHARING", "REGIONAL_RAIL", "SUBURBAN",
              "SUBWAY", "TRAM", "BUS", "FERRY", "ODM", "FUNICULAR",
@@ -325,6 +327,10 @@ def main():
     ap.add_argument("--n_threads", type=int,
                     help="'motis batch' worker threads (default: hardware "
                          "concurrency); lower it if the batch runs out of RAM")
+    ap.add_argument("--feed-dir",
+                    help="where the dataset paths of the data dir's config.yml "
+                         "are rooted, for the transfer rule check (default: "
+                         "the parent of --data, where the import ran)")
     ap.add_argument("--date", required=True,
                     help="pinned query day; pick the heaviest day class (e.g. "
                          "a Friday) and capture the rt dump on that same day")
@@ -337,6 +343,12 @@ def main():
     gbfs_dir = os.path.abspath(a.gbfs_dir) if a.gbfs_dir else None
     if a.rental and gbfs_dir is None:
         sys.exit("validate: --rental needs --gbfs-dir (dir containing dump_gbfs/)")
+
+    # Journeys on the default profile have to obey the feeds' transfer rules.
+    config = os.path.join(data, "config.yml")
+    checker = Checker.from_config(
+        config, os.path.abspath(a.feed_dir) if a.feed_dir
+        else os.path.dirname(data)) if os.path.exists(config) else None
 
     # One folder per PID -> don't interfere with parallel runs.
     work = os.path.abspath("validate-%d" % os.getpid())
@@ -450,6 +462,26 @@ def main():
             #              % (labels[i], len(dummies), ", ".join(modes),
             #                 dummies[0][0] + 1))
 
+        # TRANSFER RULES: one pass over the responses of all binaries, so every
+        # feed is read once per group. The routed and wheelchair cases route
+        # on profiles that ignore transfers.txt.
+        rule_violations = {}  # (binary, case label) -> violations
+        if checker is not None:
+            lines, owner = [], []
+            for i, o in enumerate(outs):
+                for c, (label, _, start, count) in zip(group, spans):
+                    if c["routed"] or c["wheelchair"]:
+                        continue
+                    lines += o[start:start + count]
+                    owner += [(i, label, q) for q in range(count)]
+            summary, violations = checker.check(lines)
+            print("[rt=%d rental=%d] transfer rules: %s, %d violation(s)"
+                  % (rt, rental, summary, len(violations)))
+            for v in violations:
+                i, label, q = owner[v[0]]
+                rule_violations.setdefault((i, label), []).append(
+                    (q,) + tuple(v[1:]))
+
         # COMPARE REF VS ALL (print each verdict as it completes)
         for label, qlines, start, count in spans:
             responses = [o[start:start + count] for o in outs]
@@ -458,8 +490,16 @@ def main():
             fell_back = next(((i, sum(1 for ln in r if '"gpu_used":0' in ln))
                               for i, r in enumerate(responses)
                               if any('"gpu_used":0' in ln for ln in r)), None)
+            violated = next(((i, rule_violations[(i, label)])
+                             for i in range(len(bins))
+                             if (i, label) in rule_violations), None)
             if not compare(bins[0], qlines, responses, work, label):
                 ok, detail = False, "mismatch (motis compare)"
+            elif violated is not None:
+                i, vs = violated
+                ok, detail = False, ("%s: %d transfer rule violation(s), first: %s"
+                                     % (labels[i], len(vs),
+                                        format_violation(vs[0])))
             elif fell_back is not None:
                 ok, detail = False, ("bin%d fell back to CPU on %d/%d queries"
                                      % (fell_back[0], fell_back[1], count))

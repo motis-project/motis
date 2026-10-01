@@ -86,7 +86,9 @@ void add_trip_updates(n::timetable const& tt,
         }
         stu = tu->add_stop_time_update();
         stu->set_stop_id(
-            tt.locations_.ids_[s.get_stop().location_idx()].view());
+            tt.locations_
+                .ids_[tt.locations_.get_base_idx(s.get_stop().location_idx())]
+                .view());
         stu->set_stop_sequence(*seq_it);
       };
 
