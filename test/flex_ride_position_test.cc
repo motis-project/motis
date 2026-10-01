@@ -139,7 +139,8 @@ bool any_on_day(
   });
 }
 
-// All FLEX legs of the given connections, with the leg before each.
+// All FLEX legs of the given connections, with the leg before each. The
+// pointers refer into `connections`, which has to outlive them.
 std::vector<std::pair<api::Leg const*, api::Leg const*>> flex_legs(
     std::vector<api::Itinerary> const& connections) {
   auto ret = std::vector<std::pair<api::Leg const*, api::Leg const*>>{};
@@ -222,12 +223,14 @@ TEST(motis, flex_ride_position_fixed_departure) {
 
   // Direct: moved to the fixed departure; after it, the next day's.
   {
-    auto const legs = flex_legs(f.plan(direct("2019-05-01T07:30Z")).direct_);
+    auto const res = f.plan(direct("2019-05-01T07:30Z"));
+    auto const legs = flex_legs(res.direct_);
     ASSERT_EQ(1U, legs.size());
     EXPECT_EQ(utc(1, 8, 10), *legs.front().first->startTime_);
   }
   {
-    auto const legs = flex_legs(f.plan(direct("2019-05-01T08:11Z")).direct_);
+    auto const res = f.plan(direct("2019-05-01T08:11Z"));
+    auto const legs = flex_legs(res.direct_);
     ASSERT_EQ(1U, legs.size());
     EXPECT_EQ(utc(2, 8, 10), *legs.front().first->startTime_);
   }
@@ -240,8 +243,8 @@ TEST(motis, flex_ride_position_regular_window) {
   // First mile: the ride starts inside the window (the latest departure
   // that still catches ICE_OUT is chosen, so anywhere up to 08:40Z).
   {
-    auto const legs =
-        flex_legs(f.plan(first_mile("2019-05-01T07:30Z")).itineraries_);
+    auto const res = f.plan(first_mile("2019-05-01T07:30Z"));
+    auto const legs = flex_legs(res.itineraries_);
     ASSERT_FALSE(legs.empty());
     EXPECT_TRUE(any_on_day(legs, 1));
     for (auto const& [flex, before] : legs) {
@@ -253,8 +256,8 @@ TEST(motis, flex_ride_position_regular_window) {
   // Last mile: arriving 07:40Z, the ride starts after the walk, in the
   // window.
   {
-    auto const legs =
-        flex_legs(f.plan(last_mile("2019-05-01T06:30Z")).itineraries_);
+    auto const res = f.plan(last_mile("2019-05-01T06:30Z"));
+    auto const legs = flex_legs(res.itineraries_);
     ASSERT_FALSE(legs.empty());
     EXPECT_TRUE(any_on_day(legs, 1));
     for (auto const& [flex, before] : legs) {
@@ -266,14 +269,16 @@ TEST(motis, flex_ride_position_regular_window) {
   // Direct, depart 09:50 local: walk first, the ride starts when the
   // window opens, 10:00 local.
   {
-    auto const legs = flex_legs(f.plan(direct("2019-05-01T07:50Z")).direct_);
+    auto const res = f.plan(direct("2019-05-01T07:50Z"));
+    auto const legs = flex_legs(res.direct_);
     ASSERT_EQ(1U, legs.size());
     EXPECT_EQ(utc(1, 8, 0), *legs.front().first->startTime_);
   }
 
   // Direct, depart 10:41 local: no ride that day, the next day's window.
   {
-    auto const legs = flex_legs(f.plan(direct("2019-05-01T08:41Z")).direct_);
+    auto const res = f.plan(direct("2019-05-01T08:41Z"));
+    auto const legs = flex_legs(res.direct_);
     ASSERT_EQ(1U, legs.size());
     EXPECT_EQ(utc(2, 8, 0), *legs.front().first->startTime_);
   }
