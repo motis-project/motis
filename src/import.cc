@@ -48,9 +48,9 @@
 
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
-#include "motis/flex/flex.h"
 #include "motis/compute_footpaths.h"
 #include "motis/data.h"
+#include "motis/flex/flex.h"
 #include "motis/hashes.h"
 #include "motis/route_shapes.h"
 #include "motis/tag_lookup.h"

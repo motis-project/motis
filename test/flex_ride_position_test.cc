@@ -92,18 +92,17 @@ struct fixture {
     auto ec = std::error_code{};
     auto const path = fs::path{"test/data/flex_ride_position"} / sub_dir;
     fs::remove_all(path, ec);
-    cfg_ = config{
-        .osm_ = {"test/resources/test_case.osm.pbf"},
-        .timetable_ =
-            config::timetable{
-                .first_day_ = "2019-05-01",
-                .num_days_ = 3,
-                .datasets_ = {{"test",
-                               {.path_ = fmt::format(
-                                    fmt::runtime(kRidePositionGtfs), pickup,
-                                    drop_off)}}}},
-        .street_routing_ = true,
-        .osr_footpath_ = true};
+    cfg_ = config{.osm_ = {"test/resources/test_case.osm.pbf"},
+                  .timetable_ =
+                      config::timetable{
+                          .first_day_ = "2019-05-01",
+                          .num_days_ = 3,
+                          .datasets_ = {{"test",
+                                         {.path_ = fmt::format(
+                                              fmt::runtime(kRidePositionGtfs),
+                                              pickup, drop_off)}}}},
+                  .street_routing_ = true,
+                  .osr_footpath_ = true};
     import(cfg_, path);
     d_ = std::make_unique<data>(path, cfg_);
   }
@@ -131,9 +130,9 @@ constexpr auto hm(int const h, int const m) {
   return std::chrono::hours{h} + std::chrono::minutes{m};
 }
 
-bool any_on_day(std::vector<std::pair<api::Leg const*, api::Leg const*>> const&
-                    legs,
-                int const day) {
+bool any_on_day(
+    std::vector<std::pair<api::Leg const*, api::Leg const*>> const& legs,
+    int const day) {
   return std::any_of(begin(legs), end(legs), [&](auto const& x) {
     return std::chrono::floor<date::days>(*x.first->startTime_) ==
            sys_days{2019_y / May / day};
@@ -187,9 +186,9 @@ TEST(motis, flex_ride_position_fixed_departure) {
   // First mile: walk to da_south, ride exactly at 08:10Z, ICE_OUT at 09:00Z.
   // Several starts along the street: different walks to the vehicle, so the
   // pickup offset lands on different seconds within its minute.
-  for (auto const from : {kTraubenweg, "49.87330,8.62340", "49.87329,8.62382",
-                          "49.87328,8.62420", "49.87327,8.62460",
-                          "49.87326,8.62490"}) {
+  for (auto const from :
+       {kTraubenweg, "49.87330,8.62340", "49.87329,8.62382", "49.87328,8.62420",
+        "49.87327,8.62460", "49.87326,8.62490"}) {
     SCOPED_TRACE(from);
     auto const res = f.plan(first_mile("2019-05-01T07:30Z", from));
     auto const legs = flex_legs(res.itineraries_);

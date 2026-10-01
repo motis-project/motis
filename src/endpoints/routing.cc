@@ -636,12 +636,12 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     }
     // Including waiting for a later departure (flex windows): a short ride
     // hours after `time` must not tighten the transit search.
-    auto const span = arrive_by ? time - *itinerary.startTime_
-                                : *itinerary.endTime_ - time;
-    auto const duration = std::max(
-        std::chrono::duration_cast<n::duration_t>(
-            std::chrono::seconds{itinerary.duration_}),
-        std::chrono::duration_cast<n::duration_t>(span));
+    auto const span =
+        arrive_by ? time - *itinerary.startTime_ : *itinerary.endTime_ - time;
+    auto const duration =
+        std::max(std::chrono::duration_cast<n::duration_t>(
+                     std::chrono::seconds{itinerary.duration_}),
+                 std::chrono::duration_cast<n::duration_t>(span));
     if (duration < fastest_direct) {
       fastest_direct = duration;
     }
@@ -663,8 +663,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         // No one-to-many search to reconstruct from here: this owns the
         // routing data for as long as the routing runs.
         auto frd = flex::flex_routing_data{};
-        auto sharing = flex::prepare_sharing_data(
-            *tt_, *w_, *l_, pl_, *fa_, matches_, ids.front(), frd);
+        auto sharing = flex::prepare_sharing_data(*tt_, *w_, *l_, pl_, *fa_,
+                                                  matches_, ids.front(), frd);
         route_with_adjusted_profile(
             flex::flex_output{*w_, pl_, matches_, ae_, tz_, *tags_, *tt_, *fa_,
                               ids.front(), frd.additional_nodes_,
