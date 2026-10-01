@@ -7,6 +7,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <utility>
 #include <variant>
 
 #include "boost/thread/tss.hpp"
@@ -335,9 +336,8 @@ std::vector<n::routing::offset> get_offsets(
                            transport_mode_t const mode,
                            std::function<bool(geo::latlng const&)>
                                vehicle_return_allowed = {}) {
-      auto params = to_profile_parameters(p, osr_params);
-      osr::set_vehicle_return_allowed(params,
-                                      std::move(vehicle_return_allowed));
+      auto const params = to_profile_parameters(
+          p, osr_params, std::move(vehicle_return_allowed));
       auto pos_match = osr::match_result{};
       r.l_->match(params, pos, false, dir, max_matching_distance, nullptr, p,
                   {}, pos_match);
@@ -445,13 +445,17 @@ std::vector<n::routing::offset> get_offsets(
             auto vehicle_return_allowed =
                 std::function<bool(geo::latlng const&)>{};
             if (dir == osr::direction::kBackward) {
-              vehicle_return_allowed =
-                  [&provider = *provider, &prod,
-                   ignore =
-                       ignore_rental_return_constraints](geo::latlng const& x) {
-                    return gbfs::allows_free_floating_return_at(provider, prod,
-                                                                x, ignore);
-                  };
+              if (ignore_rental_return_constraints) {
+                vehicle_return_allowed = [](geo::latlng const&) {
+                  return true;
+                };
+              } else {
+                vehicle_return_allowed = [&provider = *provider,
+                                          &prod](geo::latlng const& x) {
+                  return gbfs::allows_free_floating_return_at(provider, prod, x,
+                                                              false);
+                };
+              }
             }
 
             auto const mode = gbfs_rd.get_transport_mode(prod_ref);

@@ -190,12 +190,12 @@ api::Itinerary street_routing(osr::ways const& w,
     auto const reset =
         utl::finally{[&]() { reset_blocked(e_nodes, blocked_mem); }};
     auto const profile = out.get_profile();
-    auto params = to_profile_parameters(profile, osr_params);
-    osr::set_vehicle_return_allowed(params, [&](geo::latlng const& pos) {
-      return out.allows_free_floating_return_at(pos);
-    });
     return osr::route(
-        params, w, l, profile, from, to, max, osr_dir, max_matching_distance,
+        to_profile_parameters(profile, osr_params,
+                              [&](geo::latlng const& pos) {
+                                return out.allows_free_floating_return_at(pos);
+                              }),
+        w, l, profile, from, to, max, osr_dir, max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
         out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi,
         osr_start_time);
