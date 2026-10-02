@@ -225,7 +225,7 @@ int generate(int ac, char** av) {
       ("n,n", po::value(&n)->default_value(n), "number of queries")  //
       ("first_day", po::value<std::string>()->notifier(parse_first_day),
        "first day of query generation (inclusive), format: YYYY-MM-DD "
-       "(default: timetable start; if neither first_day nor last_day is "
+       "(default: last_day - 14 days; if neither first_day nor last_day is "
        "given: the two week window with the most stop events)")  //
       ("last_day", po::value<std::string>()->notifier(parse_last_day),
        "last day of query generation (exclusive), format: YYYY-MM-DD "
@@ -294,10 +294,10 @@ int generate(int ac, char** av) {
     first_day = window.from_;
     last_day = window.to_;
   } else {
-    first_day = first_day
-                    ? d.tt_->date_range_.clamp(*first_day)
-                    : std::chrono::time_point_cast<date::sys_days::duration>(
-                          d.tt_->external_interval().from_);
+    if (!first_day) {
+      first_day = *last_day - date::days{kDefaultWindowDays};
+    }
+    first_day = d.tt_->date_range_.clamp(*first_day);
     last_day = last_day ? d.tt_->date_range_.clamp(
                               std::max(*first_day + date::days{1U}, *last_day))
                         : d.tt_->date_range_.clamp(
