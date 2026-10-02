@@ -79,58 +79,68 @@ n::location_idx_t random_stop(n::timetable const& tt,
   return s;
 }
 
-date::sys_days busiest_window_start(n::timetable const& tt,
-                                    unsigned const window_days,
-                                    bool const with_flex) {
+// Finds the window of at most `max_window_days` consecutive days with the most
+// stop events. Each transport is weighted by the number of stops it serves
+// (i.e., roughly its number of departure/arrival events), so that a long
+// intercity run counts more than a short shuttle. Flex transports are only
+// taken into account if `with_flex` is set, mirroring whether FLEX is routed.
+n::interval<date::sys_days> busiest_window(n::timetable const& tt,
+                                           unsigned const max_window_days,
+                                           bool const with_flex) {
   auto const& date_range = tt.date_range_;
   auto const tt_days =
       static_cast<unsigned>((date_range.to_ - date_range.from_).count());
+  auto const window_days = std::min(max_window_days, tt_days);
 
-  auto transports_per_bitfield =
-      std::vector<std::uint32_t>(tt.bitfields_.size(), 0U);
-  for (auto const b : tt.transport_traffic_days_) {
-    ++transports_per_bitfield[to_idx(b)];
+  auto stops_per_bitfield =
+      std::vector<std::uint64_t>(tt.bitfields_.size(), 0U);
+  for (auto t = n::transport_idx_t{0U}; t != tt.transport_traffic_days_.size();
+       ++t) {
+    stops_per_bitfield[to_idx(tt.transport_traffic_days_[t])] +=
+        tt.route_location_seq_[tt.transport_route_[t]].size();
   }
   if (with_flex) {
-    for (auto const b : tt.flex_transport_traffic_days_) {
-      ++transports_per_bitfield[to_idx(b)];
+    for (auto t = n::flex_transport_idx_t{0U};
+         t != tt.flex_transport_traffic_days_.size(); ++t) {
+      stops_per_bitfield[to_idx(tt.flex_transport_traffic_days_[t])] +=
+          tt.flex_stop_seq_[tt.flex_transport_stop_seq_[t]].size();
     }
   }
 
   auto const first_day_idx = to_idx(tt.day_idx(date_range.from_));
-  auto transports_per_day = std::vector<std::uint64_t>(tt_days, 0ULL);
-  for (auto i = 0U; i != transports_per_bitfield.size(); ++i) {
-    auto const n_transports = transports_per_bitfield[i];
-    if (n_transports == 0U) {
+  auto stops_per_day = std::vector<std::uint64_t>(tt_days, 0ULL);
+  for (auto i = 0U; i != stops_per_bitfield.size(); ++i) {
+    auto const n_stops = stops_per_bitfield[i];
+    if (n_stops == 0U) {
       continue;
     }
     auto const& b = tt.bitfields_[n::bitfield_idx_t{i}];
     for (auto day = 0U; day != tt_days; ++day) {
       if (b.test(first_day_idx + day)) {
-        transports_per_day[day] += n_transports;
+        stops_per_day[day] += n_stops;
       }
     }
   }
 
-  auto sum = std::accumulate(transports_per_day.begin(),
-                             std::next(transports_per_day.begin(), window_days),
+  auto sum = std::accumulate(stops_per_day.begin(),
+                             std::next(stops_per_day.begin(), window_days),
                              std::uint64_t{0U});
   auto best_sum = sum;
   auto best_start = 0U;
   for (auto day = window_days; day < tt_days; ++day) {
-    sum += transports_per_day[day] - transports_per_day[day - window_days];
+    sum += stops_per_day[day] - stops_per_day[day - window_days];
     if (sum > best_sum) {
       best_sum = sum;
       best_start = day - window_days + 1U;
     }
   }
 
-  fmt::println("busiest {} day window: [{}, {}) with {} active transports",
-               window_days, date_range.from_ + date::days{best_start},
-               date_range.from_ + date::days{best_start + window_days},
-               best_sum);
-
-  return date_range.from_ + date::days{best_start};
+  auto const window = n::interval<date::sys_days>{
+      date_range.from_ + date::days{best_start},
+      date_range.from_ + date::days{best_start + window_days}};
+  fmt::println("busiest {} day window: [{}, {}) with {} stop events",
+               window_days, window.from_, window.to_, best_sum);
+  return window;
 }
 
 int generate(int ac, char** av) {
@@ -214,10 +224,12 @@ int generate(int ac, char** av) {
       ("help", "Prints this help message")  //
       ("n,n", po::value(&n)->default_value(n), "number of queries")  //
       ("first_day", po::value<std::string>()->notifier(parse_first_day),
-       "first day of query generation, format: YYYY-MM-DD (default: start of "
-       "the two week window with the most active transports)")  //
+       "first day of query generation (inclusive), format: YYYY-MM-DD "
+       "(default: timetable start; if neither first_day nor last_day is "
+       "given: the two week window with the most stop events)")  //
       ("last_day", po::value<std::string>()->notifier(parse_last_day),
-       "last day of query generation, format: YYYY-MM-DD")  //
+       "last day of query generation (exclusive), format: YYYY-MM-DD "
+       "(default: first_day + 14 days)")  //
       ("time_of_day", po::value<std::uint32_t>()->notifier(parse_time_of_day),
        "fixes the time of day of all queries to the given number of hours "
        "after midnight, i.e., 0 - 23")  //
@@ -277,13 +289,10 @@ int generate(int ac, char** av) {
                d.tt_->n_locations(), d.tt_->n_routes(), d.tt_->n_trips());
 
   if (!first_day && !last_day) {
-    // no date range given: use the days with the most active transports
-    auto const window_days = std::min(
-        kDefaultWindowDays,
-        static_cast<unsigned>(
-            (d.tt_->date_range_.to_ - d.tt_->date_range_.from_).count()));
-    first_day = busiest_window_start(*d.tt_, window_days, use_flex);
-    last_day = *first_day + date::days{window_days};
+    // no date range given: use the days with the most stop events
+    auto const window = busiest_window(*d.tt_, kDefaultWindowDays, use_flex);
+    first_day = window.from_;
+    last_day = window.to_;
   } else {
     first_day = first_day
                     ? d.tt_->date_range_.clamp(*first_day)
@@ -296,12 +305,12 @@ int generate(int ac, char** av) {
   }
   if (*first_day == *last_day) {
     fmt::println(
-        "can not generate queries: date range [{}, {}] has zero length after "
+        "can not generate queries: date range [{}, {}) has zero length after "
         "clamping",
         *first_day, *last_day);
     return 1;
   }
-  fmt::println("date range: [{}, {}], tt={}", *first_day, *last_day,
+  fmt::println("date range: [{}, {}), tt={}", *first_day, *last_day,
                d.tt_->external_interval());
 
   auto const in_bounds = [&](auto const& pos) {
