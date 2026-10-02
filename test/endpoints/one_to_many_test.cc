@@ -179,8 +179,8 @@ TEST(one_to_many, get_request_forward) {
                                        {},
                                        {.duration_ = 122.0},
                                        {.duration_ = 240.0},
-                                       {.duration_ = 529.0},
-                                       {.duration_ = 582.0},
+                                       {.duration_ = 349.0},
+                                       {.duration_ = 579.0},
                                        {},
                                        {},
                                        {},
@@ -202,7 +202,7 @@ TEST(one_to_many, get_request_forward) {
                     {},
                     {},
                     {{.duration_ = 1260.0, .transfers_ = 0}},
-                    {{.duration_ = 1620.0, .transfers_ = 0}},
+                    {{.duration_ = 1560.0, .transfers_ = 0}},
                     {},
                     {{.duration_ = 2700.0, .transfers_ = 1}},
                     {{.duration_ = 2640.0, .transfers_ = 1}},
@@ -260,7 +260,7 @@ TEST(one_to_many, post_request_backward) {
               {.duration_ = 127.0},
               {.duration_ = 103.0},
               {.duration_ = 123.0},
-              {.duration_ = 355.0},
+              {.duration_ = 343.0},
               {},
               {},
               {},
@@ -320,7 +320,7 @@ TEST(one_to_many,
   EXPECT_EQ((api::OneToManyIntermodalResponse{
                 .street_durations_ = {{
                     {},
-                    {.duration_ = 443.0},
+                    {.duration_ = 431.0},
                     {.duration_ = 370.0},  // Direct connection allowed
                     {.duration_ = 321.0},  // Valid for pre transit
                     {},
@@ -416,15 +416,15 @@ TEST(one_to_many, oneway_get_forward_for_pre_transit_and_direct_modes) {
 
   EXPECT_EQ((api::OneToManyIntermodalResponse{
                 .street_durations_ = {{
-                    {.duration_ = 228.0},
-                    {.duration_ = 321.0},
+                    {.duration_ = 166.0},
+                    {.duration_ = 230.0},
                     {},
                 }},
                 .transit_durations_ = {{
                     {},
                     {},
                     {// Must use later trip
-                     {.duration_ = 1980.0, .transfers_ = 0}},
+                     {.duration_ = 1080.0, .transfers_ = 0}},
                 }}}),
             durations);
 }
@@ -448,11 +448,11 @@ TEST(one_to_many, oneway_post_backward_for_post_transit_and_direct_modes) {
   auto const& td = durations.transit_durations_.value();
 
   ASSERT_EQ(4U, sd.size());
-  EXPECT_DOUBLE_EQ(228.0, sd.at(0).duration_.value());
+  EXPECT_DOUBLE_EQ(155.0, sd.at(0).duration_.value());
   EXPECT_NEAR(341.3, sd.at(0).distance_.value(), 0.1);
-  EXPECT_DOUBLE_EQ(335.0, sd.at(1).duration_.value());
+  EXPECT_DOUBLE_EQ(228.0, sd.at(1).duration_.value());
   EXPECT_NEAR(502.1, sd.at(1).distance_.value(), 0.1);
-  EXPECT_DOUBLE_EQ(335.0, sd.at(2).duration_.value());
+  EXPECT_DOUBLE_EQ(228.0, sd.at(2).duration_.value());
   EXPECT_NEAR(502.1, sd.at(2).distance_.value(), 0.1);
   EXPECT_EQ(api::Duration{}, sd.at(3));
 
@@ -461,7 +461,7 @@ TEST(one_to_many, oneway_post_backward_for_post_transit_and_direct_modes) {
   EXPECT_TRUE(td.at(1).empty());
   EXPECT_TRUE(td.at(2).empty());
   ASSERT_EQ(1U, td.at(3).size());
-  EXPECT_DOUBLE_EQ(1920.0, td.at(3).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1020.0, td.at(3).at(0).duration_);
   EXPECT_EQ(0, td.at(3).at(0).transfers_);
 }
 
@@ -508,7 +508,7 @@ TEST(one_to_many, oneway_get_backward_for_pre_transit_modes) {
                 .transit_durations_ = {{
                     {{.duration_ = 1080.0, .transfers_ = 0}},
                     {{.duration_ = 1080.0, .transfers_ = 0}},
-                    {{.duration_ = 1260.0, .transfers_ = 0}},
+                    {{.duration_ = 1200.0, .transfers_ = 0}},
                 }}}),
             durations);
 }
@@ -657,11 +657,11 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
   auto const& td = durations.transit_durations_.value();
 
   ASSERT_EQ(4U, sd.size());
-  EXPECT_DOUBLE_EQ(344.0, sd.at(0).duration_.value());
+  EXPECT_DOUBLE_EQ(290.0, sd.at(0).duration_.value());
   EXPECT_NEAR(351.9, sd.at(0).distance_.value(), 0.1);
-  EXPECT_DOUBLE_EQ(556.0, sd.at(1).duration_.value());
+  EXPECT_DOUBLE_EQ(503.0, sd.at(1).duration_.value());
   EXPECT_NEAR(607.0, sd.at(1).distance_.value(), 0.1);
-  EXPECT_DOUBLE_EQ(966.0, sd.at(2).duration_.value());
+  EXPECT_DOUBLE_EQ(913.0, sd.at(2).duration_.value());
   EXPECT_NEAR(1100.6, sd.at(2).distance_.value(), 0.1);
   EXPECT_EQ(api::Duration{}, sd.at(3));
 
@@ -676,7 +676,7 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
   EXPECT_DOUBLE_EQ(1800.0, td.at(2).at(0).duration_);
   EXPECT_EQ(0, td.at(2).at(0).transfers_);
   ASSERT_EQ(1U, td.at(3).size());
-  EXPECT_DOUBLE_EQ(4440.0, td.at(3).at(0).duration_);
+  EXPECT_DOUBLE_EQ(4380.0, td.at(3).at(0).duration_);
   EXPECT_EQ(2, td.at(3).at(0).transfers_);
 }
 
@@ -700,7 +700,7 @@ TEST(one_to_many, pareto_sets_with_multiple_entries) {
   // We only care about duration to DA_Tram_3, everything else is for debugging
   auto const& sd = durations.street_durations_.value();
   ASSERT_EQ(3U, sd.size());
-  EXPECT_DOUBLE_EQ(966.0, sd.at(2).duration_.value());
+  EXPECT_DOUBLE_EQ(913.0, sd.at(2).duration_.value());
   EXPECT_EQ((std::optional<std::vector<std::vector<api::ParetoSetEntry>>>{{
                 {{.duration_ = 1080.0, .transfers_ = 0}},
                 {{.duration_ = 1140.0, .transfers_ = 0}},
@@ -770,7 +770,7 @@ TEST(one_to_many, street_routing) {
       auto const get_duration =
           one_to_many_get_durations.at(0).duration_.value();
       auto const plan_duration = plan_durations.direct_.at(0).duration_;
-      EXPECT_NEAR(914.0, post_duration, 0.1);
+      EXPECT_NEAR(586.0, post_duration, 0.1);
       EXPECT_DOUBLE_EQ(post_duration, get_duration);
       EXPECT_DOUBLE_EQ(post_duration, plan_duration);
       // Ensure same distance
@@ -840,7 +840,7 @@ TEST(one_to_many, street_routing) {
       auto const get_duration =
           one_to_many_get_durations.at(0).duration_.value();
       auto const plan_duration = plan_durations.direct_.at(0).duration_;
-      EXPECT_NEAR(712.0, post_duration, 0.1);
+      EXPECT_NEAR(660.0, post_duration, 0.1);
       EXPECT_DOUBLE_EQ(post_duration, get_duration);
       EXPECT_DOUBLE_EQ(post_duration, plan_duration);
       // Ensure same distance

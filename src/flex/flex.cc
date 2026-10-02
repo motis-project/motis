@@ -1,12 +1,16 @@
 #include "motis/flex/flex.h"
 
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <ranges>
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/to_vec.h"
+
+#include "nigiri/logging.h"
 
 #include "osr/lookup.h"
 #include "osr/routing/parameters.h"
@@ -27,6 +31,30 @@ namespace n = nigiri;
 
 namespace motis::flex {
 
+void verify_flex_limits(n::timetable const& tt) {
+  constexpr auto const kMaxTransports = 1U << mode_payload::kTransportBits;
+  constexpr auto const kMaxStops = 1U << mode_payload::kStopBits;
+  auto const n_transports =
+      static_cast<std::size_t>(tt.flex_transport_stop_seq_.size());
+  auto max_stops = std::size_t{0U};
+  for (auto const t : tt.flex_transport_stop_seq_) {
+    max_stops = std::max(max_stops,
+                         static_cast<std::size_t>(tt.flex_stop_seq_[t].size()));
+  }
+  auto const pct = [](std::size_t const n, std::size_t const limit) {
+    return 100.0 * static_cast<double>(n) / static_cast<double>(limit);
+  };
+  n::log(n::log_lvl::info, "motis.flex",
+         "flex transports: {} of {} ({:.2f}%), "
+         "most stop rows in a flex transport: {} of {} ({:.2f}%)",
+         n_transports, kMaxTransports, pct(n_transports, kMaxTransports),
+         max_stops, kMaxStops, pct(max_stops, kMaxStops));
+  utl::verify(n_transports <= kMaxTransports && max_stops <= kMaxStops,
+              "flex data exceeds system limitations: {} flex transports "
+              "(limit {}), {} stop rows in one flex transport (limit {})",
+              n_transports, kMaxTransports, max_stops, kMaxStops);
+}
+
 osr::sharing_data prepare_sharing_data(n::timetable const& tt,
                                        osr::ways const& w,
                                        osr::lookup const& lookup,
@@ -34,28 +62,19 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
                                        flex_areas const& fa,
                                        platform_matches_t const* pl_matches,
                                        mode_payload const id,
-                                       osr::direction const dir,
                                        flex_routing_data& frd) {
+  // Start / end in travel order, independent of the search direction: osr's
+  // car_sharing profile reads start_allowed_ / end_allowed_ that way.
   auto const stop_seq =
       tt.flex_stop_seq_[tt.flex_transport_stop_seq_[id.get_flex_transport()]];
-  auto const from_stop = stop_seq.at(id.get_stop());
-  auto to_stops = std::vector<n::flex_stop_t>{};
-  for (auto i = static_cast<int>(id.get_stop()) +
-                (dir == osr::direction::kForward ? 1 : -1);
-       dir == osr::direction::kForward ? i < static_cast<int>(stop_seq.size())
-                                       : i >= 0;
-       dir == osr::direction::kForward ? ++i : --i) {
-    to_stops.emplace_back(stop_seq.at(static_cast<n::stop_idx_t>(i)));
-  }
+  auto const from_stop = stop_seq.at(id.get_from_stop());
+  auto const to_stop = stop_seq.at(id.get_to_stop());
 
   // Count additional nodes and allocate bit vectors.
   auto n_nodes = w.n_nodes();
-  from_stop.apply(utl::overloaded{[&](n::location_group_idx_t const from_lg) {
-    n_nodes += tt.location_group_locations_[from_lg].size();
-  }});
-  for (auto const& to_stop : to_stops) {
-    to_stop.apply(utl::overloaded{[&](n::location_group_idx_t const to_lg) {
-      n_nodes += tt.location_group_locations_[to_lg].size();
+  for (auto const& s : {from_stop, to_stop}) {
+    s.apply(utl::overloaded{[&](n::location_group_idx_t const lg) {
+      n_nodes += tt.location_group_locations_[lg].size();
     }});
   }
   frd.additional_nodes_.reset(w.n_nodes());
@@ -125,18 +144,16 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
         fa.add_area(from_area, frd.start_allowed_, tmp);
       }});
 
-  // Set end allowed in follow-up areas / location groups.
-  for (auto const& to_stop : to_stops) {
-    to_stop.apply(utl::overloaded{
-        [&](n::location_group_idx_t const to_lg) {
-          for (auto const& l : tt.location_group_locations_[to_lg]) {
-            frd.end_allowed_.set(add_tt_location(l), true);
-          }
-        },
-        [&](n::flex_area_idx_t const to_area) {
-          fa.add_area(to_area, frd.end_allowed_, tmp);
-        }});
-  }
+  // Set end allowed in the alighting area / location group.
+  to_stop.apply(utl::overloaded{
+      [&](n::location_group_idx_t const to_lg) {
+        for (auto const& l : tt.location_group_locations_[to_lg]) {
+          frd.end_allowed_.set(add_tt_location(l), true);
+        }
+      },
+      [&](n::flex_area_idx_t const to_area) {
+        fa.add_area(to_area, frd.end_allowed_, tmp);
+      }});
 
   return frd.to_sharing_data();
 }
@@ -178,37 +195,44 @@ flex_routings_t get_flex_routings(
     });
   };
 
-  // Stop index helper.
-  auto const get_stop_idx =
-      [&](n::flex_stop_seq_idx_t const stop_seq_idx,
-          n::flex_stop_t const x) -> std::optional<n::stop_idx_t> {
+  // Adds one routing per (boarding, alighting) stop pair of transport `t`
+  // in which the query position's stop `x` takes part: as boarding stop
+  // for the forward search (first mile, the ride starts at the position), as
+  // alighting stop for the backward search (last mile, the ride ends there).
+  auto const add_flex_transport = [&](n::flex_transport_idx_t const t,
+                                      n::flex_stop_t const x) {
+    if (!is_active(t)) {
+      return;
+    }
+    auto const stop_seq_idx = tt.flex_transport_stop_seq_[t];
     auto const stops = tt.flex_stop_seq_[stop_seq_idx];
-    auto const is_last = [&](n::stop_idx_t const stop_idx) {
-      return (dir == osr::direction::kBackward && stop_idx == 0U) ||
-             (dir == osr::direction::kForward && stop_idx == stops.size() - 1U);
+    auto const add = [&](n::stop_idx_t const from, n::stop_idx_t const to) {
+      if (mode_payload::fits(t, from, to)) {
+        routings[std::pair{stop_seq_idx, std::pair{from, to}}].emplace_back(
+            t, from, to);
+      }
     };
-    for (auto c = 0U; c != stops.size(); ++c) {
-      auto const stop_idx = static_cast<n::stop_idx_t>(
-          dir == osr::direction::kForward ? c : stops.size() - c - 1);
-      if (stops[stop_idx] == x && !is_last(stop_idx)) {
-        return stop_idx;
+    for (auto i = n::stop_idx_t{0U}; i != stops.size(); ++i) {
+      if (!(stops[i] == x)) {
+        continue;
+      }
+      if (dir == osr::direction::kForward) {
+        for (auto j = static_cast<n::stop_idx_t>(i + 1U); j < stops.size();
+             ++j) {
+          add(i, j);
+        }
+      } else {
+        for (auto j = n::stop_idx_t{0U}; j != i; ++j) {
+          add(j, i);
+        }
       }
     }
-    return std::nullopt;
   };
 
   // Collect area transports.
   auto const add_area_flex_transports = [&](n::flex_area_idx_t const a) {
     for (auto const t : tt.flex_area_transports_[a]) {
-      if (!is_active(t)) {
-        continue;
-      }
-
-      auto const stop_idx = get_stop_idx(tt.flex_transport_stop_seq_[t], a);
-      if (stop_idx.has_value()) {
-        routings[std::pair{tt.flex_transport_stop_seq_[t], *stop_idx}]
-            .emplace_back(t, *stop_idx, dir);
-      }
+      add_flex_transport(t, a);
     }
   };
   auto const box = geo::box{
@@ -231,40 +255,25 @@ flex_routings_t get_flex_routings(
       });
   for (auto const& lg : location_groups) {
     for (auto const t : tt.location_group_transports_[lg]) {
-      if (!is_active(t)) {
-        continue;
-      }
-
-      auto const stop_idx = get_stop_idx(tt.flex_transport_stop_seq_[t], lg);
-      if (stop_idx.has_value()) {
-        routings[std::pair{tt.flex_transport_stop_seq_[t], *stop_idx}]
-            .emplace_back(t, *stop_idx, dir);
-      }
+      add_flex_transport(t, lg);
     }
   }
 
   return routings;
 }
 
-bool is_in_flex_stop(n::timetable const& tt,
-                     osr::ways const& w,
-                     flex_areas const& fa,
-                     flex_additional_nodes const& additional_nodes,
-                     n::flex_stop_t const& s,
-                     osr::node_idx_t const n) {
-  return s.apply(utl::overloaded{
-      [&](n::flex_area_idx_t const a) {
-        return !w.is_additional_node(n) && n != osr::node_idx_t::invalid() &&
-               fa.is_in_area(a, w.get_node_pos(n));
-      },
-      [&](n::location_group_idx_t const lg) {
-        if (!w.is_additional_node(n)) {
-          return false;
-        }
-        auto const locations = tt.location_group_locations_.at(lg);
-        auto const l = additional_nodes.get(n);
-        return utl::find(locations, l) != end(locations);
-      }});
+n::interval<n::unixtime_t> get_departure_window(n::timetable const& tt,
+                                                mode_payload const id,
+                                                n::unixtime_t const day,
+                                                flex_ride const ride) {
+  auto const windows =
+      tt.flex_transport_stop_time_windows_[id.get_flex_transport()];
+  auto const from = windows[id.get_from_stop()];
+  auto const to = windows[id.get_to_stop()];
+  return n::interval{day + from.from_ - ride.pickup_,
+                     day + from.to_ - ride.pickup_}
+      .intersect(n::interval{day + to.from_ - ride.drop_off_,
+                             day + to.to_ - ride.drop_off_});
 }
 
 void add_flex_td_offsets(osr::ways const& w,
@@ -314,7 +323,7 @@ void add_flex_td_offsets(osr::ways const& w,
     UTL_START_TIMING(routing_timer);
 
     auto const sharing_data = prepare_sharing_data(
-        tt, w, lookup, pl, fa, matches, transports.front(), dir, frd);
+        tt, w, lookup, pl, fa, matches, transports.front(), frd);
 
     auto state = osr::route_one_to_many(
         params, w, lookup, osr::search_profile::kCarSharing, pos,
@@ -323,11 +332,44 @@ void add_flex_td_offsets(osr::ways const& w,
         nullptr);
     auto const& paths = state->results();
 
+    // Per destination: when the ride starts and ends, relative to the start
+    // of the whole path in travel direction. osr reports the tracked
+    // durations of the search chain from the search start (the travel start
+    // forward, the travel end backward): the same times the output timeline
+    // (street_routing over osr's reconstruct) lays out, with the matching
+    // piece at the stop as reconstruct shows it. A switch edge is shown with
+    // the mode of its target in search order: forward, the ride starts at
+    // the foot label before the first rental label and ends at the last one;
+    // backward, it starts at the last rental label and ends at the foot label
+    // after it (travel order). Shown times are truncated to minutes from a
+    // whole-minute departure, so flooring matches them exactly. Paths without
+    // a ride (car_sharing may walk all the way) are no flex offer: WALK
+    // covers them, and as FLEX offers they used to beat the WALK offset by
+    // the truncated minute.
+    auto rides = std::vector<std::optional<flex_ride>>(paths.size());
+    for (auto i = 0U; i != paths.size(); ++i) {
+      if (!paths[i].has_value()) {
+        continue;
+      }
+      auto const rental = state->rental_durations(i);
+      if (!rental.has_value()) {
+        continue;
+      }
+      auto const& rd = *rental;
+      auto const fwd = dir == osr::direction::kForward;
+      auto const total = rd.dest_node_ + rd.dest_match_;
+      auto const pickup = fwd ? rd.before_min_ : total - rd.max_;
+      auto const drop_off = fwd ? rd.max_ : total - rd.before_min_;
+      rides[i] = flex_ride{
+          .pickup_ = std::chrono::duration_cast<n::duration_t>(pickup),
+          .drop_off_ = std::chrono::duration_cast<n::duration_t>(drop_off)};
+    }
+
     // Store osr routing state for later path reconstruction.
     if (states != nullptr) {
       auto dest_idx = hash_map<n::location_idx_t, std::size_t>{};
       for (auto const [i, l] : utl::enumerate(near_stops)) {
-        if (paths[i].has_value()) {
+        if (rides[i].has_value()) {
           dest_idx.emplace(l, i);
         }
       }
@@ -346,11 +388,12 @@ void add_flex_td_offsets(osr::ways const& w,
       }
     }
 
+    // The offsets are indexed by the departure time in travel direction (the
+    // start of the whole access / egress), in both search directions: that is
+    // how nigiri's td lookup reads them.
     auto const day_idx_iv = get_relevant_days(tt, start_time);
     for (auto const id : transports) {
       auto const t = id.get_flex_transport();
-      auto const from_stop_idx = id.get_stop();
-
       for (auto const day_idx : day_idx_iv) {
         if (!tt.bitfields_[tt.flex_transport_traffic_days_[t]].test(
                 to_idx(day_idx))) {
@@ -359,60 +402,185 @@ void add_flex_td_offsets(osr::ways const& w,
 
         auto const day =
             tt.internal_interval().from_ + to_idx(day_idx) * date::days{1U};
-        auto const from_stop_time_window =
-            tt.flex_transport_stop_time_windows_[t][from_stop_idx];
-        auto const abs_from_stop_iv = n::interval{
-            day + from_stop_time_window.from_, day + from_stop_time_window.to_};
-        for (auto const [p, s, l] :
-             utl::zip(paths, near_stop_locations, near_stops)) {
-          if (p.has_value()) {
-            auto const rel_to_stop_idx = 0U;
-            auto const to_stop_idx = static_cast<n::stop_idx_t>(
-                dir == osr::direction::kForward
-                    ? from_stop_idx + rel_to_stop_idx
-                    : from_stop_idx - rel_to_stop_idx);
-            auto const duration = n::duration_t{p->cost_ / 60};
-            auto const to_stop_time_window =
-                tt.flex_transport_stop_time_windows_[t][to_stop_idx];
-            auto const abs_to_stop_iv = n::interval{
-                day + to_stop_time_window.from_, day + to_stop_time_window.to_};
+        for (auto const [p, ride, l] : utl::zip(paths, rides, near_stops)) {
+          if (ride.has_value()) {
+            // Travel time (not the search cost, which includes penalties),
+            // rounded up like every other offset: an offset promises the
+            // stop can be reached after this time.
+            auto const duration = n::duration_t{static_cast<n::duration_t::rep>(
+                std::ceil(p->duration_.count() / 60.0))};
+            auto const dep_iv = get_departure_window(tt, id, day, *ride);
 
-            auto const iv_at_to_stop =
-                (dir == osr::direction::kForward ? abs_from_stop_iv >> duration
-                                                 : abs_from_stop_iv << duration)
-                    .intersect(abs_to_stop_iv);
-            auto const iv_at_from_stop = dir == osr::direction::kForward
-                                             ? iv_at_to_stop << duration
-                                             : iv_at_to_stop >> duration;
-
-            if (iv_at_from_stop.from_ < iv_at_from_stop.to_ &&
+            if (dep_iv.from_ < dep_iv.to_ &&
                 duration < n::footpath::kMaxDuration) {
               auto const mode =
                   transport_mode(api::ModeEnum::FLEX, id.to_payload());
               auto& offsets = ret[l];
+              offsets.push_back(
+                  n::routing::td_offset::make(dep_iv.from_, duration, mode));
               offsets.push_back(n::routing::td_offset::make(
-                  iv_at_from_stop.from_, duration, mode));
-              offsets.push_back(n::routing::td_offset::make(
-                  iv_at_from_stop.to_, n::footpath::kMaxDuration, mode));
+                  dep_iv.to_, n::footpath::kMaxDuration, mode));
             }
           }
         }
       }
     }
 
+    auto const& [seq_idx, stop_pair] = stop_seq;
     stats.emplace(
-        fmt::format("prepare_{}_FLEX_{}", to_str(dir),
-                    tt.flex_stop_seq_[stop_seq.first][stop_seq.second].apply(
-                        utl::overloaded{[&](n::location_group_idx_t const g) {
-                                          return tt.get_default_translation(
-                                              tt.location_group_name_[g]);
-                                        },
-                                        [&](n::flex_area_idx_t const a) {
-                                          return tt.get_default_translation(
-                                              tt.flex_area_name_[a]);
-                                        }})),
+        fmt::format(
+            "prepare_{}_FLEX_{}", to_str(dir),
+            tt.flex_stop_seq_[seq_idx][stop_pair.first].apply(utl::overloaded{
+                [&](n::location_group_idx_t const g) {
+                  return tt.get_default_translation(tt.location_group_name_[g]);
+                },
+                [&](n::flex_area_idx_t const a) {
+                  return tt.get_default_translation(tt.flex_area_name_[a]);
+                }})),
         UTL_GET_TIMING_MS(routing_timer));
   }
+}
+
+date::sys_days get_service_day(n::timetable const& tt,
+                               mode_payload const id,
+                               std::chrono::sys_seconds const t) {
+  auto const transport = id.get_flex_transport();
+  auto const& traffic_days =
+      tt.bitfields_[tt.flex_transport_traffic_days_[transport]];
+  auto const window_start =
+      tt.flex_transport_stop_time_windows_[transport][id.get_from_stop()].from_;
+  auto const t_day = std::chrono::floor<date::days>(t);
+  auto const first_day =
+      std::chrono::floor<date::days>(tt.internal_interval().from_);
+  // Windows may start up to a few days before the ride (GTFS times past
+  // 24:00 of the service day).
+  for (auto i = 0; i != 4; ++i) {
+    auto const day = t_day - date::days{i};
+    auto const day_idx = (day - first_day).count();
+    if (day_idx >= 0 &&
+        static_cast<std::size_t>(day_idx) < traffic_days.size() &&
+        traffic_days.test(static_cast<std::size_t>(day_idx)) &&
+        day + window_start <= t) {
+      return day;
+    }
+  }
+  return t_day;
+}
+
+void set_flex_windows(n::timetable const& tt,
+                      mode_payload const id,
+                      date::sys_days const day,
+                      api::Leg& leg) {
+  auto const windows =
+      tt.flex_transport_stop_time_windows_[id.get_flex_transport()];
+  auto const from = windows[id.get_from_stop()];
+  auto const to = windows[id.get_to_stop()];
+  leg.from_.flexStartPickupDropOffWindow_ = day + from.from_;
+  leg.from_.flexEndPickupDropOffWindow_ = day + from.to_;
+  leg.to_.flexStartPickupDropOffWindow_ = day + to.from_;
+  leg.to_.flexEndPickupDropOffWindow_ = day + to.to_;
+}
+
+bool fit_direct_to_windows(n::timetable const& tt,
+                           std::vector<mode_payload> const& ids,
+                           n::unixtime_t const time,
+                           bool const arrive_by,
+                           api::Itinerary& itinerary) {
+  // A walk without a ride (car_sharing also reaches the destination on foot)
+  // is no flex connection; WALK covers it.
+  if (utl::none_of(itinerary.legs_, [](api::Leg const& l) {
+        return l.mode_ == api::ModeEnum::FLEX;
+      })) {
+    return false;
+  }
+
+  auto const to_min = [](openapi::date_time_t const& x) {
+    return std::chrono::time_point_cast<n::i32_minutes>(x.time_);
+  };
+  auto const start = to_min(itinerary.startTime_);
+  auto const end = to_min(itinerary.endTime_);
+  auto const duration = std::chrono::duration_cast<n::duration_t>(end - start);
+  // Only the first FLEX leg is checked: street routing yields one ride.
+  auto const flex_leg = utl::find_if(itinerary.legs_, [](api::Leg const& l) {
+    return l.mode_ == api::ModeEnum::FLEX;
+  });
+  auto const ride =
+      flex_ride{.pickup_ = std::chrono::duration_cast<n::duration_t>(
+                    to_min(flex_leg->startTime_) - start),
+                .drop_off_ = std::chrono::duration_cast<n::duration_t>(
+                    to_min(flex_leg->endTime_) - start)};
+
+  // Same window as for the offsets (add_flex_td_offsets), over the departure
+  // time of the whole itinerary. Waiting is limited like in nigiri's td lookup.
+  auto best =
+      std::optional<std::tuple<n::unixtime_t, mode_payload, date::sys_days>>{};
+  for (auto const id : ids) {
+    auto const t = id.get_flex_transport();
+    for (auto const day_idx : get_relevant_days(tt, time)) {
+      if (!tt.bitfields_[tt.flex_transport_traffic_days_[t]].test(
+              to_idx(day_idx))) {
+        continue;
+      }
+      auto const day =
+          tt.internal_interval().from_ + to_idx(day_idx) * date::days{1U};
+      auto const dep_iv = get_departure_window(tt, id, day, ride);
+      if (dep_iv.from_ >= dep_iv.to_) {
+        continue;
+      }
+      if (arrive_by) {
+        auto const dep =
+            std::min(dep_iv.to_ - n::duration_t{1}, time - duration);
+        if (dep < dep_iv.from_ || time - dep > n::routing::kMaxTravelTime) {
+          continue;
+        }
+        if (!best.has_value() || dep > std::get<0>(*best)) {
+          best = std::tuple{dep, id, std::chrono::floor<date::days>(day)};
+        }
+      } else {
+        auto const dep = std::max(dep_iv.from_, time);
+        if (dep >= dep_iv.to_ || dep - time > n::routing::kMaxTravelTime) {
+          continue;
+        }
+        if (!best.has_value() || dep < std::get<0>(*best)) {
+          best = std::tuple{dep, id, std::chrono::floor<date::days>(day)};
+        }
+      }
+    }
+  }
+
+  if (!best.has_value()) {
+    return false;
+  }
+
+  auto const& [dep, id, day] = *best;
+  auto const shift =
+      std::chrono::duration_cast<std::chrono::seconds>(dep - start);
+  auto const move = [&](openapi::date_time_t& x) { x.time_ += shift; };
+  auto const move_opt = [&](std::optional<openapi::date_time_t>& x) {
+    if (x.has_value()) {
+      move(*x);
+    }
+  };
+  auto const move_place = [&](api::Place& p) {
+    move_opt(p.arrival_);
+    move_opt(p.departure_);
+    move_opt(p.scheduledArrival_);
+    move_opt(p.scheduledDeparture_);
+  };
+  move(itinerary.startTime_);
+  move(itinerary.endTime_);
+  for (auto& leg : itinerary.legs_) {
+    move(leg.startTime_);
+    move(leg.endTime_);
+    move(leg.scheduledStartTime_);
+    move(leg.scheduledEndTime_);
+    move_place(leg.from_);
+    move_place(leg.to_);
+    if (leg.mode_ == api::ModeEnum::FLEX) {
+      set_flex_windows(tt, id, day, leg);
+    }
+  }
+  return true;
 }
 
 }  // namespace motis::flex
