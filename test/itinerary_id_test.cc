@@ -66,7 +66,8 @@ TEST(motis, itinerary_id_distinguishes_level_zero_from_no_level) {
       n::get_special_station(n::special_station::kStart),
       n::get_special_station(n::special_station::kEnd), dep, arr,
       n::routing::offset{n::get_special_station(n::special_station::kEnd),
-                         n::duration_t{1}, n::transport_mode_id_t{0}}});
+                         n::duration_t{1},
+                         n::routing::transport_mode_t::payload_t{0}}});
 
   auto const start =
       place_t{osr::location{geo::latlng{1.0, 2.0}, osr::level_t{0.F}}};

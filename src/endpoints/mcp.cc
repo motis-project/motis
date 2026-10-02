@@ -351,7 +351,7 @@ net::reply mcp::operator()(net::route_request const& req, bool) const {
   } catch (mcp_error const& e) {
     return error(http::status::ok, e.code_, e.what());
   } catch (openapi::bad_request_exception const& e) {
-    return error(http::status::ok, kInvalidParams, e.message_);
+    return error(http::status::ok, kInvalidParams, e.what());
   } catch (net::bad_request_exception const& e) {
     return error(http::status::ok, kInvalidParams, e.what());
   } catch (net::not_found_exception const& e) {

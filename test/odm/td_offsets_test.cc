@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "motis/odm/td_offsets.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 using namespace nigiri;
 using namespace nigiri::routing;
@@ -15,7 +15,9 @@ void print(td_offsets_t const& tdos) {
     for (auto const& t : tdo) {
       std::cout << "[valid_from_: " << t.valid_from_
                 << ", duration_: " << t.duration_
-                << ", transport_mode_id_: " << t.transport_mode_id_ << "]\n";
+                << ", transport_mode_: " << to_mode(t.mode())
+                << ", transport_mode_payload_: " << t.transport_mode_payload_
+                << "]\n";
     }
   }
 }
@@ -25,8 +27,7 @@ TEST(odm, get_td_offsets_basic) {
                                          .time_at_stop_ = unixtime_t{11h},
                                          .stop_ = location_idx_t{1U}}};
 
-  auto const td_offsets =
-      motis::odm::get_td_offsets(rides, kOdmTransportModeId);
+  auto const td_offsets = motis::odm::get_td_offsets(rides, kOdmTransportMode);
 
   print(td_offsets);
 
@@ -35,15 +36,13 @@ TEST(odm, get_td_offsets_basic) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].valid_from_, unixtime_t{10h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 1min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 
 TEST(odm, get_td_offsets_extension) {
@@ -58,8 +57,7 @@ TEST(odm, get_td_offsets_extension) {
                           .time_at_stop_ = unixtime_t{11h + 2min},
                           .stop_ = location_idx_t{1U}}};
 
-  auto const td_offsets =
-      motis::odm::get_td_offsets(rides, kOdmTransportModeId);
+  auto const td_offsets = motis::odm::get_td_offsets(rides, kOdmTransportMode);
 
   print(td_offsets);
 
@@ -68,15 +66,13 @@ TEST(odm, get_td_offsets_extension) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].valid_from_, unixtime_t{10h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 3min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 
 TEST(odm, get_td_offsets_extension_reverse) {
@@ -91,8 +87,7 @@ TEST(odm, get_td_offsets_extension_reverse) {
                           .time_at_stop_ = unixtime_t{11h},
                           .stop_ = location_idx_t{1U}}};
 
-  auto const td_offsets =
-      motis::odm::get_td_offsets(rides, kOdmTransportModeId);
+  auto const td_offsets = motis::odm::get_td_offsets(rides, kOdmTransportMode);
 
   print(td_offsets);
 
@@ -101,15 +96,13 @@ TEST(odm, get_td_offsets_extension_reverse) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].valid_from_, unixtime_t{10h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 3min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 
 TEST(odm, get_td_offsets_extension_fill_gap) {
@@ -124,8 +117,7 @@ TEST(odm, get_td_offsets_extension_fill_gap) {
                           .time_at_stop_ = unixtime_t{11h + 1min},
                           .stop_ = location_idx_t{1U}}};
 
-  auto const td_offsets =
-      motis::odm::get_td_offsets(rides, kOdmTransportModeId);
+  auto const td_offsets = motis::odm::get_td_offsets(rides, kOdmTransportMode);
 
   print(td_offsets);
 
@@ -134,15 +126,13 @@ TEST(odm, get_td_offsets_extension_fill_gap) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].valid_from_, unixtime_t{10h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 3min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 
 TEST(odm, get_td_offsets_intermittent) {
@@ -156,8 +146,7 @@ TEST(odm, get_td_offsets_intermittent) {
                                          .time_at_stop_ = unixtime_t{13h},
                                          .stop_ = location_idx_t{1U}}};
 
-  auto const td_offsets =
-      motis::odm::get_td_offsets(rides, kOdmTransportModeId);
+  auto const td_offsets = motis::odm::get_td_offsets(rides, kOdmTransportMode);
 
   print(td_offsets);
 
@@ -166,36 +155,30 @@ TEST(odm, get_td_offsets_intermittent) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].valid_from_, unixtime_t{10h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].mode(), kOdmTransportMode);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 1min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].valid_from_, unixtime_t{11h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].mode(), kOdmTransportMode);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].valid_from_,
             unixtime_t{11h + 1min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[4].valid_from_, unixtime_t{12h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[4].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[4].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[4].mode(), kOdmTransportMode);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[5].valid_from_,
             unixtime_t{12h + 1min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[5].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[5].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[5].mode(), kOdmTransportMode);
 }
 
 TEST(odm, get_td_offsets_long_short_long) {
@@ -210,8 +193,7 @@ TEST(odm, get_td_offsets_long_short_long) {
                           .time_at_stop_ = unixtime_t{10h + 31min},
                           .stop_ = location_idx_t{1U}}};
 
-  auto const td_offsets =
-      motis::odm::get_td_offsets(rides, kOdmTransportModeId);
+  auto const td_offsets = motis::odm::get_td_offsets(rides, kOdmTransportMode);
 
   print(td_offsets);
 
@@ -220,27 +202,23 @@ TEST(odm, get_td_offsets_long_short_long) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].valid_from_, unixtime_t{10h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 1min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_, 30min);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].valid_from_,
             unixtime_t{10h + 2min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].valid_from_,
             unixtime_t{10h + 3min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].mode(), kOdmTransportMode);
 }
 
 TEST(odm, get_td_offsets_late_improvement) {
@@ -261,8 +239,7 @@ TEST(odm, get_td_offsets_late_improvement) {
                           .time_at_stop_ = unixtime_t{10h + 32min},
                           .stop_ = location_idx_t{1U}}};
 
-  auto const td_offsets =
-      motis::odm::get_td_offsets(rides, kOdmTransportModeId);
+  auto const td_offsets = motis::odm::get_td_offsets(rides, kOdmTransportMode);
 
   print(td_offsets);
 
@@ -271,27 +248,23 @@ TEST(odm, get_td_offsets_late_improvement) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].valid_from_, unixtime_t{10h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 2min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_, 30min);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].valid_from_,
             unixtime_t{10h + 3min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].valid_from_,
             unixtime_t{10h + 4min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].mode(), kOdmTransportMode);
 }
 
 TEST(odm, get_td_offsets_late_worse) {
@@ -312,8 +285,7 @@ TEST(odm, get_td_offsets_late_worse) {
                           .time_at_stop_ = unixtime_t{12h + 2min},
                           .stop_ = location_idx_t{1U}}};
 
-  auto const td_offsets =
-      motis::odm::get_td_offsets(rides, kOdmTransportModeId);
+  auto const td_offsets = motis::odm::get_td_offsets(rides, kOdmTransportMode);
 
   print(td_offsets);
 
@@ -322,15 +294,13 @@ TEST(odm, get_td_offsets_late_worse) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].valid_from_, unixtime_t{10h});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].duration_, 1h);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 4min});
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
             footpath::kMaxDuration);
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].transport_mode_id_,
-            kOdmTransportModeId);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 
 }  // namespace motis::odm

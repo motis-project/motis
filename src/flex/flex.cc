@@ -1,9 +1,12 @@
 #include "motis/flex/flex.h"
 
+#include <memory>
 #include <optional>
 #include <ranges>
 
 #include "utl/concat.h"
+#include "utl/enumerate.h"
+#include "utl/to_vec.h"
 
 #include "osr/lookup.h"
 #include "osr/routing/parameters.h"
@@ -18,6 +21,7 @@
 #include "motis/flex/flex_routing_data.h"
 #include "motis/match_platforms.h"
 #include "motis/osr/max_distance.h"
+#include "motis/osr/one_to_many_searches.h"
 
 namespace n = nigiri;
 
@@ -29,7 +33,7 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
                                        osr::platforms const* pl,
                                        flex_areas const& fa,
                                        platform_matches_t const* pl_matches,
-                                       mode_id const id,
+                                       mode_payload const id,
                                        osr::direction const dir,
                                        flex_routing_data& frd) {
   auto const stop_seq =
@@ -54,9 +58,7 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
       n_nodes += tt.location_group_locations_[to_lg].size();
     }});
   }
-  frd.additional_node_offset_ = w.n_nodes();
-  frd.additional_node_coordinates_.clear();
-  frd.additional_edges_.clear();
+  frd.additional_nodes_.reset(w.n_nodes());
   frd.start_allowed_.resize(n_nodes);
   frd.end_allowed_.resize(n_nodes);
   frd.through_allowed_.resize(n_nodes);
@@ -68,8 +70,8 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
   // and adds additional edges to/from this node.
   auto next_add_node_idx = osr::node_idx_t{w.n_nodes()};
   auto const add_tt_location = [&](n::location_idx_t const l) {
-    frd.additional_nodes_.emplace_back(l);
-    frd.additional_node_coordinates_.emplace_back(
+    frd.additional_nodes_.locations_.emplace_back(l);
+    frd.additional_nodes_.coordinates_.emplace_back(
         tt.locations_.coordinates_[l]);
 
     auto const pos = get_location(&tt, &w, pl, pl_matches, tt_location{l});
@@ -90,12 +92,13 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
         auto const edge_to_an = osr::additional_edge{
             l_additional_node_idx,
             static_cast<osr::distance_t>(node.dist_to_node_)};
-        auto& node_edges = frd.additional_edges_[node.node_];
+        auto& node_edges = frd.additional_nodes_.edges_[node.node_];
         if (utl::find(node_edges, edge_to_an) == end(node_edges)) {
           node_edges.emplace_back(edge_to_an);
         }
 
-        auto& add_node_out = frd.additional_edges_[l_additional_node_idx];
+        auto& add_node_out =
+            frd.additional_nodes_.edges_[l_additional_node_idx];
         auto const edge_from_an = osr::additional_edge{
             node.node_, static_cast<osr::distance_t>(node.dist_to_node_)};
         if (utl::find(add_node_out, edge_from_an) == end(add_node_out)) {
@@ -246,7 +249,7 @@ flex_routings_t get_flex_routings(
 bool is_in_flex_stop(n::timetable const& tt,
                      osr::ways const& w,
                      flex_areas const& fa,
-                     flex_routing_data const& frd,
+                     flex_additional_nodes const& additional_nodes,
                      n::flex_stop_t const& s,
                      osr::node_idx_t const n) {
   return s.apply(utl::overloaded{
@@ -259,7 +262,7 @@ bool is_in_flex_stop(n::timetable const& tt,
           return false;
         }
         auto const locations = tt.location_group_locations_.at(lg);
-        auto const l = frd.get_additional_node(n);
+        auto const l = additional_nodes.get(n);
         return utl::find(locations, l) != end(locations);
       }});
 }
@@ -280,7 +283,8 @@ void add_flex_td_offsets(osr::ways const& w,
                          osr_parameters const& osr_params,
                          flex_routing_data& frd,
                          n::routing::td_offsets_t& ret,
-                         std::map<std::string, std::uint64_t>& stats) {
+                         std::map<std::string, std::uint64_t>& stats,
+                         one_to_many_side* const states) {
   UTL_START_TIMING(flex_lookup_timer);
 
   auto const max_dist =
@@ -312,11 +316,36 @@ void add_flex_td_offsets(osr::ways const& w,
     auto const sharing_data = prepare_sharing_data(
         tt, w, lookup, pl, fa, matches, transports.front(), dir, frd);
 
-    auto const paths =
-        osr::route(params, w, lookup, osr::search_profile::kCarSharing, pos,
-                   near_stop_locations, pos_match[osr::match_idx_t{0U}],
-                   near_stop_matches, static_cast<osr::cost_t>(max.count()),
-                   dir, nullptr, &sharing_data, nullptr);
+    auto state = osr::route_one_to_many(
+        params, w, lookup, osr::search_profile::kCarSharing, pos,
+        near_stop_locations, pos_match[osr::match_idx_t{0U}], near_stop_matches,
+        static_cast<osr::cost_t>(max.count()), dir, nullptr, &sharing_data,
+        nullptr);
+    auto const& paths = state->results();
+
+    // Store osr routing state for later path reconstruction.
+    if (states != nullptr) {
+      auto dest_idx = hash_map<n::location_idx_t, std::size_t>{};
+      for (auto const [i, l] : utl::enumerate(near_stops)) {
+        if (paths[i].has_value()) {
+          dest_idx.emplace(l, i);
+        }
+      }
+
+      if (!dest_idx.empty()) {
+        auto const search_idx = states->searches_.size();
+        states->searches_.emplace_back(
+            one_to_many_search{std::move(state), std::move(dest_idx),
+                               std::move(frd.additional_nodes_)});
+
+        for (auto const id : transports) {
+          states
+              ->by_mode_[transport_mode(api::ModeEnum::FLEX, id.to_payload())] =
+              search_idx;
+        }
+      }
+    }
+
     auto const day_idx_iv = get_relevant_days(tt, start_time);
     for (auto const id : transports) {
       auto const t = id.get_flex_transport();
@@ -358,10 +387,13 @@ void add_flex_td_offsets(osr::ways const& w,
 
             if (iv_at_from_stop.from_ < iv_at_from_stop.to_ &&
                 duration < n::footpath::kMaxDuration) {
+              auto const mode =
+                  transport_mode(api::ModeEnum::FLEX, id.to_payload());
               auto& offsets = ret[l];
-              offsets.emplace_back(iv_at_from_stop.from_, duration, id.to_id());
-              offsets.emplace_back(iv_at_from_stop.to_,
-                                   n::footpath::kMaxDuration, id.to_id());
+              offsets.push_back(n::routing::td_offset::make(
+                  iv_at_from_stop.from_, duration, mode));
+              offsets.push_back(n::routing::td_offset::make(
+                  iv_at_from_stop.to_, n::footpath::kMaxDuration, mode));
             }
           }
         }

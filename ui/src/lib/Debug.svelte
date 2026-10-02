@@ -11,7 +11,7 @@
 		TableHeader,
 		TableRow
 	} from '$lib/components/ui/table';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import { transfers } from '@motis-project/motis-client';
 	import Control from '$lib/map/Control.svelte';
 	import * as Card from '$lib/components/ui/card';
