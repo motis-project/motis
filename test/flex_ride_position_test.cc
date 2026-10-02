@@ -241,7 +241,7 @@ TEST(motis, flex_ride_position_regular_window) {
   auto const f = fixture{"regular", "10:00:00,10:40:00", "10:00:00,13:00:00"};
 
   // First mile: the ride starts inside the window (the latest departure
-  // that still catches ICE_OUT is chosen, so anywhere up to 08:40Z).
+  // that still catches ICE_OUT is chosen, so anywhere before 08:40Z).
   {
     auto const res = f.plan(first_mile("2019-05-01T07:30Z"));
     auto const legs = flex_legs(res.itineraries_);
@@ -249,7 +249,7 @@ TEST(motis, flex_ride_position_regular_window) {
     EXPECT_TRUE(any_on_day(legs, 1));
     for (auto const& [flex, before] : legs) {
       EXPECT_GE(utc_minute_of_day(flex->startTime_), hm(8, 0));
-      EXPECT_LE(utc_minute_of_day(flex->startTime_), hm(8, 40));
+      EXPECT_LT(utc_minute_of_day(flex->startTime_), hm(8, 40));
     }
   }
 
@@ -262,7 +262,7 @@ TEST(motis, flex_ride_position_regular_window) {
     EXPECT_TRUE(any_on_day(legs, 1));
     for (auto const& [flex, before] : legs) {
       EXPECT_GE(utc_minute_of_day(flex->startTime_), hm(8, 0));
-      EXPECT_LE(utc_minute_of_day(flex->startTime_), hm(8, 40));
+      EXPECT_LT(utc_minute_of_day(flex->startTime_), hm(8, 40));
     }
   }
 
