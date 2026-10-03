@@ -1,9 +1,12 @@
 #include "motis/osr/street_routing.h"
 
+#include <cassert>
+
 #include "geo/polyline_format.h"
 
 #include "utl/concat.h"
 #include "utl/get_or_create.h"
+#include "utl/raii.h"
 
 #include "osr/routing/algorithms.h"
 #include "osr/routing/parameters.h"
@@ -180,6 +183,9 @@ api::Itinerary street_routing(osr::ways const& w,
                                              out.get_sharing_data());
     }
     auto const& [e_nodes, e_states] = *s;
+    assert(blocked_mem.none());
+    auto const reset =
+        utl::finally{[&]() { reset_blocked(e_nodes, blocked_mem); }};
     auto const profile = out.get_profile();
     return osr::route(
         to_profile_parameters(profile, osr_params), w, l, profile, from, to,
