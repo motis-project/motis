@@ -44,12 +44,9 @@ json::value update_elevator::operator()(json::value const& query) const {
   it->state_changes_ =
       intervals_to_state_changes(it->out_of_service_, it->status_);
 
-  auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
+  auto tasks = hash_set<n::location_idx_t>{};
   loc_rtree_.in_radius(it->pos_, kElevatorUpdateRadius,
-                       [&](n::location_idx_t const l) {
-                         tasks.emplace(l, osr::direction::kForward);
-                         tasks.emplace(l, osr::direction::kBackward);
-                       });
+                       [&](n::location_idx_t const l) { tasks.emplace(l); });
 
   auto new_e =
       elevators{w_, elevator_ids_, elevator_nodes_, std::move(elevators_copy)};
