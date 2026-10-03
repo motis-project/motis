@@ -140,37 +140,41 @@ std::vector<n::td_footpath> get_td_footpaths(
   return fps;
 }
 
-void update_rtt_td_footpaths(
-    osr::ways const& w,
-    osr::lookup const& l,
-    osr::platforms const& pl,
-    nigiri::timetable const& tt,
-    point_rtree<n::location_idx_t> const& loc_rtree,
-    elevators const& e,
-    platform_matches_t const& matches,
-    hash_set<std::pair<n::location_idx_t, osr::direction>> const& tasks,
-    nigiri::rt_timetable const* old_rtt,
-    nigiri::rt_timetable& rtt,
-    std::chrono::seconds const max) {
-  auto in_mutex = std::mutex{}, out_mutex = std::mutex{};
+void update_rtt_td_footpaths(osr::ways const& w,
+                             osr::lookup const& l,
+                             osr::platforms const& pl,
+                             nigiri::timetable const& tt,
+                             point_rtree<n::location_idx_t> const& loc_rtree,
+                             elevators const& e,
+                             platform_matches_t const& matches,
+                             hash_set<n::location_idx_t> const& tasks,
+                             nigiri::rt_timetable const* old_rtt,
+                             nigiri::rt_timetable& rtt,
+                             std::chrono::seconds const max) {
+  // A footpath is time-dependent iff its source has td footpaths. Only the
+  // outgoing footpaths are routed, the incoming ones are their transpose.
+  auto out_mutex = std::mutex{};
   auto out = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
-  auto in = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
   utl::parallel_for_run_threadlocal<osr::bitvec<osr::node_idx_t>>(
       tasks.size(),
       [&](osr::bitvec<osr::node_idx_t>& blocked, std::size_t const task_idx) {
-        auto const [start, dir] = *(begin(tasks) + task_idx);
-        auto fps = get_td_footpaths(w, l, pl, tt, &rtt, loc_rtree, e, matches,
-                                    start, get_loc(tt, w, pl, matches, start),
-                                    dir, osr::search_profile::kWheelchair, max,
-                                    kMaxWheelchairMatchingDistance,
-                                    osr_parameters{}, blocked);
+        auto const start = *(begin(tasks) + task_idx);
+        auto fps = get_td_footpaths(
+            w, l, pl, tt, &rtt, loc_rtree, e, matches, start,
+            get_loc(tt, w, pl, matches, start), osr::direction::kForward,
+            osr::search_profile::kWheelchair, max,
+            kMaxWheelchairMatchingDistance, osr_parameters{}, blocked);
         {
-          auto const lock = std::unique_lock{
-              dir == osr::direction::kForward ? out_mutex : in_mutex};
-          (dir == osr::direction::kForward ? out : in)[start] = std::move(fps);
+          auto const lock = std::unique_lock{out_mutex};
+          out[start] = std::move(fps);
         }
       });
 
+  // The td footpaths of a source replace all its static footpaths:
+  // has_td_footpaths_in_ marks the targets of both.
+  auto in = n::vector_map<n::location_idx_t, std::vector<n::td_footpath>>{};
+  in.resize(tt.n_locations());
+  rtt.has_td_footpaths_in_[2].zero_out();
   rtt.td_footpaths_out_[2].clear();
   for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
     auto const it = out.find(i);
@@ -186,23 +190,22 @@ void update_rtt_td_footpaths(
       rtt.td_footpaths_out_[2].emplace_back(
           std::initializer_list<n::td_footpath>{});
     }
+
+    if (!rtt.has_td_footpaths_out_[2].test(i)) {
+      continue;
+    }
+    for (auto const& fp : rtt.td_footpaths_out_[2][i]) {
+      in[fp.target_].push_back(n::td_footpath{i, fp.valid_from_, fp.duration_});
+      rtt.has_td_footpaths_in_[2].set(fp.target_, true);
+    }
+    for (auto const& fp : tt.locations_.footpaths_out_[2][i]) {
+      rtt.has_td_footpaths_in_[2].set(fp.target(), true);
+    }
   }
 
   rtt.td_footpaths_in_[2].clear();
-  for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
-    auto const it = in.find(i);
-    if (it != end(in)) {
-      rtt.has_td_footpaths_in_[2].set(i, true);
-      rtt.td_footpaths_in_[2].emplace_back(it->second);
-    } else if (old_rtt != nullptr) {
-      rtt.has_td_footpaths_in_[2].set(i,
-                                      old_rtt->has_td_footpaths_in_[2].test(i));
-      rtt.td_footpaths_in_[2].emplace_back(old_rtt->td_footpaths_in_[2][i]);
-    } else {
-      rtt.has_td_footpaths_in_[2].set(i, false);
-      rtt.td_footpaths_in_[2].emplace_back(
-          std::initializer_list<n::td_footpath>{});
-    }
+  for (auto const& fps : in) {
+    rtt.td_footpaths_in_[2].emplace_back(fps);
   }
 }
 
@@ -216,7 +219,7 @@ void update_rtt_td_footpaths(osr::ways const& w,
                              platform_matches_t const& matches,
                              nigiri::rt_timetable& rtt,
                              std::chrono::seconds const max) {
-  auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
+  auto tasks = hash_set<n::location_idx_t>{};
   for (auto const& [e_in_path, from_to] : elevators_in_paths) {
     auto const e_idx =
         match_elevator(e.elevators_rtree_, e.elevators_, w, e_in_path);
@@ -228,8 +231,7 @@ void update_rtt_td_footpaths(osr::ways const& w,
       continue;
     }
     for (auto const& [from, to] : from_to) {
-      tasks.emplace(from, osr::direction::kForward);
-      tasks.emplace(to, osr::direction::kBackward);
+      tasks.emplace(from);
     }
   }
   update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, tasks, nullptr,

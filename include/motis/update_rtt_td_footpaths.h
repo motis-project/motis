@@ -48,18 +48,17 @@ std::optional<std::pair<nodes_t, states_t>> get_states_at(osr::ways const&,
                                                           nigiri::unixtime_t,
                                                           geo::latlng const&);
 
-void update_rtt_td_footpaths(
-    osr::ways const&,
-    osr::lookup const&,
-    osr::platforms const&,
-    nigiri::timetable const&,
-    point_rtree<nigiri::location_idx_t> const&,
-    elevators const&,
-    platform_matches_t const&,
-    hash_set<std::pair<nigiri::location_idx_t, osr::direction>> const& tasks,
-    nigiri::rt_timetable const* old_rtt,
-    nigiri::rt_timetable&,
-    std::chrono::seconds max);
+void update_rtt_td_footpaths(osr::ways const&,
+                             osr::lookup const&,
+                             osr::platforms const&,
+                             nigiri::timetable const&,
+                             point_rtree<nigiri::location_idx_t> const&,
+                             elevators const&,
+                             platform_matches_t const&,
+                             hash_set<nigiri::location_idx_t> const& tasks,
+                             nigiri::rt_timetable const* old_rtt,
+                             nigiri::rt_timetable&,
+                             std::chrono::seconds max);
 
 void update_rtt_td_footpaths(osr::ways const&,
                              osr::lookup const&,
