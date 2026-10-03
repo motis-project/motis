@@ -24,6 +24,8 @@ osr::bitvec<osr::node_idx_t>& set_blocked(nodes_t const&,
                                           states_t const&,
                                           osr::bitvec<osr::node_idx_t>&);
 
+void reset_blocked(nodes_t const&, osr::bitvec<osr::node_idx_t>&);
+
 std::vector<nigiri::td_footpath> get_td_footpaths(
     osr::ways const&,
     osr::lookup const&,

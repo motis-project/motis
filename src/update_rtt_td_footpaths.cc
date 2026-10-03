@@ -4,6 +4,7 @@
 
 #include "utl/equal_ranges_linear.h"
 #include "utl/parallel_for.h"
+#include "utl/raii.h"
 
 #include "osr/routing/parameters.h"
 #include "osr/routing/route.h"
@@ -50,11 +51,17 @@ osr::bitvec<osr::node_idx_t>& set_blocked(
     nodes_t const& e_nodes,
     states_t const& states,
     osr::bitvec<osr::node_idx_t>& blocked_mem) {
-  blocked_mem.zero_out();
   for (auto const [n, s] : utl::zip(e_nodes, states)) {
     blocked_mem.set(n, !s);
   }
   return blocked_mem;
+}
+
+void reset_blocked(nodes_t const& e_nodes,
+                   osr::bitvec<osr::node_idx_t>& blocked_mem) {
+  for (auto const n : e_nodes) {
+    blocked_mem.set(n, false);
+  }
 }
 
 std::optional<std::pair<nodes_t, states_t>> get_states_at(
@@ -96,6 +103,8 @@ std::vector<n::td_footpath> get_td_footpaths(
   blocked_mem.resize(w.n_nodes());
 
   auto const [e_nodes, e_state_changes] = get_node_states(w, l, e, start.pos_);
+  auto const reset =
+      utl::finally{[&]() { reset_blocked(e_nodes, blocked_mem); }};
 
   auto fps = std::vector<n::td_footpath>{};
   for (auto const& [t, states] : e_state_changes) {
