@@ -1,5 +1,6 @@
 #include "motis/update_rtt_td_footpaths.h"
 
+#include <cassert>
 #include <map>
 
 #include "utl/equal_ranges_linear.h"
@@ -101,6 +102,7 @@ std::vector<n::td_footpath> get_td_footpaths(
     osr_parameters const& osr_params,
     osr::bitvec<osr::node_idx_t>& blocked_mem) {
   blocked_mem.resize(w.n_nodes());
+  assert(blocked_mem.none());
 
   auto const [e_nodes, e_state_changes] = get_node_states(w, l, e, start.pos_);
   auto const reset =
