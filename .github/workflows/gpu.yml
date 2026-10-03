@@ -65,6 +65,26 @@ jobs:
           cd "$HOME/ci-data/ger"
           "$GITHUB_WORKSPACE/build/cpu/motis" import -c config_de.yml -d data
 
+      - name: Import Germany wheelchair
+        run: |
+          # all DE feeds of config_de.yml (DELFI lacks VBB), every trip
+          # wheelchair accessible; reuses the osr data of the Germany import
+          cd "$HOME/ci-data/ger"
+          python3 - <<'EOF'
+          import yaml
+          with open("config_de.yml") as f:
+              c = yaml.safe_load(f)
+          for d in c["timetable"]["datasets"].values():
+              d["script"] = "scripts/wheelchair.lua"
+          with open("config_de_wheelchair.yml", "w") as f:
+              yaml.safe_dump(c, f, sort_keys=False)
+          EOF
+          mkdir -p data-wheelchair/meta
+          ln -sfn ../data/osr data-wheelchair/osr
+          cp data/meta/osr.json data-wheelchair/meta/osr.json
+          "$GITHUB_WORKSPACE/build/cpu/motis" import -c config_de_wheelchair.yml \
+            -d data-wheelchair
+
       - name: Import Europe
         run: |
           cd "$HOME/ci-data/eu"
@@ -86,6 +106,15 @@ jobs:
           python3 tools/validate.py ./build/cuda-san/motis $GER --n 25
           python3 tools/validate.py ./build/cuda/motis $GER --n 3 \
             --launcher "$COMPUTE_SANITIZER"
+
+      - name: Validate Germany elevators
+        run: |
+          # wheelchair routing (td footpaths) with random elevator outages on
+          # the query day
+          python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
+            --data $HOME/ci-data/ger/data-wheelchair --name germany-elevators \
+            --date 2026-07-10 --intermodal --wheelchair --only wheelchair \
+            --elevators $HOME/ci-data/ger/fasta.json --n 1000
 
       - name: Validate Europe
         run: |

@@ -2,8 +2,11 @@
 
 import argparse
 import atexit
+import datetime
 import json
 import os
+import random
+import re
 import shlex
 import shutil
 import signal
@@ -22,6 +25,11 @@ SANITIZER_MARKERS = ("AddressSanitizer", "UndefinedBehaviorSanitizer",
                      "LeakSanitizer", "ThreadSanitizer", "runtime error:",
                      "COMPUTE-SANITIZER")
 
+# Routing errors the server recovers from silently (PONG falls back to RAPTOR,
+# a journey whose reconstruction fails is dropped). The comparison can still
+# pass, so the batch output is checked for them.
+ROUTING_ERROR_MARKERS = ("PONG EXCEPTION", "reconstruct failed")
+
 def run(cmd, cwd=None):
     # Both streams are kept and echoed on failure: for a sanitizer build the
     # report is the whole point, and discarding it would leave only an exit
@@ -33,6 +41,7 @@ def run(cmd, cwd=None):
             sys.stderr.write(stream.decode("utf-8", "replace"))
         sys.exit("validate: '%s' failed with exit code %d"
                  % (" ".join(cmd), p.returncode))
+    return (p.stdout + p.stderr).decode("utf-8", "replace")
 
 
 def generate(motis, data, n, date, work, modes=None, bounds=None):
@@ -61,8 +70,78 @@ def batch(motis, data, qfile, out, rt_dir, gbfs_dir=None, n_threads=None,
     t0 = time.perf_counter()
     # Both dump_rt/ and dump_gbfs/ are resolved relative to the working
     # directory, so a run needing both wants them side by side in one dir.
-    run(cmd, cwd=gbfs_dir or rt_dir)
-    return time.perf_counter() - t0  # wall time (whole batch, all cases)
+    output = run(cmd, cwd=gbfs_dir or rt_dir)
+    return time.perf_counter() - t0, output  # wall time (whole batch)
+
+
+def routing_errors(output):
+    return [ln for ln in output.splitlines()
+            if any(m in ln for m in ROUTING_ERROR_MARKERS)]
+
+
+def random_outages(fasta_in, date, seed, out):
+    # Random maintenance windows for half of the working elevators: on the
+    # query day mostly short, some for hours, a few for longer than
+    # footpath::kMaxDuration (8:31h). Many last for weeks and start up to 60
+    # days before or after the query day: broken and working periods both
+    # exceed routing::kMaxTravelTime and the 16 bit duration_t.
+    rng = random.Random(seed)
+    with open(fasta_in) as f:
+        elevators = json.load(f)
+    day = datetime.datetime.strptime(date, "%Y-%m-%d")
+    fmt = "%Y-%m-%dT%H:%M:%S"
+    n_elevators = n_windows = 0
+    for e in elevators:
+        if (e.get("type") != "ELEVATOR" or e.get("state") != "ACTIVE" or
+                "geocoordX" not in e or rng.random() >= 0.5):
+            continue
+        windows = []
+        for _ in range(rng.randint(1, 3)):
+            r = rng.random()
+            if r < 0.80:
+                minutes = (rng.randint(10, 120) if r < 0.50 else
+                           rng.randint(120, 360) if r < 0.75 else
+                           rng.randint(540, 720))
+                start = day + datetime.timedelta(
+                    minutes=rng.randint(3 * 60, 21 * 60))
+            else:
+                minutes = rng.randint(30, 60) * 24 * 60
+                start = day + datetime.timedelta(
+                    days=rng.randint(-60, 60), minutes=rng.randint(0, 24 * 60))
+            windows.append([start, start + datetime.timedelta(minutes=minutes)])
+        windows.sort()
+        merged = []
+        for start, end in windows:
+            if merged and start <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], end)
+            else:
+                merged.append([start, end])
+        # With windows, motis ignores the state: working outside the windows.
+        e["outOfService"] = [[s.strftime(fmt), t.strftime(fmt)]
+                             for s, t in merged]
+        n_elevators += 1
+        n_windows += len(merged)
+    with open(out, "w") as f:
+        json.dump(elevators, f)
+    print("elevators: %d outages on %d elevators (seed %d)"
+          % (n_windows, n_elevators, seed))
+
+
+def elevator_data(data, fasta, work):
+    # Same data, but with the elevators initialized from `fasta` (td footpaths
+    # for the wheelchair profile). Only config.yml differs, the rest is linked.
+    overlay = os.path.join(work, "data-elevators")
+    os.makedirs(overlay)
+    for entry in os.listdir(data):
+        if entry != "config.yml":
+            os.symlink(os.path.join(data, entry), os.path.join(overlay, entry))
+    with open(os.path.join(data, "config.yml")) as f:
+        config = f.read()
+    config = re.sub(r"^elevators:.*\n(?:[ \t]+.*\n)*", "", config, flags=re.M)
+    config += "elevators:\n  init: %s\n" % json.dumps(fasta)
+    with open(os.path.join(overlay, "config.yml"), "w") as f:
+        f.write(config)
+    return overlay
 
 
 def pct(vals, p):
@@ -318,6 +397,21 @@ def main():
     ap.add_argument("--exclude-transit-modes",
                     help="API transit modes dropped for the clasz-filter cases, "
                          "comma-separated (e.g. COACH or HIGHSPEED_RAIL,COACH)")
+    ap.add_argument("--only",
+                    help="only run cases whose label contains one of these "
+                         "comma-separated strings. Labels are "
+                         "<type>-<algorithm>-<direction>[-<variant>][-rt] "
+                         "with type station, intermodal, flex or rental, "
+                         "algorithm pong or raptor and direction fwd or bwd. "
+                         "Only station and intermodal have variants: clasz, "
+                         "wheelchair and car with pong, routed, bike and tts "
+                         "with pong and raptor-fwd.")
+    ap.add_argument("--elevators",
+                    help="FaSta elevator snapshot: adds random maintenance "
+                         "windows on --date and routes with these elevators "
+                         "(td footpaths for --wheelchair)")
+    ap.add_argument("--elevator-seed", type=int, default=42,
+                    help="seed for the random maintenance windows")
     ap.add_argument("--launcher",
                     help="command prefixing 'motis batch' (e.g. "
                          "'compute-sanitizer --tool memcheck --error-exitcode 1')")
@@ -353,6 +447,13 @@ def main():
         sys.stdout.reconfigure(line_buffering=True)
 
     print("== %s ==" % a.name)
+
+    if a.elevators:
+        fasta = os.path.join(work, "fasta.json")
+        random_outages(os.path.abspath(a.elevators), a.date, a.elevator_seed,
+                       fasta)
+        data = elevator_data(data, fasta, work)
+
     labels = bin_labels(bins)
 
     bases = {}
@@ -377,6 +478,9 @@ def main():
                  "--station / --intermodal / --flex / --rental)")
     cases = build_cases(bases, restricted, rt_dir is not None, a.routed_footpaths,
                         a.wheelchair, a.bike, a.car, a.tts)
+    if a.only:
+        only = a.only.split(",")
+        cases = [c for c in cases if any(o in c["label"] for o in only)]
 
     results = []
     lat = []  # (case_label, per-binary [execute_time ms] lists)
@@ -410,9 +514,10 @@ def main():
             o = "%s.%d" % (combined, i)
             print("[rt=%d rental=%d] batching %d queries on %s..." %
                   (rt, rental, offsets, labels[i]))
-            wall[i] += batch(b, data, combined, o, rt_dir if rt else None,
-                             gbfs_dir if rental else None, a.n_threads,
-                             launcher)
+            t, output = batch(b, data, combined, o, rt_dir if rt else None,
+                              gbfs_dir if rental else None, a.n_threads,
+                              launcher)
+            wall[i] += t
             print("[rt=%d rental=%d]   %s done in %.0fs" %
                   (rt, rental, labels[i], wall[i]))
             with open(o) as f:
@@ -428,6 +533,11 @@ def main():
                          "is a CUDA build. With a sanitizer build this usually "
                          "means ASAN_OPTIONS is missing protect_shadow_gap=0."
                          % (labels[i], n_cpu))
+
+            errors = routing_errors(output)
+            if errors:
+                sys.exit("validate: %s reported %d routing error(s), first: %s"
+                         % (labels[i], len(errors), errors[0]))
 
             neg = invalid_durations(outs[-1])
             if neg:
