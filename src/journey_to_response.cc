@@ -172,10 +172,12 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     return std::nullopt;
   }
 
-  if (tt.locations_.ticketing_unavailable_.test(
-          enter_stop.get_stop().location_idx()) ||
-      tt.locations_.ticketing_unavailable_.test(
-          exit_stop.get_stop().location_idx())) {
+  auto const stop_of = [&](n::rt::run_stop const& s) {
+    return tt.locations_.get_base_idx(s.get_stop().location_idx());
+  };
+
+  if (tt.locations_.ticketing_unavailable_.test(stop_of(enter_stop)) ||
+      tt.locations_.ticketing_unavailable_.test(stop_of(exit_stop))) {
     return std::nullopt;
   }
 
@@ -205,7 +207,7 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     auto const location_ticketing_id =
         [&](n::rt::run_stop stop) -> std::optional<std::string_view> {
       auto const provider_ids =
-          tt.location_ticketing_identifier_[stop.get_stop().location_idx()];
+          tt.location_ticketing_identifier_[stop_of(stop)];
       auto const provider_idx = exit_stop.get_provider_idx(n::event_type::kArr);
 
       auto const it = std::lower_bound(
@@ -549,8 +551,10 @@ api::Itinerary journey_to_response(
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, lang);
       if (auto const it = is_unique.find(s.get_location_idx());
           it != end(is_unique) && !it->second) {
-        p.name_ =
-            tt.translate(lang, tt.locations_.names_[s.get_location_idx()]);
+        p.name_ = tt.translate(
+            lang,
+            tt.locations_
+                .names_[tt.locations_.get_base_idx(s.get_location_idx())]);
       }
       return p;
     };

@@ -31,6 +31,8 @@ inline void add_location(nigiri::timetable const& tt,
                          bool const exact = false) {
   if (exact) {
     locations.emplace_back(l);
+    tt.locations_.for_each_virt(
+        l, [&](nigiri::location_idx_t const v) { locations.push_back(v); });
     return;
   }
 

@@ -1,6 +1,9 @@
 #include "motis/rt_update.h"
 
+#include <algorithm>
 #include <filesystem>
+#include <map>
+#include <variant>
 
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
@@ -179,14 +182,42 @@ void apply_canned(data& d, endpoints_t const& endpoints, n::rt_timetable& rtt) {
   }
 }
 
+date::sys_days get_canned_day(endpoints_t const& endpoints) {
+  auto days = std::map<date::sys_days, unsigned>{};
+  for (auto const& ep : endpoints) {
+    if (!std::holds_alternative<gtfs_rt_endpoint>(ep)) {
+      continue;
+    }
+    auto const body =
+        utl::read_file(get_dump_path(std::get<gtfs_rt_endpoint>(ep)).c_str());
+    auto msg = transit_realtime::FeedMessage{};
+    if (body.has_value() &&
+        msg.ParseFromArray(body->data(), static_cast<int>(body->size())) &&
+        msg.header().timestamp() != 0U) {
+      ++days[std::chrono::time_point_cast<date::days>(std::chrono::sys_seconds{
+          std::chrono::seconds{msg.header().timestamp()}})];
+    }
+  }
+  if (days.empty()) {
+    return std::chrono::time_point_cast<date::days>(
+        std::chrono::system_clock::now());
+  }
+  return std::max_element(
+             begin(days), end(days),
+             [](auto const& a, auto const& b) { return a.second < b.second; })
+      ->first;
+}
+
 awaitable<void> update_rt(config const& c,
                           data& d,
                           bool const dump_rt,
                           endpoints_t const& endpoints) {
   auto executor = co_await asio::this_coro::executor;
   // Create new real-time timetable.
-  auto const today = std::chrono::time_point_cast<date::days>(
-      std::chrono::system_clock::now());
+  auto const today = c.timetable_->canned_rt_
+                         ? get_canned_day(endpoints)
+                         : std::chrono::time_point_cast<date::days>(
+                               std::chrono::system_clock::now());
   auto rtt = std::make_unique<n::rt_timetable>(
       c.timetable_->incremental_rt_update_
           ? n::rt_timetable{*d.rt_->rtt_}
@@ -350,8 +381,7 @@ awaitable<void> update_rt(config const& c,
 
 void apply_canned_rt_update(config const& c, data& d) {
   auto const endpoints = make_endpoints(c, d);
-  auto const today = std::chrono::time_point_cast<date::days>(
-      std::chrono::system_clock::now());
+  auto const today = get_canned_day(endpoints);
   auto rtt = std::make_unique<n::rt_timetable>(
       n::rt::create_rt_timetable(*d.tt_, today));
   apply_canned(d, endpoints, *rtt);

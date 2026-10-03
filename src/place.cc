@@ -136,6 +136,9 @@ api::Place to_place(n::timetable const* tt,
               }
               l = std::get<tt_location>(dest).l_;
             }
+            l = tt->locations_.get_base_idx(l);
+            auto const actual = tt->locations_.get_base_idx(tt_l.l_);
+            auto const scheduled = tt->locations_.get_base_idx(tt_l.scheduled_);
             auto const get_track = [&](n::location_idx_t const x) {
               auto const p =
                   tt->translate(lang, tt->locations_.platform_codes_.at(x));
@@ -175,10 +178,10 @@ api::Place to_place(n::timetable const* tt,
                 .level_ = get_level(w, pl, matches, l),
                 .tz_ = timezone == nullptr ? fallback_tz
                                            : std::optional{timezone->name()},
-                .scheduledTrack_ = get_track(tt_l.scheduled_),
-                .track_ = get_track(tt_l.l_),
-                .stopCode_ = get_stop_code(tt_l.scheduled_),
-                .description_ = get_description(tt_l.scheduled_),
+                .scheduledTrack_ = get_track(scheduled),
+                .track_ = get_track(actual),
+                .stopCode_ = get_stop_code(scheduled),
+                .description_ = get_description(scheduled),
                 .vertexType_ = api::VertexTypeEnum::TRANSIT,
                 .modes_ =
                     ae != nullptr
