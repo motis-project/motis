@@ -77,12 +77,31 @@ constexpr double get_max_distance(osr::profile_parameters const& p,
                     p);
 }
 
+// Inverts the profile's lower bound on the cost of a distance, which is
+// assumed to be linear in the distance.
+constexpr double get_distance_upper_bound(osr::profile_parameters const& p,
+                                          std::chrono::seconds const t) {
+  return std::visit(
+      [&]<osr::ProfileParameters P>(P const& params) {
+        return static_cast<double>(t.count()) /
+               P::profile_t::lower_bound_heuristic(params, 1.0);
+      },
+      p);
+}
+
 }  // namespace
 
 double get_max_distance(osr::search_profile const profile,
                         osr_parameters const& osr_params,
                         std::chrono::seconds const t) {
   return get_max_distance(to_profile_parameters(profile, osr_params), t);
+}
+
+double get_distance_upper_bound(osr::search_profile const profile,
+                                osr_parameters const& osr_params,
+                                std::chrono::seconds const t) {
+  return get_distance_upper_bound(to_profile_parameters(profile, osr_params),
+                                  t);
 }
 
 }  // namespace motis
@@ -120,3 +139,10 @@ static_assert(get_max_distance(osr::railway::parameters{},
 static_assert(get_max_distance(osr::ferry::parameters{},
                                std::chrono::seconds(32)) ==
               32 * osr_parameters::kFerrySpeed);
+
+static_assert(osr::foot<false>::lower_bound_heuristic({}, 2000.0) ==
+              2 * osr::foot<false>::lower_bound_heuristic({}, 1000.0));
+static_assert(get_distance_upper_bound(osr::foot<false>::parameters{},
+                                       std::chrono::seconds(3600)) >=
+              get_max_distance(osr::foot<false>::parameters{},
+                               std::chrono::seconds(3600)));
