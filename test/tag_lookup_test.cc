@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+#include "boost/json.hpp"
 #include "boost/url/url.hpp"
 
 #include "nigiri/types.h"
@@ -94,6 +95,15 @@ TEST(motis, tag_lookup) {
                net::not_found_exception);
   EXPECT_THROW(d.tags_->find_location(*d.tt_, "unknown_DA 10"),
                net::not_found_exception);
+
+  // unknown codes are reported in the exception payload
+  try {
+    d.tags_->get_location(*d.tt_, "test_UNKNOWN");
+    FAIL() << "expected net::not_found_exception";
+  } catch (net::not_found_exception const& e) {
+    EXPECT_EQ((boost::json::array{"test_UNKNOWN"}),
+              e.payload_.at("unknownCodes").as_array());
+  }
 
   auto u = boost::urls::url{
       "/api",
