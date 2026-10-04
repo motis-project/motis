@@ -261,7 +261,7 @@ elevator_footpath_map_t compute_footpaths(
                                            tt, l, fp.target(), fp.duration())});
         }
       }
-      n::loader::write_default_profile(tt, false);
+      n::loader::write_default_profile(tt);
     }
 
     n_done += tt.n_locations();

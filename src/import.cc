@@ -370,6 +370,7 @@ void import(config const& c,
                        .default_transfer_time_ =
                            n::duration_t{static_cast<std::int16_t>(
                                t.default_transfer_time_)},
+                       .adjust_footpaths_ = t.adjust_footpaths_,
                        .default_tz_ = dc.default_timezone_.value_or(
                            t.default_timezone_.value_or("")),
                        .bikes_allowed_default_ = to_clasz_bool_array(
@@ -393,8 +394,7 @@ void import(config const& c,
                                })
                                .value_or("")}};
                 }),
-            {.adjust_footpaths_ = t.adjust_footpaths_,
-             .merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
+            {.merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_,
              .merge_stats_dir_ = data_path},
