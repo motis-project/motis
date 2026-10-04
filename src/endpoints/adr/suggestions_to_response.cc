@@ -84,7 +84,7 @@ api::geocode_response suggestions_to_response(
             category = to_str(t.place_type_[p]);
             id = fmt::format("{}/{}",
                              t.place_is_way_[to_idx(p)] ? "way" : "node",
-                             t.place_osm_ids_[p]);
+                             t.place_osm_ids_[p][0]);
           }
           return std::string{t.strings_[s.str_].view()};
         },
