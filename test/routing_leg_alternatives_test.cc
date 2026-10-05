@@ -886,9 +886,9 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   // === Scenario A: DA → FFM_HAUPT (transfer / rt_timetable td) ===
   // The chosen wheelchair journey transfers at FFM via the elevator-
   // routed td footpath FFM_10 → FFM_101. The S3 02:15 / 03:15 alts
-  // would naively walk through the outage; they still surface but
-  // with the inflated `get_td_duration` walk (start before the
-  // outage and idle on the platform until boarding) — see the
+  // would naively walk through the outage; they still surface by
+  // starting the walk before the outage and waiting on the platform
+  // until boarding (the wait is not part of the WALK leg) — see the
   // file-level "raptor 1:1" note above. Only alts whose required
   // walk window is entirely blocked (no pre-outage start time fits)
   // would be omitted.
@@ -909,8 +909,8 @@ HIGHSPEED_RAIL ICE DA Hbf 00:35->FFM Hbf 00:45
   alt [HIGHSPEED_RAIL ICE DA Hbf 23:35->FFM Hbf 23:45 | WALK FFM Hbf 23:45->FFM Hbf 23:52]
   alt [HIGHSPEED_RAIL ICE DA Hbf 22:35->FFM Hbf 22:46 | WALK FFM Hbf 22:46->FFM Hbf 22:53]
 METRO S3 FFM Hbf 01:15->FFM Hauptwache 01:20
-  alt [WALK FFM Hbf 01:23->FFM Hbf 02:15 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
-  alt [WALK FFM Hbf 01:23->FFM Hbf 03:15 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
+  alt [WALK FFM Hbf 01:23->FFM Hbf 01:30 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
+  alt [WALK FFM Hbf 01:23->FFM Hbf 01:30 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
 )",
             to_str(res_a.itineraries_.front()));
 
