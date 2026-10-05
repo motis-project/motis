@@ -85,8 +85,7 @@ void add_trip_updates(n::timetable const& tt,
           return;
         }
         stu = tu->add_stop_time_update();
-        stu->set_stop_id(
-            tt.locations_.ids_[tt.base(s.get_stop().location_idx())].view());
+        stu->set_stop_id(tt.locations_.ids_[s.get_location_idx()].view());
         stu->set_stop_sequence(*seq_it);
       };
 
@@ -120,7 +119,7 @@ void add_trip_updates(n::timetable const& tt,
           last_delay = dep_delay;
         }
       }
-      if (s.is_cancelled() && !s.get_scheduled_stop().is_cancelled()) {
+      if (s.is_cancelled() && !s.get_raw_scheduled_stop().is_cancelled()) {
         set_stu();
         stu->set_schedule_relationship(
             transit_realtime::TripUpdate_StopTimeUpdate_ScheduleRelationship::

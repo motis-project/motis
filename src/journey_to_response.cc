@@ -173,7 +173,7 @@ std::optional<api::TicketUrls> get_ticketing_urls(
   }
 
   auto const stop_of = [&](n::rt::run_stop const& s) {
-    return tt.base(s.get_stop().location_idx());
+    return s.get_location_idx();
   };
 
   if (tt.locations_.ticketing_unavailable_.test(stop_of(enter_stop)) ||
@@ -551,8 +551,8 @@ api::Itinerary journey_to_response(
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, lang);
       if (auto const it = is_unique.find(s.get_location_idx());
           it != end(is_unique) && !it->second) {
-        p.name_ = tt.translate(
-            lang, tt.locations_.names_[tt.base(s.get_location_idx())]);
+        p.name_ =
+            tt.translate(lang, tt.locations_.names_[s.get_location_idx()]);
       }
       return p;
     };
@@ -739,8 +739,8 @@ api::Itinerary journey_to_response(
                 for (auto i = first; i < last; ++i) {
                   auto const stop = fr[i];
                   if (!with_scheduled_skipped_stops &&
-                      !stop.get_scheduled_stop().in_allowed() &&
-                      !stop.get_scheduled_stop().out_allowed() &&
+                      !stop.get_raw_scheduled_stop().in_allowed() &&
+                      !stop.get_raw_scheduled_stop().out_allowed() &&
                       !stop.in_allowed() && !stop.out_allowed()) {
                     continue;
                   }

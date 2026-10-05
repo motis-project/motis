@@ -136,9 +136,8 @@ api::Place to_place(n::timetable const* tt,
               }
               l = std::get<tt_location>(dest).l_;
             }
-            l = tt->base(l);
-            auto const actual = tt->base(tt_l.l_);
-            auto const scheduled = tt->base(tt_l.scheduled_);
+            auto const actual = tt_l.l_;
+            auto const scheduled = tt_l.scheduled_;
             auto const get_track = [&](n::location_idx_t const x) {
               auto const p =
                   tt->translate(lang, tt->locations_.platform_codes_.at(x));
@@ -220,8 +219,8 @@ api::Place to_place(n::timetable const* tt,
                        ? api::PickupDropoffTypeEnum::NORMAL
                        : api::PickupDropoffTypeEnum::NOT_ALLOWED;
   p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
-                                   (s.get_scheduled_stop().in_allowed() ||
-                                    s.get_scheduled_stop().out_allowed()));
+                                   (s.get_raw_scheduled_stop().in_allowed() ||
+                                    s.get_raw_scheduled_stop().out_allowed()));
   return p;
 }
 

@@ -76,8 +76,7 @@ std::string_view tag_lookup::get_tag(n::source_idx_t const src) const {
 }
 
 std::string tag_lookup::id(n::timetable const& tt,
-                           n::location_idx_t const x) const {
-  auto const l = tt.base(x);
+                           n::location_idx_t const l) const {
   auto const src = tt.locations_.src_.at(l);
   auto const id = tt.locations_.ids_.at(l).view();
   return src == n::source_idx_t::invalid()

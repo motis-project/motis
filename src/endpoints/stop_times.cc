@@ -247,17 +247,17 @@ std::vector<n::rt::run> get_events(
                       .rt_ = rt_t}};
               auto const frs = fr[0];
               if (!ev_type.has_value()) {
-                if (!frs.get_scheduled_stop().in_allowed() &&
+                if (!frs.get_raw_scheduled_stop().in_allowed() &&
                     !frs.in_allowed() &&
-                    !frs.get_scheduled_stop().out_allowed() &&
+                    !frs.get_raw_scheduled_stop().out_allowed() &&
                     !frs.out_allowed()) {
                   continue;
                 }
               } else if ((ev_type == n::event_type::kDep &&
-                          !frs.get_scheduled_stop().in_allowed() &&
+                          !frs.get_raw_scheduled_stop().in_allowed() &&
                           !frs.in_allowed()) ||
                          (ev_type == n::event_type::kArr &&
-                          !frs.get_scheduled_stop().out_allowed() &&
+                          !frs.get_raw_scheduled_stop().out_allowed() &&
                           !frs.out_allowed())) {
                 continue;
               }
@@ -572,8 +572,10 @@ api::stoptimes_response stop_times::operator()(
             auto const stop_cancelled =
                 run_cancelled ||
                 (ev_type == n::event_type::kArr
-                     ? !s.out_allowed() && s.get_scheduled_stop().out_allowed()
-                     : !s.in_allowed() && s.get_scheduled_stop().in_allowed());
+                     ? !s.out_allowed() &&
+                           s.get_raw_scheduled_stop().out_allowed()
+                     : !s.in_allowed() &&
+                           s.get_raw_scheduled_stop().in_allowed());
 
             auto const trip_id = tags_.id(tt_, s, ev_type);
 
