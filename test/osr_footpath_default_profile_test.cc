@@ -5,7 +5,7 @@
 
 #include "utl/init_from.h"
 
-#include "nigiri/routing/for_each_hub_source.h"
+#include "nigiri/routing/transfers.h"
 #include "nigiri/timetable.h"
 
 #include "motis/config.h"

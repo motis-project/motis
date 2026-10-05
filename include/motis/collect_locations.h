@@ -2,10 +2,9 @@
 
 #include <vector>
 
-#include "utl/concat.h"
-
 #include "adr/typeahead.h"
 
+#include "nigiri/for_each_meta.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
@@ -16,11 +15,9 @@ namespace motis {
 inline void add_with_children(nigiri::timetable const& tt,
                               std::vector<nigiri::location_idx_t>& locations,
                               nigiri::location_idx_t const x) {
-  locations.emplace_back(x);
-  utl::concat(locations, tt.locations_.children_[x]);
-  for (auto const& c : tt.locations_.children_[x]) {
-    utl::concat(locations, tt.locations_.children_[c]);
-  }
+  nigiri::routing::for_each_meta(
+      tt, nigiri::routing::location_match_mode::kOnlyChildren, x,
+      [&](nigiri::location_idx_t const c) { locations.push_back(c); });
 }
 
 inline void add_location(nigiri::timetable const& tt,
@@ -30,9 +27,9 @@ inline void add_location(nigiri::timetable const& tt,
                          nigiri::location_idx_t const l,
                          bool const exact = false) {
   if (exact) {
-    locations.emplace_back(l);
-    tt.locations_.for_each_virt(
-        l, [&](nigiri::location_idx_t const v) { locations.push_back(v); });
+    nigiri::routing::for_each_meta(
+        tt, nigiri::routing::location_match_mode::kExact, l,
+        [&](nigiri::location_idx_t const c) { locations.push_back(c); });
     return;
   }
 
