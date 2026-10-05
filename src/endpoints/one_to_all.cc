@@ -167,7 +167,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
         tt_, state,
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward, l,
         time, q.max_transfers_);
-    auto& best = fastest[tt_.locations_.get_base_idx(l)];
+    auto& best = fastest[tt_.base(l)];
     if (std::tie(f.duration_, f.k_) < std::tie(best.duration_, best.k_)) {
       best = f;
     }

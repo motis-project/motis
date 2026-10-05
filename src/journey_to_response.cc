@@ -173,7 +173,7 @@ std::optional<api::TicketUrls> get_ticketing_urls(
   }
 
   auto const stop_of = [&](n::rt::run_stop const& s) {
-    return tt.locations_.get_base_idx(s.get_stop().location_idx());
+    return tt.base(s.get_stop().location_idx());
   };
 
   if (tt.locations_.ticketing_unavailable_.test(stop_of(enter_stop)) ||
@@ -552,9 +552,7 @@ api::Itinerary journey_to_response(
       if (auto const it = is_unique.find(s.get_location_idx());
           it != end(is_unique) && !it->second) {
         p.name_ = tt.translate(
-            lang,
-            tt.locations_
-                .names_[tt.locations_.get_base_idx(s.get_location_idx())]);
+            lang, tt.locations_.names_[tt.base(s.get_location_idx())]);
       }
       return p;
     };

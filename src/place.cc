@@ -136,9 +136,9 @@ api::Place to_place(n::timetable const* tt,
               }
               l = std::get<tt_location>(dest).l_;
             }
-            l = tt->locations_.get_base_idx(l);
-            auto const actual = tt->locations_.get_base_idx(tt_l.l_);
-            auto const scheduled = tt->locations_.get_base_idx(tt_l.scheduled_);
+            l = tt->base(l);
+            auto const actual = tt->base(tt_l.l_);
+            auto const scheduled = tt->base(tt_l.scheduled_);
             auto const get_track = [&](n::location_idx_t const x) {
               auto const p =
                   tt->translate(lang, tt->locations_.platform_codes_.at(x));

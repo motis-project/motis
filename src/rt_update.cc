@@ -15,6 +15,7 @@
 #include "utl/read_file.h"
 #include "utl/timer.h"
 #include "utl/verify.h"
+#include "utl/visit.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
@@ -185,18 +186,17 @@ void apply_canned(data& d, endpoints_t const& endpoints, n::rt_timetable& rtt) {
 date::sys_days get_canned_day(endpoints_t const& endpoints) {
   auto days = std::map<date::sys_days, unsigned>{};
   for (auto const& ep : endpoints) {
-    if (!std::holds_alternative<gtfs_rt_endpoint>(ep)) {
-      continue;
-    }
-    auto const body =
-        utl::read_file(get_dump_path(std::get<gtfs_rt_endpoint>(ep)).c_str());
-    auto msg = transit_realtime::FeedMessage{};
-    if (body.has_value() &&
-        msg.ParseFromArray(body->data(), static_cast<int>(body->size())) &&
-        msg.header().timestamp() != 0U) {
-      ++days[std::chrono::time_point_cast<date::days>(std::chrono::sys_seconds{
-          std::chrono::seconds{msg.header().timestamp()}})];
-    }
+    utl::visit(ep, [&](gtfs_rt_endpoint const& gtfs) {
+      auto const body = utl::read_file(get_dump_path(gtfs).c_str());
+      auto msg = transit_realtime::FeedMessage{};
+      if (body.has_value() &&
+          msg.ParseFromArray(body->data(), static_cast<int>(body->size())) &&
+          msg.header().timestamp() != 0U) {
+        ++days[std::chrono::time_point_cast<date::days>(
+            std::chrono::sys_seconds{
+                std::chrono::seconds{msg.header().timestamp()}})];
+      }
+    });
   }
   if (days.empty()) {
     return std::chrono::time_point_cast<date::days>(
