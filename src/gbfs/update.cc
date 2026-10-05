@@ -348,6 +348,7 @@ struct gbfs_update {
       }
 
       co_await init_missing_config_feeds();
+      remove_metrics_of_removed_providers();
     }
 
     apply_pending_routing_updates();
@@ -356,6 +357,35 @@ struct gbfs_update {
   void ensure_gbfs_metrics(std::string const& id) {
     metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
     metrics_->gbfs_feed_timestamp_seconds_.Add({{"provider_id", id}});
+  }
+
+  static void remove_gauge(prometheus::Family<prometheus::Gauge>& family,
+                           prometheus::Labels const& labels) {
+    if (family.Has(labels)) {
+      family.Remove(&family.Add(labels));
+    }
+  }
+
+  void remove_gbfs_metrics(gbfs_provider const& provider) {
+    remove_gauge(metrics_->gbfs_last_update_timestamp_seconds_,
+                 {{"provider_id", provider.id_}});
+    remove_gauge(metrics_->gbfs_feed_timestamp_seconds_,
+                 {{"provider_id", provider.id_}});
+    for (auto i = 0U; i != kFormFactorCount; ++i) {
+      remove_gauge(metrics_->gbfs_vehicle_count_,
+                   vehicle_count_labels(provider.id_, provider.group_id_,
+                                        static_cast<vehicle_form_factor>(i)));
+    }
+  }
+
+  // providers that were removed from their aggregated feed
+  void remove_metrics_of_removed_providers() {
+    for (auto const& [id, idx] : prev_d_->provider_by_id_) {
+      auto const& prev = prev_d_->providers_[idx];
+      if (prev != nullptr && d_->providers_[idx] == nullptr) {
+        remove_gbfs_metrics(*prev);
+      }
+    }
   }
 
   void inc_fetch_error(std::string const& id, std::string_view const file) {
@@ -399,16 +429,23 @@ struct gbfs_update {
     return provider.vehicle_types_.at(vt).form_factor_;
   }
 
+  static prometheus::Labels vehicle_count_labels(
+      std::string const& provider_id,
+      std::string const& provider_group_id,
+      vehicle_form_factor const ff) {
+    return {{"provider_id", provider_id},
+            {"provider_group_id", provider_group_id},
+            {"form_factor",
+             static_cast<std::string>(
+                 json::value_from(to_api_form_factor(ff)).as_string())}};
+  }
+
   void set_vehicle_count(std::string const& provider_id,
                          std::string const& provider_group_id,
                          vehicle_form_factor const ff,
                          std::uint64_t const count) {
     metrics_->gbfs_vehicle_count_
-        .Add({{"provider_id", provider_id},
-              {"provider_group_id", provider_group_id},
-              {"form_factor",
-               static_cast<std::string>(
-                   json::value_from(to_api_form_factor(ff)).as_string())}})
+        .Add(vehicle_count_labels(provider_id, provider_group_id, ff))
         .Set(static_cast<double>(count));
   }
 
@@ -500,8 +537,6 @@ struct gbfs_update {
                             config::gbfs::feed const& config,
                             std::optional<std::filesystem::path> const& dir) {
     // initialization of a (standalone or aggregated) feed from the config
-    ensure_gbfs_metrics(id);
-
     try {
       auto const headers = config.headers_.value_or(headers_t{});
       auto oauth = std::shared_ptr<oauth_state>{};
@@ -568,6 +603,9 @@ struct gbfs_update {
 
       co_return co_await update_provider_feed(*saf, std::move(discovery));
     } catch (std::exception const& ex) {
+      // not known yet whether this is a standalone or an aggregated feed:
+      // report as never updated until initialization succeeds
+      ensure_gbfs_metrics(id);
       inc_fetch_error(id, "gbfs");
       std::cerr << "[GBFS] error initializing feed " << id << " ("
                 << config.url_ << "): " << ex.what() << "\n";
@@ -1095,41 +1133,43 @@ struct gbfs_update {
       boost::json::object const& root,
       std::map<std::string, unsigned> const& default_ttl = {},
       std::map<std::string, unsigned> const& overwrite_ttl = {}) {
-    auto af = aggregated_feed{
-        .id_ = prefix,
-        .url_ = url,
-        .headers_ = headers,
-        .dir_ = dir,
-        .expiry_ = get_expiry(root, std::chrono::hours{1}, default_ttl,
-                              overwrite_ttl, "manifest"),
-        .oauth_ = std::move(oauth),
-        .default_ttl_ = default_ttl,
-        .overwrite_ttl_ = overwrite_ttl};
+    auto af = aggregated_feed{.id_ = prefix,
+                              .url_ = url,
+                              .headers_ = headers,
+                              .dir_ = dir,
+                              .oauth_ = std::move(oauth),
+                              .default_ttl_ = default_ttl,
+                              .overwrite_ttl_ = overwrite_ttl};
 
-    co_await process_aggregated_feed(af, root);
+    process_aggregated_feed(af, root);
+    // an aggregated feed has no last_updated field itself
+    // (only its provider feeds do)
+    remove_gauge(metrics_->gbfs_feed_timestamp_seconds_,
+                 {{"provider_id", af.id_}});
+    co_await update_aggregated_feed_provider_feeds(af);
     d_->aggregated_feeds_->emplace_back(
         std::make_unique<aggregated_feed>(std::move(af)));
   }
 
   awaitable<void> update_aggregated_feed(aggregated_feed& af) {
-    try {
-      if (af.needs_update()) {
+    if (af.needs_update()) {
+      try {
         auto const file = co_await fetch_file(
             "manifest", af.url_, af.headers_, af.oauth_, af.id_, af.dir_,
             af.default_ttl_, af.overwrite_ttl_);
-        co_await process_aggregated_feed(af, file.json_.as_object());
-      } else {
-        co_await update_aggregated_feed_provider_feeds(af);
+        process_aggregated_feed(af, file.json_.as_object());
+      } catch (std::exception const& ex) {
+        // keep the previous list of provider feeds
+        inc_fetch_error(af.id_, "manifest");
+        std::cerr << "[GBFS] error processing aggregated feed " << af.id_
+                  << " (" << af.url_ << "): " << ex.what() << "\n";
       }
-    } catch (std::exception const& ex) {
-      inc_fetch_error(af.id_, "manifest");
-      std::cerr << "[GBFS] error processing aggregated feed " << af.id_ << " ("
-                << af.url_ << "): " << ex.what() << "\n";
     }
+    co_await update_aggregated_feed_provider_feeds(af);
   }
 
-  awaitable<void> process_aggregated_feed(aggregated_feed& af,
-                                          boost::json::object const& root) {
+  void process_aggregated_feed(aggregated_feed& af,
+                               boost::json::object const& root) {
     auto feeds = std::vector<provider_feed>{};
     auto skipped_entries = 0U;
     auto const resolve_dir = [&](std::string const& url,
@@ -1238,11 +1278,11 @@ struct gbfs_update {
     add_skipped_entries(af.id_, "manifest", skipped_entries);
 
     af.feeds_ = std::move(feeds);
+    af.expiry_ = get_expiry(root, std::chrono::hours{1}, af.default_ttl_,
+                            af.overwrite_ttl_, "manifest");
 
     metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", af.id_}})
         .SetToCurrentTime();
-
-    co_await update_aggregated_feed_provider_feeds(af);
   }
 
   awaitable<void> update_aggregated_feed_provider_feeds(aggregated_feed& af) {
