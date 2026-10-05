@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <mutex>
 #include <optional>
+#include <utility>
 #include <variant>
 
 #include "boost/thread/tss.hpp"
@@ -52,6 +54,7 @@
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/gbfs_output.h"
+#include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
 #include "motis/get_stops_with_traffic.h"
@@ -136,8 +139,9 @@ std::vector<n::routing::offset> client_offsets(
 
 osr::location stop_to_osr_location(routing const& r,
                                    n::location_idx_t const l) {
-  return osr::location{r.tt_->locations_.coordinates_[l],
-                       r.pl_->get_level(*r.w_, (*r.matches_)[l])};
+  return osr::location{.pos_ = r.tt_->locations_.coordinates_[l],
+                       .lvl_ = r.pl_->get_level(*r.w_, (*r.matches_)[l]),
+                       .must_reach_ = true};
 }
 
 n::routing::td_offsets_t get_td_offsets(
@@ -327,8 +331,11 @@ std::vector<n::routing::offset> get_offsets(
 
     auto const route = [&](osr::search_profile const p,
                            osr::sharing_data const* sharing,
-                           transport_mode_t const mode) {
-      auto const params = to_profile_parameters(p, osr_params);
+                           transport_mode_t const mode,
+                           std::function<bool(geo::latlng const&)>
+                               vehicle_return_allowed = {}) {
+      auto const params = to_profile_parameters(
+          p, osr_params, std::move(vehicle_return_allowed));
       auto pos_match = osr::match_result{};
       r.l_->match(params, pos, false, dir, max_matching_distance, nullptr, p,
                   {}, pos_match);
@@ -348,8 +355,7 @@ std::vector<n::routing::offset> get_offsets(
       auto state = osr::route_one_to_many(
           params, *r.w_, *r.l_, p, pos, near_stop_locations,
           pos_match[osr::match_idx_t{0U}], cached_near_stop_matches->matches_,
-          static_cast<osr::cost_t>(max.count()), dir, nullptr, sharing,
-          elevations);
+          max, dir, nullptr, sharing, elevations);
       auto const& paths = state->results();
 
       if (states != nullptr) {
@@ -432,15 +438,31 @@ std::vector<n::routing::offset> get_offsets(
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
 
+          // Forward searches end at the near stops: no return there.
+          auto vehicle_return_allowed =
+              std::function<bool(geo::latlng const&)>{};
+          if (dir == osr::direction::kBackward) {
+            if (ignore_rental_return_constraints) {
+              vehicle_return_allowed = [](geo::latlng const&) { return true; };
+            } else {
+              vehicle_return_allowed = [&provider = *provider,
+                                        &prod](geo::latlng const& x) {
+                return gbfs::allows_free_floating_return_at(provider, prod, x,
+                                                            false);
+              };
+            }
+          }
+
           auto const mode = gbfs_rd.get_transport_mode(prod_ref);
           auto const paths =
-              route(gbfs::get_osr_profile(prod.form_factor_), &sharing, mode);
+              route(gbfs::get_osr_profile(prod.form_factor_), &sharing, mode,
+                    std::move(vehicle_return_allowed));
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
               offsets.emplace_back(l,
                                    n::duration_t{static_cast<unsigned>(
-                                       std::ceil(p->cost_ / 60.0))},
+                                       std::ceil(p->duration_.count() / 60.0))},
                                    mode);
             }
           }
@@ -456,10 +478,10 @@ std::vector<n::routing::offset> get_offsets(
       auto const paths = route(profile, nullptr, mode);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
-          offsets.emplace_back(
-              l,
-              n::duration_t{static_cast<unsigned>(std::ceil(p->cost_ / 60.0))},
-              mode);
+          offsets.emplace_back(l,
+                               n::duration_t{static_cast<unsigned>(
+                                   std::ceil(p->duration_.count() / 60.0))},
+                               mode);
         }
       }
     }
