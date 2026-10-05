@@ -35,9 +35,9 @@
   branch=master
   commit=d1d445326a5d3ec77e14394fee60962d08894ba0
 [nigiri]
-  url=git@github.com:mority/nigiri.git
-  branch=flex-empty-window
-  commit=b806d300875f0ac9c2b5e70d3cee0cef6bb2f20d
+  url=git@github.com:motis-project/nigiri.git
+  branch=master
+  commit=e1e89785bb8a75ed1c658ab9ec67b33ec8fde49b
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
