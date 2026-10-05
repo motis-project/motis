@@ -9,6 +9,7 @@
 #include "nigiri/footpath.h"
 #include "nigiri/td_footpath.h"
 
+#include "motis/endpoints/routing.h"
 #include "motis/flex/mode_payload.h"
 #include "motis/td_offsets.h"
 
@@ -22,10 +23,9 @@ n::unixtime_t t(int const minutes) {
 
 n::routing::transport_mode_t::payload_t flex_payload(
     n::flex_transport_idx_t::value_t const transport,
-    n::stop_idx_t const stop,
-    osr::direction const dir) {
-  return motis::flex::mode_payload{n::flex_transport_idx_t{transport}, stop,
-                                   dir}
+    n::stop_idx_t const to_stop) {
+  return motis::flex::mode_payload{n::flex_transport_idx_t{transport}, 0U,
+                                   to_stop}
       .to_payload();
 }
 
@@ -77,8 +77,8 @@ std::optional<n::unixtime_t> arrival(
 }  // namespace
 
 TEST(motis, td_offsets_keep_shortest_same_window) {
-  auto const slow = flex_payload(1U, 0U, osr::direction::kBackward);
-  auto const fast = flex_payload(2U, 0U, osr::direction::kBackward);
+  auto const slow = flex_payload(1U, 0U);
+  auto const fast = flex_payload(2U, 0U);
 
   auto offsets = raw({
       {100, 200, n::duration_t{30}, slow},
@@ -91,8 +91,8 @@ TEST(motis, td_offsets_keep_shortest_same_window) {
 }
 
 TEST(motis, td_offsets_deterministic_on_equal_duration) {
-  auto const first = flex_payload(1U, 0U, osr::direction::kBackward);
-  auto const second = flex_payload(2U, 0U, osr::direction::kBackward);
+  auto const first = flex_payload(1U, 0U);
+  auto const second = flex_payload(2U, 0U);
 
   auto offsets = raw({
       {100, 200, n::duration_t{10}, first},
@@ -106,8 +106,8 @@ TEST(motis, td_offsets_deterministic_on_equal_duration) {
 }
 
 TEST(motis, td_offsets_split_overlapping_windows) {
-  auto const slow = flex_payload(1U, 0U, osr::direction::kBackward);
-  auto const fast = flex_payload(2U, 0U, osr::direction::kBackward);
+  auto const slow = flex_payload(1U, 0U);
+  auto const fast = flex_payload(2U, 0U);
 
   auto offsets = raw({
       {100, 220, n::duration_t{30}, slow},
@@ -137,9 +137,9 @@ TEST(motis, td_offsets_split_overlapping_windows) {
 }
 
 TEST(motis, td_offsets_fifo_cascade) {
-  auto const a = flex_payload(1U, 0U, osr::direction::kBackward);
-  auto const b = flex_payload(2U, 0U, osr::direction::kBackward);
-  auto const c = flex_payload(3U, 0U, osr::direction::kBackward);
+  auto const a = flex_payload(1U, 0U);
+  auto const b = flex_payload(2U, 0U);
+  auto const c = flex_payload(3U, 0U);
 
   // Three overlapping offers, each faster than the previous: the FIFO repair
   // cuts `a` relative to `b` (at 200 + 60 - 90 = 170) and `b` relative to `c`
@@ -169,8 +169,8 @@ TEST(motis, td_offsets_fifo_cascade) {
 }
 
 TEST(motis, td_offsets_keep_inactive_gaps) {
-  auto const first = flex_payload(1U, 0U, osr::direction::kBackward);
-  auto const second = flex_payload(2U, 0U, osr::direction::kBackward);
+  auto const first = flex_payload(1U, 0U);
+  auto const second = flex_payload(2U, 0U);
 
   auto offsets = raw({
       {100, 120, n::duration_t{10}, first},
@@ -186,8 +186,8 @@ TEST(motis, td_offsets_keep_inactive_gaps) {
 }
 
 TEST(motis, td_offsets_drop_fully_dominated_window) {
-  auto const slow = flex_payload(1U, 0U, osr::direction::kBackward);
-  auto const fast = flex_payload(2U, 0U, osr::direction::kBackward);
+  auto const slow = flex_payload(1U, 0U);
+  auto const fast = flex_payload(2U, 0U);
 
   auto offsets = raw({
       {100, 200, n::duration_t{100}, slow},
@@ -211,8 +211,8 @@ TEST(motis, td_offsets_drop_fully_dominated_window) {
 }
 
 TEST(motis, td_offsets_merge_inactive_after_cut) {
-  auto const slow = flex_payload(1U, 0U, osr::direction::kBackward);
-  auto const fast = flex_payload(2U, 0U, osr::direction::kBackward);
+  auto const slow = flex_payload(1U, 0U);
+  auto const fast = flex_payload(2U, 0U);
 
   // The slow offer is cut at 250 + 10 - 100 = 160; the envelope already has an
   // inactive gap at 200 (slow closes, fast not yet open). The cut's inactive
@@ -244,7 +244,7 @@ TEST(motis, td_offsets_merge_inactive_after_cut) {
 }
 
 TEST(motis, td_offsets_preserve_mode_payload) {
-  auto const backward = flex_payload(42U, 3U, osr::direction::kBackward);
+  auto const backward = flex_payload(42U, 3U);
 
   auto offsets = raw({
       {100, 200, n::duration_t{10}, backward},
@@ -254,7 +254,50 @@ TEST(motis, td_offsets_preserve_mode_payload) {
   ASSERT_EQ(3U, offsets.size());
   auto const restored =
       motis::flex::mode_payload{offsets[1].transport_mode_payload_};
-  EXPECT_EQ(osr::direction::kBackward, restored.get_dir());
   EXPECT_EQ(n::flex_transport_idx_t{42U}, restored.get_flex_transport());
-  EXPECT_EQ(static_cast<n::stop_idx_t>(3U), restored.get_stop());
+  EXPECT_EQ(static_cast<n::stop_idx_t>(0U), restored.get_from_stop());
+  EXPECT_EQ(static_cast<n::stop_idx_t>(3U), restored.get_to_stop());
+}
+
+// remove_slower_than_fastest_direct prunes single entries of a td offset
+// sequence. An entry is valid until the next one, so erasing it stretches its
+// predecessor over the erased span: with touching windows
+//     [10: 5 min, A] [20: 100 min, B] [30: closed]
+// erasing the 100-min entry leaves the 5-min offer of A valid until 30, an
+// offer nobody published. Pruning may only take options away; it must never
+// yield an arrival the unpruned sequence does not reach.
+TEST(motis, td_offsets_pruning_does_not_stretch_windows) {
+  auto const a = flex_payload(1U, 0U);
+  auto const b = flex_payload(2U, 0U);
+  auto const l = n::location_idx_t{7U};
+
+  auto offsets = raw({
+      {10, 20, n::duration_t{5}, a},
+      {20, 30, n::duration_t{100}, b},
+  });
+  motis::normalize_td_offsets(offsets);
+  ASSERT_EQ((std::vector{inactive(0), active(10, 5, a), active(20, 100, b),
+                         inactive(30)}),
+            offsets);
+
+  auto q = n::routing::query{};
+  q.fastest_direct_ = n::duration_t{50};
+  // Destination reachable in 0 min, so every start offset of >= 50 min loses
+  // against the direct connection and is pruned.
+  q.destination_.emplace_back(n::location_idx_t{8U}, n::duration_t{0}, 0U);
+  q.td_start_[l] = offsets;
+  motis::ep::remove_slower_than_fastest_direct(q);
+  auto const& pruned = q.td_start_.at(l);
+
+  // B is closed, not erased; the closer at 30 collapses into it.
+  EXPECT_EQ((std::vector{inactive(0), active(10, 5, a), inactive(20)}), pruned);
+
+  for (auto dep = 0; dep <= 40; ++dep) {
+    auto const want = arrival(offsets, dep);
+    auto const got = arrival(pruned, dep);
+    EXPECT_FALSE(got.has_value() && (!want.has_value() || *got < *want))
+        << "at minute " << dep;
+  }
+  // Departing inside B's window: A is gone, nothing is left.
+  EXPECT_FALSE(arrival(pruned, 25).has_value());
 }
