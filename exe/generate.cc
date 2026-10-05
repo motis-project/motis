@@ -219,17 +219,24 @@ int generate(int ac, char** av) {
     }
   };
 
+  auto const first_day_desc = fmt::format(
+      "first day of query generation (inclusive), format: YYYY-MM-DD "
+      "(default: last_day - {0} days; if neither first_day nor last_day is "
+      "given: the {0} day window with the most stop events)",
+      kDefaultWindowDays);
+  auto const last_day_desc = fmt::format(
+      "last day of query generation (exclusive), format: YYYY-MM-DD "
+      "(default: first_day + {} days)",
+      kDefaultWindowDays);
+
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
       ("n,n", po::value(&n)->default_value(n), "number of queries")  //
       ("first_day", po::value<std::string>()->notifier(parse_first_day),
-       "first day of query generation (inclusive), format: YYYY-MM-DD "
-       "(default: last_day - 14 days; if neither first_day nor last_day is "
-       "given: the two week window with the most stop events)")  //
+       first_day_desc.c_str())  //
       ("last_day", po::value<std::string>()->notifier(parse_last_day),
-       "last day of query generation (exclusive), format: YYYY-MM-DD "
-       "(default: first_day + 14 days)")  //
+       last_day_desc.c_str())  //
       ("time_of_day", po::value<std::uint32_t>()->notifier(parse_time_of_day),
        "fixes the time of day of all queries to the given number of hours "
        "after midnight, i.e., 0 - 23")  //
