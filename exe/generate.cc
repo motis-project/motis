@@ -127,7 +127,7 @@ n::interval<date::sys_days> busiest_window(n::timetable const& tt,
                              std::uint64_t{0U});
   auto best_sum = sum;
   auto best_start = 0U;
-  for (auto day = window_days; day < tt_days; ++day) {
+  for (auto day = window_days; day != tt_days; ++day) {
     sum += stops_per_day[day];
     sum -= stops_per_day[day - window_days];
     if (sum > best_sum) {
