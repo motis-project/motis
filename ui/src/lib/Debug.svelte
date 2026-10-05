@@ -11,7 +11,7 @@
 		TableHeader,
 		TableRow
 	} from '$lib/components/ui/table';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import { transfers } from '@motis-project/motis-client';
 	import Control from '$lib/map/Control.svelte';
 	import * as Card from '$lib/components/ui/card';
@@ -120,10 +120,13 @@
 		bounds && debug ? getFlex(maplibregl.LngLatBounds.convert(bounds)) : undefined
 	);
 
-	const parseElevator = (e: { outOfService: string }) => {
+	const parseElevator = (e: { outOfService: string | [string, string][] }) => {
+		// maplibre-gl >= 6 already decodes nested feature properties
+		const outOfService: [string, string][] =
+			typeof e.outOfService === 'string' ? JSON.parse(e.outOfService) : e.outOfService;
 		return {
 			...e,
-			outOfService: JSON.parse(e.outOfService).map(([from, to]: [string, string]) => {
+			outOfService: outOfService.map(([from, to]) => {
 				return [new Date(from), new Date(to)];
 			})
 		};

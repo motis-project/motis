@@ -1,17 +1,11 @@
 <script lang="ts">
-	import maplibregl from 'maplibre-gl';
-	import { setContext, type Snippet } from 'svelte';
+	import * as maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
+	import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+	import { setContext, type Snippet } from 'svelte';
 	import { createShield } from './shield';
 	import { browser } from '$app/environment';
-	// pinned to 0.2.3 — 0.4.0's `exports` field blocks deep-importing the worker script
-	import rtlTextUrl from '@mapbox/mapbox-gl-rtl-text/mapbox-gl-rtl-text.min.js?url';
 
-	// required for correct rendering of RTL scripts (Arabic, Hebrew, ...);
-	// lazy: only loaded once RTL text is actually encountered
-	if (browser && maplibregl.getRTLTextPluginStatus() === 'unavailable') {
-		maplibregl.setRTLTextPlugin(rtlTextUrl, true);
-	}
 	let {
 		map = $bindable(),
 		zoom = $bindable(),
@@ -57,6 +51,9 @@
 		}
 		let tmp: maplibregl.Map;
 		try {
+			// Set worker URL to get it bundled by Vite.
+			maplibregl.setWorkerUrl(workerUrl);
+
 			tmp = new maplibregl.Map({
 				hash: true,
 				container,

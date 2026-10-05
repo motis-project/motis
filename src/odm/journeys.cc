@@ -10,7 +10,7 @@
 #include "nigiri/routing/pareto_set.h"
 
 #include "motis/odm/odm.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 namespace motis::odm {
 
@@ -26,12 +26,11 @@ struct csv_journey {
       last_mile_duration_;
 };
 
-std::optional<nigiri::transport_mode_id_t> read_transport_mode(
-    std::string_view m) {
+std::optional<transport_mode_t> read_transport_mode(std::string_view m) {
   if (m == "taxi") {
-    return kOdmTransportModeId;
+    return kOdmTransportMode;
   } else if (m == "walk") {
-    return kWalkTransportModeId;
+    return kWalkTransportMode;
   } else {
     return std::nullopt;
   }
@@ -41,9 +40,9 @@ nigiri::routing::journey make_dummy(
     nigiri::unixtime_t const departure,
     nigiri::unixtime_t const arrival,
     std::uint8_t const transfers,
-    nigiri::transport_mode_id_t const first_mile_mode,
+    transport_mode_t const first_mile_mode,
     nigiri::duration_t const first_mile_duration,
-    nigiri::transport_mode_id_t const last_mile_mode,
+    transport_mode_t const last_mile_mode,
     nigiri::duration_t const last_mile_duration) {
   return nigiri::routing::journey{
       .legs_ = {{nigiri::direction::kForward, nigiri::location_idx_t::invalid(),
@@ -119,15 +118,15 @@ nigiri::pareto_set<nigiri::routing::journey> separate_pt(
 }
 
 std::string to_csv(nigiri::routing::journey const& j) {
-  auto const mode_str = [&](nigiri::transport_mode_id_t const mode) {
-    return mode == kOdmTransportModeId ? "taxi" : "walk";
+  auto const mode_str = [&](transport_mode_t const mode) {
+    return mode == kOdmTransportMode ? "taxi" : "walk";
   };
 
   auto const first_mile_mode =
       !j.legs_.empty() && std::holds_alternative<nigiri::routing::offset>(
                               j.legs_.front().uses_)
-          ? mode_str(std::get<nigiri::routing::offset>(j.legs_.front().uses_)
-                         .transport_mode_id_)
+          ? mode_str(
+                std::get<nigiri::routing::offset>(j.legs_.front().uses_).mode())
           : "walk";
 
   auto const first_mile_duration =
@@ -141,8 +140,8 @@ std::string to_csv(nigiri::routing::journey const& j) {
   auto const last_mile_mode =
       j.legs_.size() > 1 && std::holds_alternative<nigiri::routing::offset>(
                                 j.legs_.back().uses_)
-          ? mode_str(std::get<nigiri::routing::offset>(j.legs_.back().uses_)
-                         .transport_mode_id_)
+          ? mode_str(
+                std::get<nigiri::routing::offset>(j.legs_.back().uses_).mode())
           : "walk";
 
   auto const last_mile_duration =
@@ -178,7 +177,7 @@ nigiri::routing::journey make_odm_direct(nigiri::location_idx_t const from,
       .legs_ = {{nigiri::direction::kForward, from, to, departure, arrival,
                  nigiri::routing::offset{to,
                                          std::chrono::abs(arrival - departure),
-                                         kOdmTransportModeId}}},
+                                         kOdmTransportMode}}},
       .start_time_ = departure,
       .dest_time_ = arrival,
       .dest_ = to,

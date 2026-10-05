@@ -66,7 +66,8 @@ TEST(motis, itinerary_id_distinguishes_level_zero_from_no_level) {
       n::get_special_station(n::special_station::kStart),
       n::get_special_station(n::special_station::kEnd), dep, arr,
       n::routing::offset{n::get_special_station(n::special_station::kEnd),
-                         n::duration_t{1}, n::transport_mode_id_t{0}}});
+                         n::duration_t{1},
+                         n::routing::transport_mode_t::payload_t{0}}});
 
   auto const start =
       place_t{osr::location{geo::latlng{1.0, 2.0}, osr::level_t{0.F}}};
@@ -2190,7 +2191,7 @@ TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
          "FFM-HBF Gleis 101/102 elevator is out of service";
 }
 
-TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
+TEST(motis, itinerary_id_refresh_access_before_elevator_outage) {
   auto& d = get_elevator_test_case();
   d.rt_->e_ = std::make_unique<elevators>(
       *d.w_, nullptr, *d.elevator_nodes_,
@@ -2240,15 +2241,19 @@ TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
   EXPECT_EQ(api::ModeEnum::WALK, access.mode_);
   EXPECT_NE(true, access.cancelled_.value_or(false))
       << "access should remain feasible while the elevator is only briefly out";
-  EXPECT_GT(access.duration_, original_access_dur)
-      << "the elevator outage should extend the access by the platform wait";
   EXPECT_LT(access.startTime_.get_unixtime_seconds(), original_access_start)
       << "the access should start earlier to beat the outage";
-  EXPECT_EQ(original_access_end, access.endTime_.get_unixtime_seconds())
+  EXPECT_EQ(original_access_dur, access.duration_)
+      << "the access only covers the walk, the wait is spent on the platform";
+  EXPECT_LE(access.endTime_.get_unixtime_seconds(), original_access_end)
+      << "the access should end before the train departs";
+  ASSERT_GT(refreshed.legs_.size(), 1U);
+  ASSERT_GT(original.legs_.size(), 1U);
+  EXPECT_EQ(original.legs_[1].startTime_, refreshed.legs_[1].startTime_)
       << "the access should still board the same train";
 }
 
-TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
+TEST(motis, itinerary_id_refresh_transfer_after_elevator_outage) {
   auto& d = get_elevator_test_case();
   d.rt_->e_ = std::make_unique<elevators>(
       *d.w_, nullptr, *d.elevator_nodes_,
@@ -2276,7 +2281,6 @@ TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
   ASSERT_NE(transfer_it, end(original.legs_));
   auto const idx =
       static_cast<std::size_t>(transfer_it - begin(original.legs_));
-  auto const original_duration = transfer_it->duration_;
 
   // Take the FFM elevator out only for [22:30, 23:00) UTC (covers the 22:45
   // FFM_10 arrival, reopens before the 23:15 S3 departure).
@@ -2302,11 +2306,12 @@ TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
   EXPECT_NE(true, transfer.cancelled_.value_or(false))
       << "transfer should remain feasible while the elevator is only briefly "
          "out of service";
-  EXPECT_GT(transfer.duration_, original_duration)
-      << "the elevator outage should extend the transfer by the platform wait";
+  // 2019-04-30T23:00:00Z: the elevator is back in service.
+  EXPECT_GE(transfer.startTime_.get_unixtime_seconds(), 1556665200)
+      << "the transfer should wait on the platform until the elevator works";
   EXPECT_LE(transfer.endTime_.get_unixtime_seconds(),
             next_pt.startTime_.get_unixtime_seconds())
-      << "the extended transfer must still make the next PT departure";
+      << "the transfer must still make the next PT departure";
 }
 
 TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
@@ -2735,10 +2740,11 @@ TEST(motis, itinerary_id_refresh_first_mile_td_anchor) {
   auto const refreshed = refresh(query.to_url("?"));
   auto const& refresh_leg = first_transit_leg(refreshed);
 
-  // Sanity: the temporary outage inflated the first-mile access well beyond the
-  // ~2 min active-elevator walk.
-  EXPECT_GT(refreshed.legs_.front().duration_, 600)
-      << "DA elevator outage should inflate the first-mile access";
+  // Sanity: the temporary outage makes the first-mile access start earlier
+  // (before the outage); the wait for the train is spent on the platform.
+  EXPECT_LT(refreshed.legs_.front().startTime_.get_unixtime_seconds(),
+            original.legs_.front().startTime_.get_unixtime_seconds())
+      << "DA elevator outage should make the first-mile access start earlier";
 
   // The same-time alternative is only found when the alternatives search
   // anchors at the journey's CURRENT (inflated) origin departure - looked up
