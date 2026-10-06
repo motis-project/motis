@@ -105,7 +105,7 @@ export const colors = {
 		sport: '#272525',
 		sportOutline: '#272525',
 
-		building: '#1F1F1F',
+		building: '#313131',
 		buildingOutline: '#1A1A1A',
 
 		landuseComplex: '#292929',
@@ -136,21 +136,21 @@ export const colors = {
 		livingStreet: 'rgb(46, 46, 46)',
 		footpath: 'rgb(80, 80, 80)',
 		cycleway: 'rgb(110, 150, 205)',
-		unclassified: '#414141',
+		unclassified: '#484848',
 		steps: '#70504b',
 
 		elevatorOutline: '#808080',
 		elevator: '#3b423b',
 
-		roadBackResidential: '#414141',
-		roadBackNonResidential: '#414141',
+		roadBackResidential: '#484848',
+		roadBackNonResidential: '#484848',
 
-		motorway: '#414141',
-		motorwayLink: '#414141',
-		primarySecondary: '#414141',
-		linkTertiary: '#414141',
-		residential: '#414141',
-		road: '#414141',
+		motorway: '#484848',
+		motorwayLink: '#484848',
+		primarySecondary: '#484848',
+		linkTertiary: '#484848',
+		residential: '#484848',
+		road: '#484848',
 
 		text: '#9a9a9a',
 		textHalo: 'rgba(0, 0, 0, 0.8)',
