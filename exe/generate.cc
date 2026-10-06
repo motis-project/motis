@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -69,6 +70,13 @@ std::uint64_t rand_in(std::uint64_t const from, std::uint64_t const to) {
   return from + (combined % (to - from));
 }
 
+// uniformly distributed in [0, 1): 53 random bits fill a double's mantissa
+double rand_unit() {
+  return static_cast<double>(
+             rand_in(std::uint64_t{0U}, std::uint64_t{1U} << 53U)) *
+         0x1.0p-53;
+}
+
 template <typename It>
 It rand_in(It const begin, It const end) {
   return std::next(
@@ -138,7 +146,6 @@ int generate(int ac, char** av) {
   tg_geom* bounds{nullptr};
   auto const free_bounds = utl::make_finally([&]() { tg_geom_free(bounds); });
   auto population_grid = geo::grid<std::uint64_t>{};
-  auto population_grid_low = geo::grid<std::uint64_t>{};
   auto master_params = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -217,18 +224,13 @@ int generate(int ac, char** av) {
                 "could not read population grid file at {}", s.c_str());
     population_grid = geo::parse_eurostat_population_grid(*file_content);
     utl::erase_if(population_grid, [](auto const c) { return c.data_ == 0UL; });
+    utl::verify(!population_grid.empty(),
+                "population grid file at {} contains no populated cells",
+                s.c_str());
   };
 
   auto const grid_cell_rect = [](geo::box const& b) {
     return tg_rect{{b.min_.lng_, b.min_.lat_}, {b.max_.lng_, b.max_.lat_}};
-  };
-
-  auto const partial_sum_grid = [](geo::grid<std::uint64_t>& g) {
-    std::partial_sum(
-        g.begin(), g.end(), g.begin(),
-        [](auto const& acc, auto const& c) -> geo::grid_cell<std::uint64_t> {
-          return {c.b_, acc.data_ + c.data_};
-        });
   };
 
   auto desc = po::options_description{"Options"};
@@ -284,10 +286,12 @@ int generate(int ac, char** av) {
        "--population_from and/or --population_to to say which end of a query "
        "is drawn from it")  //
       ("population_from", po::value<std::string>()->notifier(parse_pop_from),
-       "weight the origin towards \"high\" or \"low\" population: every grid "
-       "cell stays eligible, only its likelihood changes - proportional to a "
-       "cell's population for \"high\", to (max population + 1 - the cell's) "
-       "for \"low\"; requires --population_grid")  //
+       "weight the origin towards \"high\" or \"low\" population: every "
+       "populated grid cell with an eligible stop can be drawn, only its "
+       "likelihood changes - proportional to the cell's population for "
+       "\"high\"; the mirror image for \"low\": the k-th least populated cell "
+       "is as likely as the k-th most populated cell is for \"high\"; "
+       "requires --population_grid, not supported with FLEX")  //
       ("population_to", po::value<std::string>()->notifier(parse_pop_to),
        "weight the destination the same way, overriding the default "
        "lower-bounds rank without needing --lb_rank 0; requires "
@@ -304,11 +308,15 @@ int generate(int ac, char** av) {
     return 0;
   }
 
-  utl::verify((!population_from && !population_to) || !population_grid.empty(),
+  auto const has_population_grid = vm.count("population_grid") != 0U;
+  utl::verify((!population_from && !population_to) || has_population_grid,
               "--population_from/--population_to require --population_grid");
-  utl::verify(population_grid.empty() || population_from || population_to,
+  utl::verify(!has_population_grid || population_from || population_to,
               "--population_grid requires --population_from and/or "
               "--population_to to say which end is drawn by population");
+  utl::verify(!population_from || !use_flex,
+              "--population_from cannot be combined with --modes FLEX: FLEX "
+              "draws `from` from the flex areas");
   utl::verify(!population_to || !geo_rank,
               "--population_to cannot be combined with --geo_rank: both "
               "decide how `to` is picked");
@@ -442,6 +450,11 @@ int generate(int ac, char** av) {
   // a stop with at least one route): the stops located within the cell,
   // used to weight random stop selection by population
   auto cell_stops = std::vector<std::vector<n::location_idx_t>>{};
+  // running totals of the per-cell selection weights, indexed like
+  // population_grid and cell_stops: population for kHigh, its rank mirror for
+  // kLow (only computed for the weightings in use)
+  auto cumulative_weight_high = std::vector<double>{};
+  auto cumulative_weight_low = std::vector<double>{};
   if (!population_grid.empty()) {
     auto const drop_grid_cells_out_of_bounds = [&](tg_geom const* geom,
                                                    char const* label) {
@@ -512,24 +525,49 @@ int generate(int ac, char** av) {
         "cells with total population {} remain for query generation",
         n_discarded, n_before, population_grid.size(), total_population);
 
+    auto const pop = [&](std::size_t const i) {
+      return population_grid[i].data_;
+    };
+    auto const cumulative_weights = [&](auto&& weight) {
+      auto v = std::vector<double>(population_grid.size());
+      auto sum = 0.0;
+      for (auto i = 0UL; i != population_grid.size(); ++i) {
+        sum += weight(i);
+        v[i] = sum;
+      }
+      return v;
+    };
+    if (population_from == pop_weight::kHigh ||
+        population_to == pop_weight::kHigh) {
+      cumulative_weight_high = cumulative_weights(
+          [&](std::size_t const i) { return static_cast<double>(pop(i)); });
+    }
     if (population_from == pop_weight::kLow ||
         population_to == pop_weight::kLow) {
-      // same cells/order as population_grid (and therefore cell_stops), but
-      // weighted inversely by population so low-population cells are the
-      // likely picks
-      population_grid_low = population_grid;
-      auto const max_pop =
-          std::max_element(
-              population_grid_low.begin(), population_grid_low.end(),
-              [](auto const& a, auto const& b) { return a.data_ < b.data_; })
-              ->data_;
-      for (auto& gc : population_grid_low) {
-        gc.data_ = max_pop + 1U - gc.data_;
+      // rank mirror of kHigh: the k-th least populated cell weighs as much as
+      // the k-th most populated one, i.e. kHigh's weights in reverse order;
+      // cells with equal population share the mean of their mirrored weights,
+      // so the order among them does not matter
+      auto by_pop = std::vector<std::size_t>(population_grid.size());
+      std::iota(begin(by_pop), end(by_pop), std::size_t{0U});
+      utl::sort(by_pop,
+                [&](auto const a, auto const b) { return pop(a) < pop(b); });
+      auto const m = by_pop.size();
+      auto mirrored = std::vector<double>(m);
+      for (auto first = 0UL; first != m;) {
+        auto last = first;
+        auto sum = 0.0;
+        for (; last != m && pop(by_pop[last]) == pop(by_pop[first]); ++last) {
+          sum += static_cast<double>(pop(by_pop[m - 1U - last]));
+        }
+        for (auto k = first; k != last; ++k) {
+          mirrored[by_pop[k]] = sum / static_cast<double>(last - first);
+        }
+        first = last;
       }
-      partial_sum_grid(population_grid_low);
+      cumulative_weight_low =
+          cumulative_weights([&](std::size_t const i) { return mirrored[i]; });
     }
-
-    partial_sum_grid(population_grid);
   }
 
   struct flex_seed {
@@ -558,20 +596,17 @@ int generate(int ac, char** av) {
     return v;
   }();
 
-  // randomizes a grid cell weighted by its population (random integer in
-  // [0, total_population) followed by a linear search over the partial
-  // sums), then picks uniformly at random among the cell's eligible stops
-  // population_grid_low shares its cells and their order with population_grid
-  // (and therefore with cell_stops), so both are indexed the same way
+  // randomizes a grid cell by its selection weight (random number in
+  // [0, total weight) followed by a binary search over the running totals),
+  // then picks uniformly at random among the cell's eligible stops
   auto const random_population_weighted_stop = [&](pop_weight const w) {
-    auto const& grid =
-        w == pop_weight::kHigh ? population_grid : population_grid_low;
-    auto const total = grid.back().data_;
-    auto const r = rand_in(std::uint64_t{0U}, total);
-    auto const cell =
-        utl::find_if(grid, [&](auto const& gc) { return r < gc.data_; });
-    auto const cell_idx =
-        static_cast<std::size_t>(std::distance(grid.begin(), cell));
+    auto const& cumulative =
+        w == pop_weight::kHigh ? cumulative_weight_high : cumulative_weight_low;
+    auto const r = rand_unit() * cumulative.back();
+    auto const cell = std::upper_bound(cumulative.begin(), cumulative.end(), r);
+    auto const cell_idx = std::min(
+        static_cast<std::size_t>(std::distance(cumulative.begin(), cell)),
+        cumulative.size() - 1U);  // guard against rounding
     return rand_in(cell_stops[cell_idx]);
   };
 
@@ -590,8 +625,8 @@ int generate(int ac, char** av) {
                ? "weighted towards high population (any cell can be drawn, "
                  "likelihood proportional to its population)"
                : "weighted towards low population (any cell can be drawn, "
-                 "likelihood proportional to max population + 1 - its "
-                 "population)";
+                 "the k-th least populated cell is as likely as the k-th most "
+                 "populated one is for high population)";
   };
   auto const from_desc = population_from
                              ? std::string{weight_desc(*population_from)}
