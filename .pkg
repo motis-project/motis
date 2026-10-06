@@ -17,7 +17,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=7c78f91a7ae9a9fdb9ed29ce5ba2e8c19acc8cb1
+  commit=bba61c2882db8bb057f9cdca0dee784f105959f1
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -35,9 +35,9 @@
   branch=master
   commit=d1d445326a5d3ec77e14394fee60962d08894ba0
 [nigiri]
-  url=git@github.com:motis-project/nigiri.git
-  branch=master
-  commit=e1e89785bb8a75ed1c658ab9ec67b33ec8fde49b
+  url=git@github.com:mority/nigiri.git
+  branch=drop-proj
+  commit=efc50f1f24197113a4ce3163e624dc48a99f6651
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
