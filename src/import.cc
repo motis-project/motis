@@ -31,6 +31,7 @@
 #include "nigiri/loader/loader_interface.h"
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
+#include "nigiri/location_routes.h"
 #include "nigiri/routing/tb/preprocess.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
@@ -369,6 +370,7 @@ void import(config const& c,
                        .default_transfer_time_ =
                            n::duration_t{static_cast<std::int16_t>(
                                t.default_transfer_time_)},
+                       .adjust_footpaths_ = t.adjust_footpaths_,
                        .default_tz_ = dc.default_timezone_.value_or(
                            t.default_timezone_.value_or("")),
                        .bikes_allowed_default_ = to_clasz_bool_array(
@@ -392,8 +394,7 @@ void import(config const& c,
                                })
                                .value_or("")}};
                 }),
-            {.adjust_footpaths_ = t.adjust_footpaths_,
-             .merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
+            {.merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_,
              .merge_stats_dir_ = data_path},
@@ -405,18 +406,6 @@ void import(config const& c,
             << to_str(n::get_metrics(*tt), *tt);
       },
       {tt_hash, n_version()}};
-
-  auto tbd = task{"tbd",
-                  {&tt},
-                  c.timetable_.has_value() && c.timetable_->tb_,
-                  [&]() {
-                    auto d = data{data_path};
-                    d.load_tt("tt.bin");
-                    cista::write(
-                        data_path / "tbd.bin",
-                        n::routing::tb::preprocess(*d.tt_, n::kDefaultProfile));
-                  },
-                  {tt_hash, n_version(), tbd_version()}};
 
   auto adr_extend = task{
       "adr_extend",
@@ -519,7 +508,8 @@ void import(config const& c,
              .profile_idx_ = n::kFootProfile,
              .max_matching_distance_ = c.timetable_->max_matching_distance_,
              .extend_missing_ = c.timetable_->extend_missing_footpaths_,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min,
+             .writes_default_profile_ = true},
             {.profile_ = osr::search_profile::kWheelchair,
              .profile_idx_ = n::kWheelchairProfile,
              .max_matching_distance_ = 8.0,
@@ -529,7 +519,7 @@ void import(config const& c,
              .max_matching_distance_ = 250.0,
              .max_duration_ = 8h,
              .is_candidate_ = [&](n::location_idx_t const l) {
-               return utl::any_of(d.tt_->location_routes_[l], [&](auto r) {
+               return n::any_route_at(*d.tt_, l, [&](n::route_idx_t const r) {
                  return d.tt_->is_flag_set(nigiri::kCarsAllowed, r);
                });
              }}};
@@ -550,6 +540,23 @@ void import(config const& c,
        std::pair{"way_matches",
                  cista::build_hash(c.timetable_.value_or(config::timetable{})
                                        .preprocess_max_matching_distance_)}}};
+
+  auto tbd_hashes = meta_t{tt_hash, n_version(), tbd_version()};
+  if (c.osr_footpath_) {
+    tbd_hashes.insert(begin(osr_footpath.hashes_), end(osr_footpath.hashes_));
+  }
+  auto tbd = task{"tbd",
+                  c.osr_footpath_ ? std::vector<task*>{&tt, &osr_footpath}
+                                  : std::vector<task*>{&tt},
+                  c.timetable_.has_value() && c.timetable_->tb_,
+                  [&]() {
+                    auto d = data{data_path};
+                    d.load_tt(c.osr_footpath_ ? "tt_ext.bin" : "tt.bin");
+                    cista::write(
+                        data_path / "tbd.bin",
+                        n::routing::tb::preprocess(*d.tt_, n::kDefaultProfile));
+                  },
+                  std::move(tbd_hashes)};
 
   auto route_shapes_task = task{
       "route_shapes",
