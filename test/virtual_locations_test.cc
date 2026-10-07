@@ -269,8 +269,8 @@ n::location_idx_t lidx(data const& d, char const* id) {
   return d.tt_->locations_.location_id_to_idx_.at({id, n::source_idx_t{0U}});
 }
 
-// how often each stop id occurs
-std::map<std::string, unsigned> count_ids(auto const& places, auto&& get) {
+// Every stop id occurs once (U among them).
+void expect_each_stop_once(auto const& places, auto&& get) {
   auto counts = std::map<std::string, unsigned>{};
   for (auto const& x : places) {
     auto const& p = get(x);
@@ -278,24 +278,21 @@ std::map<std::string, unsigned> count_ids(auto const& places, auto&& get) {
       ++counts[*p.stopId_];
     }
   }
-  return counts;
+  ASSERT_TRUE(counts.contains("test_U")) << "precondition";
+  for (auto const& [id, n] : counts) {
+    EXPECT_EQ(1U, n) << id;
+  }
 }
 
-api::Itinerary plan_l_to_m(data& d, std::string const& extra = "") {
+// The first itinerary from -> to, departing 09:55.
+api::Itinerary plan(data& d,
+                    std::string const& from,
+                    std::string const& to,
+                    std::string const& extra = "") {
   auto const routing = utl::init_from<ep::routing>(d).value();
-  auto const res = routing(
-      "?fromPlace=test_L&toPlace=test_M&time=2019-05-01T07:55:00Z"
-      "&timetableView=false" +
-      extra);
-  EXPECT_FALSE(res.itineraries_.empty());
-  return res.itineraries_.empty() ? api::Itinerary{} : res.itineraries_.front();
-}
-
-api::Itinerary plan_x_to_y(data& d) {
-  auto const routing = utl::init_from<ep::routing>(d).value();
-  auto const res = routing(
-      "?fromPlace=test_X&toPlace=test_Y&time=2019-05-01T07:55:00Z"
-      "&timetableView=false");
+  auto const res =
+      routing("?fromPlace=test_" + from + "&toPlace=test_" + to +
+              "&time=2019-05-01T07:55:00Z&timetableView=false" + extra);
   EXPECT_FALSE(res.itineraries_.empty());
   return res.itineraries_.empty() ? api::Itinerary{} : res.itineraries_.front();
 }
@@ -307,7 +304,7 @@ api::Itinerary plan_x_to_y(data& d) {
 TEST(virtual_locations, itinerary_names_the_stops) {
   auto& d = station();
   ASSERT_NE(0U, test::n_virts(*d.tt_)) << "precondition";
-  auto const it = plan_x_to_y(d);
+  auto const it = plan(d, "X", "Y");
   for (auto const& l : it.legs_) {
     for (auto const* p : {&l.from_, &l.to_}) {
       ASSERT_TRUE(p->stopId_.has_value());
@@ -351,7 +348,7 @@ TEST(virtual_locations, itinerary_with_real_time_is_found_again) {
   auto& d = station();
   auto const routing = utl::init_from<ep::routing>(d).value();
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
-  auto const original = plan_x_to_y(d);
+  auto const original = plan(d, "X", "Y");
   EXPECT_EQ(original,
             reconstruct_itinerary(routing, stop_times, *d.rt_, original.id_));
 }
@@ -401,26 +398,18 @@ TEST(virtual_locations, one_to_all_lists_each_stop_once) {
       "/api/v6/one-to-all?one=test_L&time=2019-05-01T07:55:00Z"
       "&maxTravelTime=90");
   ASSERT_TRUE(res.all_.has_value());
-  auto const counts = count_ids(
-      *res.all_, [](api::ReachablePlace const& p) -> api::Place const& {
-        return *p.place_;
-      });
-  ASSERT_TRUE(counts.contains("test_U")) << "precondition";
-  for (auto const& [id, n] : counts) {
-    EXPECT_EQ(1U, n) << id;
-  }
+  expect_each_stop_once(*res.all_,
+                        [](api::ReachablePlace const& p) -> api::Place const& {
+                          return *p.place_;
+                        });
 }
 
 TEST(virtual_locations, map_stops_lists_each_stop_once) {
   auto& d = plain();
   auto const stops = utl::init_from<ep::stops>(d).value();
   auto const res = stops("/api/v1/map/stops?min=54.9%2C12.9&max=55.3%2C13.1");
-  auto const counts = count_ids(
+  expect_each_stop_once(
       res, [](api::Place const& p) -> api::Place const& { return p; });
-  ASSERT_TRUE(counts.contains("test_U")) << "precondition";
-  for (auto const& [id, n] : counts) {
-    EXPECT_EQ(1U, n) << id;
-  }
 }
 
 TEST(virtual_locations, map_routes_lists_each_stop_once) {
@@ -429,12 +418,8 @@ TEST(virtual_locations, map_routes_lists_each_stop_once) {
   auto const res = routes(
       "/api/experimental/map/routes?max=55.3%2C13.1&min=54.9%2C12.9"
       "&zoom=16");
-  auto const counts = count_ids(
+  expect_each_stop_once(
       res.stops_, [](api::Place const& p) -> api::Place const& { return p; });
-  ASSERT_TRUE(counts.contains("test_U")) << "precondition";
-  for (auto const& [id, n] : counts) {
-    EXPECT_EQ(1U, n) << id;
-  }
 }
 
 // exactRadius: the stop itself, but that includes the trips a rule moved to
@@ -454,7 +439,7 @@ TEST(virtual_locations, stop_times_exact_radius_lists_moved_departures) {
 
 TEST(virtual_locations, refresh_itinerary_through_virtual_location) {
   auto& d = plain();
-  auto const original = plan_l_to_m(d);
+  auto const original = plan(d, "L", "M");
   ASSERT_FALSE(original.legs_.empty());
 
   auto const routing = utl::init_from<ep::routing>(d).value();
@@ -471,7 +456,7 @@ TEST(virtual_locations, refresh_itinerary_through_virtual_location) {
 
 TEST(virtual_locations, leg_alternatives_after_trip_at_virtual_location) {
   auto& d = plain();
-  auto const it = plan_l_to_m(d, "&numLegAlternatives=3");
+  auto const it = plan(d, "L", "M", "&numLegAlternatives=3");
   auto const fb = utl::find_if(it.legs_, [](api::Leg const& l) {
     return l.tripId_.has_value() && l.tripId_->ends_with("_FB");
   });
