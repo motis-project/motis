@@ -35,9 +35,9 @@
   branch=master
   commit=d1d445326a5d3ec77e14394fee60962d08894ba0
 [nigiri]
-  url=git@github.com:mority/nigiri.git
-  branch=drop-proj
-  commit=efc50f1f24197113a4ce3163e624dc48a99f6651
+  url=git@github.com:motis-project/nigiri.git
+  branch=master
+  commit=00a4681837ef2a7e0552e32a150cd171f7036375
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
