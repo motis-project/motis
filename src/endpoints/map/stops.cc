@@ -40,9 +40,10 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   if (!grouped) {
     loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
       auto location_clasz_mask = n::routing::clasz_mask_t{0};
-      n::for_each_route_at_stop(tt_, l, [&](n::route_idx_t const r) {
-        location_clasz_mask |= n::routing::to_mask(tt_.route_clasz_[r]);
-      });
+      n::for_each_route_at_stop(
+          tt_, l, [&](n::location_idx_t, n::route_idx_t const r) {
+            location_clasz_mask |= n::routing::to_mask(tt_.route_clasz_[r]);
+          });
       if (location_clasz_mask == 0) {
         return;
       }
