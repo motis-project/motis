@@ -19,7 +19,7 @@ std::vector<n::location_idx_t> get_stops_with_traffic(
     n::location_idx_t const not_equal_to) {
   auto ret = std::vector<n::location_idx_t>{};
   rtree.in_radius(pos.pos_, distance, [&](n::location_idx_t const l) {
-    if (!n::has_routes(tt, l) &&
+    if (!n::any_route_at(tt, l) &&
         (rtt == nullptr || rtt->location_rt_transports_[l].empty())) {
       return;
     }

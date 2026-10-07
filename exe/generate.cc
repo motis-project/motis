@@ -80,7 +80,7 @@ n::location_idx_t random_stop(n::timetable const& tt,
   auto s = n::location_idx_t::invalid();
   do {
     s = rand_in(stops);
-  } while (!n::has_routes(tt, s));
+  } while (!n::any_route_at(tt, s));
   return s;
 }
 
