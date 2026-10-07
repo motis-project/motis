@@ -119,7 +119,7 @@ void add_trip_updates(n::timetable const& tt,
           last_delay = dep_delay;
         }
       }
-      if (s.is_cancelled() && !s.get_raw_scheduled_stop().is_cancelled()) {
+      if (s.is_cancelled() && !s.get_scheduled_stop().is_cancelled()) {
         set_stu();
         stu->set_schedule_relationship(
             transit_realtime::TripUpdate_StopTimeUpdate_ScheduleRelationship::

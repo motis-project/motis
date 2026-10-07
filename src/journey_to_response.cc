@@ -739,8 +739,8 @@ api::Itinerary journey_to_response(
                 for (auto i = first; i < last; ++i) {
                   auto const stop = fr[i];
                   if (!with_scheduled_skipped_stops &&
-                      !stop.get_raw_scheduled_stop().in_allowed() &&
-                      !stop.get_raw_scheduled_stop().out_allowed() &&
+                      !stop.get_scheduled_stop().in_allowed() &&
+                      !stop.get_scheduled_stop().out_allowed() &&
                       !stop.in_allowed() && !stop.out_allowed()) {
                     continue;
                   }

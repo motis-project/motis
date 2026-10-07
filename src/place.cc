@@ -219,8 +219,8 @@ api::Place to_place(n::timetable const* tt,
                        ? api::PickupDropoffTypeEnum::NORMAL
                        : api::PickupDropoffTypeEnum::NOT_ALLOWED;
   p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
-                                   (s.get_raw_scheduled_stop().in_allowed() ||
-                                    s.get_raw_scheduled_stop().out_allowed()));
+                                   (s.get_scheduled_stop().in_allowed() ||
+                                    s.get_scheduled_stop().out_allowed()));
   return p;
 }
 
