@@ -43,6 +43,7 @@ namespace po = boost::program_options;
 namespace motis {
 
 constexpr auto kMinRank = 16U;
+constexpr auto kMaxPlaceAttempts = 1000U;
 
 constexpr auto kEuropeBounds = R"({
   "type": "Polygon",
@@ -644,7 +645,7 @@ int generate(int ac, char** av) {
       auto from_place = std::optional<std::string>{};
       auto to_place = std::optional<std::string>{};
 
-      for (auto x = 0U; x != 1000U; ++x) {
+      for (auto x = 0U; x != kMaxPlaceAttempts; ++x) {
         // stop used to lb-rank the destination (invalid -> random
         // destination)
         auto rank_stop = n::location_idx_t::invalid();
@@ -695,6 +696,11 @@ int generate(int ac, char** av) {
           break;
         }
       }
+
+      utl::verify(from_place.has_value() && to_place.has_value(),
+                  "no origin and destination with an eligible OSM node within "
+                  "--max_dist {} m found in {} attempts",
+                  max_dist, kMaxPlaceAttempts);
 
       s.p_.fromPlace_ = *from_place;
       s.p_.toPlace_ = *to_place;
