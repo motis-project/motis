@@ -41,7 +41,6 @@ namespace po = boost::program_options;
 namespace motis {
 
 constexpr auto kMinRank = 16U;
-constexpr auto kMaxPlaceAttempts = 1000U;
 
 constexpr auto kEuropeBounds = R"({
   "type": "Polygon",
@@ -289,24 +288,33 @@ int generate(int ac, char** av) {
     fmt::println("station-to-station");
   }
 
+  // intermodal: only stops with an eligible OSM node within max_dist, so that
+  // every stop drawn as origin or destination yields a place
   auto const master_stops = [&] {
+    auto eligible = std::vector<std::uint8_t>(d.tt_->n_locations(), 0U);
+    utl::parallel_for_run(d.tt_->n_locations(), [&](auto const i) {
+      auto const& pos = d.tt_->locations_.coordinates_[n::location_idx_t{i}];
+      eligible[i] = in_bounds(pos) &&
+                    (!use_odm_bounds || d.odm_bounds_->contains(pos)) &&
+                    (!modes || node_rtree.any_in_radius(pos, max_dist));
+    });
+
     auto v = std::vector<n::location_idx_t>{};
     for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
-      auto const l = n::location_idx_t{i};
-
-      if (!in_bounds(d.tt_->locations_.coordinates_[l]) ||
-          (use_odm_bounds &&
-           !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l]))) {
-        continue;
+      if (eligible[i] != 0U) {
+        v.emplace_back(i);
       }
-      v.emplace_back(l);
     }
     return v;
   }();
 
-  if (bounds != nullptr) {
-    fmt::println("in bounds: {}/{} stops", master_stops.size(),
+  if (bounds != nullptr || modes) {
+    fmt::println("eligible: {}/{} stops", master_stops.size(),
                  d.tt_->n_locations());
+  }
+  if (master_stops.empty()) {
+    fmt::println("can not generate queries: no eligible stops");
+    return 1;
   }
 
   population.match_stops(*d.tt_, master_stops);
@@ -370,23 +378,20 @@ int generate(int ac, char** av) {
                    geo_rank_index, master_stops.size() - 1U);
       return -1;
     }
-    to_desc = events.enabled_
-                  ? fmt::format(
-                        "geo-rank {} of `from`: among the [{}, {})-th nearest "
-                        "stops by distance, weighted by number of arrivals",
-                        *geo_rank, geo_rank_index / 2UL, geo_rank_index)
-                  : fmt::format(
-                        "geo-rank {} of `from`: the {}-th nearest stop by "
-                        "distance",
-                        *geo_rank, geo_rank_index);
+    to_desc =
+        fmt::format("geo-rank {} of `from`: the {}-th nearest stop by distance",
+                    *geo_rank, geo_rank_index);
     lb_rank = false;
   } else if (lb_rank) {
-    to_desc = events.enabled_
-                  ? "lower-bounds rank of `from`: among the [2^(n-1), 2^n)-th "
-                    "stops by travel-time lower bound, weighted by number of "
-                    "arrivals, n varied per query"
-                  : "lower-bounds rank of `from`: the 2^n-th stop by "
-                    "travel-time lower bound, n varied per query";
+    if (kMinRank >= master_stops.size()) {
+      fmt::println(
+          "lb-rank index exceeds number of stops: {} >= {}, use --lb_rank 0",
+          kMinRank, master_stops.size());
+      return -1;
+    }
+    to_desc =
+        "lower-bounds rank of `from`: the 2^n-th stop by travel-time lower "
+        "bound, n varied per query";
   } else {
     to_desc = events.enabled_ ? "weighted by its number of arrivals"
                               : "drawn uniformly at random";
@@ -415,95 +420,67 @@ int generate(int ac, char** av) {
     s.stops_ = master_stops;
     s.geo_distance_.reserve(master_stops.size());
 
-    auto const get_place =
-        [&](n::location_idx_t const l) -> std::optional<std::string> {
+    // master_stops only holds stops with an eligible OSM node in range
+    auto const get_place = [&](n::location_idx_t const l) -> std::string {
       if (!modes) {
         return d.tags_->id(*d.tt_, l);
       }
 
-      auto const nodes =
-          node_rtree.in_radius(d.tt_->locations_.coordinates_[l], max_dist);
-      if (nodes.empty()) {
-        return std::nullopt;
-      }
-
-      auto const pos = d.w_->get_node_pos(rand_in(nodes));
+      auto const pos = d.w_->get_node_pos(rand_in(
+          node_rtree.in_radius(d.tt_->locations_.coordinates_[l], max_dist)));
       return fmt::format("{},{}", pos.lat(), pos.lng());
     };
 
     auto const random_from_to = [&] {
-      auto from_place = std::optional<std::string>{};
-      auto to_place = std::optional<std::string>{};
-
-      for (auto x = 0U; x != kMaxPlaceAttempts; ++x) {
-        // stop used to lb-rank the destination (invalid -> random
-        // destination)
-        auto rank_stop = n::location_idx_t::invalid();
-        if (use_flex) {
-          auto const seed = rand_in(flex_seeds);
-          from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
-          rank_stop = seed.rank_stop_;
-        } else {
-          rank_stop = population.from_
-                          ? random_population_weighted_stop(*population.from_)
-                      : events.enabled_ ? events.random_from(*d.tt_, s.stops_)
-                                        : random_stop(*d.tt_, s.stops_);
-          from_place = get_place(rank_stop);
-          if (!from_place) {
-            continue;
-          }
-        }
-
-        if (lb_rank && rank_stop != n::location_idx_t::invalid()) {
-          auto const search = n::routing::search<
-              n::direction::kBackward,
-              n::routing::raptor<n::direction::kBackward, false, 0,
-                                 n::routing::search_mode::kOneToAll>>{
-              *d.tt_, nullptr, s.ss_, s.rs_,
-              nigiri::routing::query{
-                  .start_time_ = d.tt_->date_range_.from_,
-                  .destination_ = {{rank_stop, n::duration_t{0U}, 0}}}};
-          utl::sort(s.stops_, [&](auto const& a, auto const& b) {
-            return s.ss_.travel_time_lower_bound_[to_idx(a)] <
-                   s.ss_.travel_time_lower_bound_[to_idx(b)];
-          });
-          to_place =
-              get_place(events.enabled_ ? events.random_to(s.stops_, r / 2U, r)
-                                        : s.stops_[r]);
-        } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
-          auto const& rank_stop_pos = d.tt_->locations_.coordinates_[rank_stop];
-          auto const lng_degrees =
-              geo::approx_distance_lng_degrees(rank_stop_pos);
-          for (auto const l : s.stops_) {
-            s.geo_distance_[l] = geo::approx_squared_distance(
-                rank_stop_pos, d.tt_->locations_.coordinates_[l], lng_degrees);
-          }
-          utl::sort(s.stops_, [&](auto const& a, auto const& b) {
-            return s.geo_distance_[a] < s.geo_distance_[b];
-          });
-          to_place = get_place(
-              events.enabled_ ? events.random_to(s.stops_, geo_rank_index / 2UL,
-                                                 geo_rank_index)
-                              : s.stops_[geo_rank_index]);
-        } else {
-          to_place = get_place(
-              population.to_ ? random_population_weighted_stop(*population.to_)
-              : events.enabled_
-                  ? events.random_to(s.stops_, 0U, s.stops_.size())
-                  : random_stop(*d.tt_, s.stops_));
-        }
-        if (to_place) {
-          break;
-        }
+      // stop used to lb-rank the destination (invalid -> random destination)
+      auto rank_stop = n::location_idx_t::invalid();
+      if (use_flex) {
+        auto const seed = rand_in(flex_seeds);
+        s.p_.fromPlace_ =
+            fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
+        rank_stop = seed.rank_stop_;
+      } else {
+        rank_stop = population.from_
+                        ? random_population_weighted_stop(*population.from_)
+                    : events.enabled_ ? events.random_from(*d.tt_, s.stops_)
+                                      : random_stop(*d.tt_, s.stops_);
+        s.p_.fromPlace_ = get_place(rank_stop);
       }
 
-      utl::verify(from_place.has_value() && to_place.has_value(),
-                  "no origin and destination with an eligible OSM node within "
-                  "--max_dist {} m found in {} attempts",
-                  max_dist, kMaxPlaceAttempts);
-
-      s.p_.fromPlace_ = *from_place;
-      s.p_.toPlace_ = *to_place;
+      if (lb_rank && rank_stop != n::location_idx_t::invalid()) {
+        auto const search = n::routing::search<
+            n::direction::kBackward,
+            n::routing::raptor<n::direction::kBackward, false, 0,
+                               n::routing::search_mode::kOneToAll>>{
+            *d.tt_, nullptr, s.ss_, s.rs_,
+            nigiri::routing::query{
+                .start_time_ = d.tt_->date_range_.from_,
+                .destination_ = {{rank_stop, n::duration_t{0U}, 0}}}};
+        utl::sort(s.stops_, [&](auto const& a, auto const& b) {
+          return s.ss_.travel_time_lower_bound_[to_idx(a)] <
+                 s.ss_.travel_time_lower_bound_[to_idx(b)];
+        });
+        s.p_.toPlace_ = get_place(s.stops_[r]);
+      } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
+        auto const& rank_stop_pos = d.tt_->locations_.coordinates_[rank_stop];
+        auto const lng_degrees =
+            geo::approx_distance_lng_degrees(rank_stop_pos);
+        for (auto const l : s.stops_) {
+          s.geo_distance_[l] = geo::approx_squared_distance(
+              rank_stop_pos, d.tt_->locations_.coordinates_[l], lng_degrees);
+        }
+        // `from` first, also ahead of other stops at its position
+        s.geo_distance_[rank_stop] = -1.0;
+        utl::sort(s.stops_, [&](auto const& a, auto const& b) {
+          return s.geo_distance_[a] < s.geo_distance_[b];
+        });
+        s.p_.toPlace_ = get_place(s.stops_[geo_rank_index]);
+      } else {
+        s.p_.toPlace_ = get_place(
+            population.to_    ? random_population_weighted_stop(*population.to_)
+            : events.enabled_ ? events.random_to(*d.tt_, s.stops_)
+                              : random_stop(*d.tt_, s.stops_));
+      }
     };
 
     auto const random_time = [&] {

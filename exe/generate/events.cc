@@ -19,9 +19,10 @@ void event_sampler::add_options(po::options_description& desc) {
       ("event_weighted", po::value(&enabled_)->default_value(enabled_),
        "sample from_place with probability proportional to its departure "
        "count and to_place with probability proportional to its arrival "
-       "count within [first_day, last_day); with lb_rank/geo_rank, the "
-       "weighting is applied within the respective rank bucket instead of "
-       "picking the exact rank; not supported with FLEX");
+       "count within [first_day, last_day); with lb_rank/geo_rank, to_place "
+       "stays the exact rank and only from_place is weighted (lb_rank is on "
+       "by default: use --lb_rank 0 to weight to_place); not supported with "
+       "FLEX");
 }
 
 void event_sampler::verify(bool const use_flex,
@@ -104,29 +105,25 @@ n::location_idx_t event_sampler::random_from(
 }
 
 n::location_idx_t event_sampler::random_to(
-    std::vector<n::location_idx_t> const& stops,
-    std::size_t lo,
-    std::size_t hi) const {
-  hi = std::min(hi, stops.size());
-  lo = std::min(lo, hi > 0U ? hi - 1U : 0U);
+    n::timetable const& tt, std::vector<n::location_idx_t> const& stops) const {
   auto total = 0.0;
-  for (auto k = lo; k != hi; ++k) {
-    total += arr_weight_[to_idx(stops[k])];
+  for (auto const l : stops) {
+    total += arr_weight_[to_idx(l)];
   }
   if (total <= 0.0) {
-    return stops[lo + rand_in(0U, static_cast<std::uint32_t>(hi - lo))];
+    return random_stop(tt, stops);
   }
-  // stop k is drawn for x in [acc before k, acc after k): never if its
+  // stop l is drawn for x in [acc before l, acc after l): never if its
   // weight is zero
   auto const x = total * rand_unit();
   auto acc = 0.0;
-  for (auto k = lo; k != hi; ++k) {
-    acc += arr_weight_[to_idx(stops[k])];
+  for (auto const l : stops) {
+    acc += arr_weight_[to_idx(l)];
     if (x < acc) {
-      return stops[k];
+      return l;
     }
   }
-  return stops[hi - 1U];
+  return stops.back();
 }
 
 }  // namespace motis

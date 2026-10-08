@@ -184,18 +184,13 @@ TEST_F(event_sampler_test, random_from_without_departures_is_uniform) {
   EXPECT_EQ((std::set{loc("A"), loc("B"), loc("C")}), drawn);
 }
 
-TEST_F(event_sampler_test, random_to_weighted_by_arrivals_within_range) {
+TEST_F(event_sampler_test, random_to_weighted_by_arrivals) {
   auto const s =
       counted(sys_days{2024_y / March / 4}, sys_days{2024_y / March / 6});
-  auto const stops = std::vector{loc("C"), loc("D"), loc("A"), loc("B")};
 
   auto n_b = 0U;
   for (auto i = 0U; i != kDraws; ++i) {
-    // D and A have no arrivals
-    EXPECT_EQ(loc("C"), s.random_to(stops, 0U, 2U));
-    EXPECT_EQ(loc("B"), s.random_to(stops, 2U, 100U));  // hi is clamped
-
-    auto const l = s.random_to(stops, 0U, stops.size());
+    auto const l = s.random_to(tt_, all_locations());
     ASSERT_TRUE(l == loc("B") || l == loc("C"));
     n_b += l == loc("B") ? 1U : 0U;
   }
@@ -203,16 +198,17 @@ TEST_F(event_sampler_test, random_to_weighted_by_arrivals_within_range) {
   EXPECT_NEAR(0.6, static_cast<double>(n_b) / kDraws, 0.05);
 }
 
-TEST_F(event_sampler_test, random_to_without_arrivals_is_uniform_in_range) {
+TEST_F(event_sampler_test, random_to_without_arrivals_is_uniform) {
+  // no service from March 6 on
   auto const s =
-      counted(sys_days{2024_y / March / 4}, sys_days{2024_y / March / 6});
-  auto const stops = std::vector{loc("C"), loc("D"), loc("A"), loc("B")};
+      counted(sys_days{2024_y / March / 6}, sys_days{2024_y / March / 8});
 
   auto drawn = std::set<n::location_idx_t>{};
   for (auto i = 0U; i != kDraws; ++i) {
-    drawn.insert(s.random_to(stops, 1U, 3U));
+    drawn.insert(s.random_to(tt_, all_locations()));
   }
-  EXPECT_EQ((std::set{loc("D"), loc("A")}), drawn);
+  // any stop with a route
+  EXPECT_EQ((std::set{loc("A"), loc("B"), loc("C")}), drawn);
 }
 
 TEST(event_sampler, random_from_resolves_small_weights) {

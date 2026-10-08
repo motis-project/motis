@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <vector>
 
 #include "boost/program_options.hpp"
@@ -38,13 +37,12 @@ struct event_sampler {
       nigiri::timetable const&,
       std::vector<nigiri::location_idx_t> const& stops) const;
 
-  // picks a stop from stops[lo, hi) with probability proportional to its
-  // arrival weight, falling back to a uniform pick within the range if all
-  // weights in range are zero
+  // picks one of `stops` with probability proportional to its arrival weight,
+  // falling back to a uniform pick from `stops` if there are no arrivals at
+  // all
   nigiri::location_idx_t random_to(
-      std::vector<nigiri::location_idx_t> const& stops,
-      std::size_t lo,
-      std::size_t hi) const;
+      nigiri::timetable const&,
+      std::vector<nigiri::location_idx_t> const& stops) const;
 
   bool enabled_{false};
 
