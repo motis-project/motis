@@ -1079,7 +1079,9 @@
 		>
 			<Tabs.List class="grid shrink-0 grid-cols-3">
 				<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
-				<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
+				<Tabs.Trigger value="departures"
+					>{page.state.stopArriveBy ? t.arrivals : t.departures}</Tabs.Trigger
+				>
 				<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 			</Tabs.List>
 			<Tabs.Content value="connections" class="min-h-0 overflow-hidden">
