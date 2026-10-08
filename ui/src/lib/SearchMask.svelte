@@ -2,9 +2,7 @@
 	import { t } from '$lib/i18n/translation';
 	import { ArrowUpDown, LocateFixed } from '@lucide/svelte';
 	import type * as maplibregl from 'maplibre-gl';
-	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
-	import { Label } from '$lib/components/ui/label';
 	import {
 		type CyclingSpeed,
 		type PedestrianSpeed,
@@ -18,6 +16,7 @@
 	import DateInput from '$lib/DateInput.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import type { PrePostDirectMode } from '$lib/Modes';
+	import DepartureArrivalSwitch from '$lib/DepartureArrivalSwitch.svelte';
 
 	let {
 		geocodingBiasPlace,
@@ -176,30 +175,7 @@
 	</Button>
 	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
-		<RadioGroup.Root
-			class="flex"
-			bind:value={() => (arriveBy ? 'arrival' : 'departure'), (v) => (arriveBy = v === 'arrival')}
-		>
-			<Label
-				for="departure"
-				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
-			>
-				<RadioGroup.Item
-					value="departure"
-					id="departure"
-					class="sr-only"
-					aria-label={t.departure}
-				/>
-				<span>{t.departure}</span>
-			</Label>
-			<Label
-				for="arrival"
-				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
-			>
-				<RadioGroup.Item value="arrival" id="arrival" class="sr-only" aria-label={t.arrival} />
-				<span>{t.arrival}</span>
-			</Label>
-		</RadioGroup.Root>
+		<DepartureArrivalSwitch bind:arriveBy />
 		<AdvancedOptions
 			{serverConfig}
 			bind:advancedOptionsOpen
