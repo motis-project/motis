@@ -207,7 +207,8 @@ configure_file(
         ${CMAKE_CURRENT_BINARY_DIR}/generated/test_dir.h
 )
 file(GLOB_RECURSE motis-test-files test/*.cc)
-add_executable(motis-test ${motis-test-files})
+add_executable(motis-test ${motis-test-files} exe/generate/population.cc)
+target_include_directories(motis-test PRIVATE exe)
 target_link_libraries(motis-test
     motislib
     gmock
