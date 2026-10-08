@@ -37,9 +37,11 @@ const translations: Translations = {
 	departure: 'Odjezd',
 	duration: 'Čas cesty',
 	arrivals: 'Příjezdy',
+	arrivalsAt: (stop) => `Příjezdy do ${stop}`,
 	later: 'později',
 	earlier: 'dřive',
 	departures: 'Odjezdy',
+	departuresAt: (stop) => `Odjezdy ze ${stop}`,
 	connections: 'Spoje',
 	switchToArrivals: 'Přepni na příjezdy',
 	switchToDepartures: 'Přepni na odjezdy',
@@ -216,8 +218,6 @@ const translations: Translations = {
 	pageTitle: {
 		default: 'MOTIS',
 		fromTo: (from, to) => `${from} do ${to}`,
-		departuresAt: (stop) => `Odjezdy ze ${stop}`,
-		arrivalsAt: (stop) => `Příjezdy do ${stop}`,
 		isochronesFrom: (place) => `Izochrony z ${place}`
 	},
 	tickets: 'Vstupenky',

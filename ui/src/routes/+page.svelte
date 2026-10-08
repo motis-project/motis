@@ -1286,12 +1286,10 @@
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
 						{#if page.state.stopArriveBy}
-							{t.arrivals}
+							{t.arrivalsAt(stopNameFromResponse)}
 						{:else}
-							{t.departures}
+							{t.departuresAt(stopNameFromResponse)}
 						{/if}
-						in
-						{stopNameFromResponse}
 					</h2>
 					<Button
 						variant="ghost"
