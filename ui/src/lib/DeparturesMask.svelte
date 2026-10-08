@@ -6,6 +6,14 @@
 	import { page } from '$app/state';
 	import DateInput from '$lib/DateInput.svelte';
 	import DepartureArrivalSwitch from '$lib/DepartureArrivalSwitch.svelte';
+	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
+	import type { Mode } from '@motis-project/motis-client';
+
+	let {
+		modes = $bindable()
+	}: {
+		modes: Mode[];
+	} = $props();
 
 	let time = $derived(page.state.selectedStop?.time ?? new Date(Date.now()));
 	let arriveBy = $derived(page.state.stopArriveBy ?? false);
@@ -56,4 +64,5 @@
 			}
 		/>
 	</div>
+	<TransitModeSelect bind:transitModes={modes} />
 </div>

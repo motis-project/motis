@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		type Mode,
 		stoptimes,
 		type StoptimesError,
 		type StoptimesResponse
@@ -25,6 +26,7 @@
 		stop = $bindable(),
 		stopMarker = $bindable(),
 		arriveBy,
+		modes,
 		exactRadius = false
 	}: {
 		stopId: string;
@@ -33,6 +35,7 @@
 		stopNameFromResponse: string;
 		stop: Location | undefined;
 		stopMarker: maplibregl.Marker | undefined;
+		modes: Mode[];
 		// only show the events of this exact stop (no parent / child / equivalent stops)
 		exactRadius?: boolean;
 	} = $props();
@@ -41,6 +44,7 @@
 		stopId,
 		time: queryTime.toISOString(),
 		arriveBy,
+		mode: modes,
 		exactRadius: exactRadius ? true : undefined,
 		n: 10,
 		language: [language]

@@ -564,6 +564,8 @@
 	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
+	let stopsTransitModes = $state<Mode[]>(possibleTransitModes);
+
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
@@ -1140,7 +1142,7 @@
 				<Card
 					class="max-h-[calc(97dvh-2.5rem)] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 				>
-					<DeparturesMask />
+					<DeparturesMask bind:modes={stopsTransitModes} />
 				</Card>
 			</Tabs.Content>
 			<Tabs.Content value="isochrones" class="min-h-0 overflow-hidden">
@@ -1309,6 +1311,7 @@
 						bind:stopNameFromResponse
 						arriveBy={page.state.stopArriveBy}
 						exactRadius={page.state.exactRadius}
+						modes={stopsTransitModes}
 					/>
 				</div>
 			</Card>
