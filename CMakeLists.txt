@@ -34,6 +34,10 @@ endif()
 include(cmake/buildcache.cmake)
 include(cmake/pkg.cmake)
 
+# pugixml only requires C++11. MSVC defaults to C++14, which compiles pugixml
+# without the std::string_view overloads that motis (C++23) calls.
+target_compile_features(pugixml PUBLIC cxx_std_17)
+
 if (MOTIS_MIMALLOC)
     if(WIN32)
         set(motis-mimalloc-lib mimalloc)
@@ -166,6 +170,7 @@ target_link_libraries(motislib
     opentelemetry_trace
     opentelemetry_exporter_otlp_http
     lmdb
+    pugixml
     Boost::stacktrace
     "$<${_MOTIS_STACKTRACE_ON}:Boost::stacktrace_from_exception>"
 )
