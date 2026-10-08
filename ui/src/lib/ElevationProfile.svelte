@@ -26,6 +26,11 @@
             minResolution = (minResolution) ? Math.min(minResolution, d) : d;
             maxResolution = Math.max(maxResolution, d);
             maxDistance += d;
+            if (points[i-1] < points[i+2]) {
+                up += points[i+2] - points[i-1];
+            } else {
+                down += points[i-1] - points[i+2];
+            }
             res.push({distance: maxDistance, elevation: points[i+2]});
         }
 
@@ -37,11 +42,14 @@
     const fontSize = 20;
     const xPadding = Math.max(40, `${profile.max}m`.length * fontSize * 0.6 + 5);
     const yPadding = 40;
+    const x0 = profile.min > 100 ? 100 : 0;
+    let up = 0;
+    let down = 0;
     const xScale = (d: number): number => {
         return d / maxDistance * (width - xPadding * 2) + xPadding;
     }
     const yScale = (d: number): number => {
-        return height - yPadding - (d - profile.min) / (profile.max - profile.min) * (height - yPadding * 2);
+        return height - yPadding - (d - x0) / (profile.max - x0) * (height - yPadding * 2);
     }
 
     let linePath = processData(profile.points).reduce((acc: string, v: IResult, i: number): string => {
@@ -69,7 +77,8 @@
         {/if}
         <!-- y-Axis -->
         <path class="axis-line" d="M {xPadding + 0.5} {yPadding} L {xPadding + 0.5} {height - yPadding}" />
-        <text class="label" x={xPadding - 5} y={height - yPadding} font-size={fontSize} fill="#64748b" text-anchor="end">{profile.min}m</text>
+        <text class="label" x={xPadding - 5} y={height - yPadding} font-size={fontSize} fill="#64748b" text-anchor="end">{x0}m</text>
+        <text class="label" x={xPadding - 5} y={yScale(profile.min)} font-size={fontSize} fill="#64748b" text-anchor="end">{profile.min}m</text>
         <text class="label" x={xPadding - 5} y={yPadding} font-size={fontSize} fill="#64748b" text-anchor="end">{profile.max}m</text>
         <!-- Profile -->
         <path d={linePath} fill="none" stroke="#30919c" stroke-width="1" />
@@ -77,6 +86,10 @@
     <div class="mt-2 text-center text-sm text-slate-500">
         median={profile.median}m
         N={profile.size}
+        up={profile.up}m
+        down={profile.down}m
+        up2={up}m
+        down2={down}m
     </div>
 </div>
 

@@ -384,6 +384,8 @@ api::Itinerary street_routing(osr::ways const& w,
           if (elevation_samples != 0) {
             leg.elevationProfile_ =
                 get_elevation_profile(w, range, dist, elevation_samples);
+            leg.elevationProfile_->down_ = path->elevation_.down_.v_;
+            leg.elevationProfile_->up_ = path->elevation_.up_.v_;
           }
         }
 
