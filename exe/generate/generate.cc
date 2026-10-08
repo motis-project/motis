@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <limits>
 #include <mutex>
 
 #include "conf/configuration.h"
@@ -30,7 +29,9 @@
 #include "motis/point_rtree.h"
 #include "motis/tag_lookup.h"
 
+#include "./events.h"
 #include "./population.h"
+#include "./random.h"
 #include "../flags.h"
 
 namespace n = nigiri;
@@ -48,57 +49,6 @@ constexpr auto kEuropeBounds = R"({
     [[ [ -11, 72 ], [ -11, 36 ], [ 32, 36 ], [ 32, 72 ], [ -11, 72 ] ]]
 })";
 
-static std::atomic_uint32_t seed{0U};
-
-std::uint32_t rand_in(std::uint32_t const from, std::uint32_t const to) {
-  auto a = ++seed;
-  a = (a ^ 61U) ^ (a >> 16U);
-  a = a + (a << 3U);
-  a = a ^ (a >> 4U);
-  a = a * 0x27d4eb2d;
-  a = a ^ (a >> 15U);
-  return from + (a % (to - from));
-}
-
-std::uint64_t rand_in(std::uint64_t const from, std::uint64_t const to) {
-  auto const hi = rand_in(0U, std::numeric_limits<std::uint32_t>::max());
-  auto const lo = rand_in(0U, std::numeric_limits<std::uint32_t>::max());
-  auto const combined =
-      (static_cast<std::uint64_t>(hi) << 32U) | static_cast<std::uint64_t>(lo);
-  return from + (combined % (to - from));
-}
-
-// uniformly distributed in [0, 1): 53 random bits fill a double's mantissa
-double rand_unit() {
-  return static_cast<double>(
-             rand_in(std::uint64_t{0U}, std::uint64_t{1U} << 53U)) *
-         0x1.0p-53;
-}
-
-template <typename It>
-It rand_in(It const begin, It const end) {
-  return std::next(
-      begin,
-      rand_in(0U, static_cast<std::uint32_t>(std::distance(begin, end))));
-}
-
-template <typename Collection>
-Collection::value_type rand_in(Collection const& c) {
-  using std::begin;
-  using std::end;
-  utl::verify(!c.empty(), "empty collection");
-  return *rand_in(begin(c), end(c));
-}
-
-n::location_idx_t random_stop(n::timetable const& tt,
-                              std::vector<n::location_idx_t> const& stops) {
-  auto s = n::location_idx_t::invalid();
-  do {
-    s = rand_in(stops);
-  } while (tt.location_routes_[s].empty());
-  return s;
-}
-
 int generate(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto n = 100U;
@@ -114,10 +64,10 @@ int generate(int ac, char** av) {
   auto use_flex = false;
   auto lb_rank = true;
   auto geo_rank = std::optional<std::uint64_t>{};
-  auto event_weighted = false;
   tg_geom* bounds{nullptr};
   auto const free_bounds = utl::make_finally([&]() { tg_geom_free(bounds); });
   auto population = population_sampler{};
+  auto events = event_sampler{};
   auto master_params = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -221,17 +171,11 @@ int generate(int ac, char** av) {
            [&](std::uint64_t const r) { geo_rank = r; }),
        "emit queries with geo-rank r, i.e., the target is the 2^r-th stop from "
        "the source in terms of geographical distance, overrides lb_rank")  //
-      ("event_weighted",
-       po::value(&event_weighted)->default_value(event_weighted),
-       "sample from_place with probability proportional to its departure "
-       "count and to_place with probability proportional to its arrival "
-       "count within [first_day, last_day); with lb_rank/geo_rank, the "
-       "weighting is applied within the respective rank bucket instead of "
-       "picking the exact rank")  //
       ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
        "randomize locations within bounds, format: GeoJSON"
        "(shorthand for Europe \"-b europe\")");
   population.add_options(desc);
+  events.add_options(desc);
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -243,6 +187,7 @@ int generate(int ac, char** av) {
   population.verify(
       use_flex, geo_rank.has_value(),
       vm.count("lb_rank") != 0U && !vm["lb_rank"].defaulted() && lb_rank);
+  events.verify(population.from_.has_value() || population.to_.has_value());
 
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");
@@ -365,66 +310,7 @@ int generate(int ac, char** av) {
 
   population.match_stops(*d.tt_, master_stops);
 
-  // dep_weight_/arr_weight_: number of departure/arrival events per stop
-  // within [first_day, last_day), accounting for each transport's traffic
-  // day bitfield.
-  auto dep_weight = std::vector<double>{};
-  auto arr_weight = std::vector<double>{};
-  if (event_weighted) {
-    dep_weight.assign(d.tt_->n_locations(), 0.0);
-    arr_weight.assign(d.tt_->n_locations(), 0.0);
-
-    auto const day_from = d.tt_->day_idx(*first_day);
-    auto const day_to = d.tt_->day_idx(*last_day);
-
-    for (auto i = 0U; i != d.tt_->n_routes(); ++i) {
-      auto const route = n::route_idx_t{i};
-      auto const loc_seq = d.tt_->route_location_seq_[route];
-      auto const n_stops = static_cast<n::stop_idx_t>(loc_seq.size());
-      if (n_stops < 2U) {
-        continue;
-      }
-
-      auto active_days = 0.0;
-      for (auto const t : d.tt_->route_transport_ranges_[route]) {
-        for (auto day = day_from; day != day_to; ++day) {
-          if (d.tt_->is_transport_active(t, day)) {
-            ++active_days;
-          }
-        }
-      }
-      if (active_days == 0.0) {
-        continue;
-      }
-
-      for (auto stop_idx = n::stop_idx_t{0U}; stop_idx != n_stops; ++stop_idx) {
-        auto const st = n::stop{loc_seq[stop_idx]};
-        auto const l = to_idx(st.location_idx());
-        if (stop_idx + 1U != n_stops && st.in_allowed()) {
-          dep_weight[l] += active_days;
-        }
-        if (stop_idx != 0U && st.out_allowed()) {
-          arr_weight[l] += active_days;
-        }
-      }
-    }
-  }
-
-  // cumulative departure weight over master_stops, used to sample from_place
-  // in O(log n) via binary search (master_stops itself is never reordered).
-  auto const dep_cum = [&] {
-    auto v = std::vector<double>{};
-    if (!event_weighted) {
-      return v;
-    }
-    v.reserve(master_stops.size());
-    auto acc = 0.0;
-    for (auto const l : master_stops) {
-      acc += dep_weight[to_idx(l)];
-      v.push_back(acc);
-    }
-    return v;
-  }();
+  events.count_events(*d.tt_, master_stops, *first_day, *last_day);
 
   struct flex_seed {
     geo::latlng from_;
@@ -468,9 +354,10 @@ int generate(int ac, char** av) {
   }();
 
   auto geo_rank_index = 0UL;
-  auto const from_desc = population.from_
-                             ? std::string{description(*population.from_)}
-                             : std::string{"drawn uniformly at random"};
+  auto const from_desc =
+      population.from_  ? std::string{description(*population.from_)}
+      : events.enabled_ ? std::string{"weighted by its number of departures"}
+                        : std::string{"drawn uniformly at random"};
   auto to_desc = std::string{};
   if (population.to_) {
     to_desc = description(*population.to_);
@@ -482,70 +369,29 @@ int generate(int ac, char** av) {
                    geo_rank_index, master_stops.size() - 1U);
       return -1;
     }
-    to_desc =
-        fmt::format("geo-rank {} of `from`: the {}-th nearest stop by distance",
-                    *geo_rank, geo_rank_index);
+    to_desc = events.enabled_
+                  ? fmt::format(
+                        "geo-rank {} of `from`: among the [{}, {})-th nearest "
+                        "stops by distance, weighted by number of arrivals",
+                        *geo_rank, geo_rank_index / 2UL, geo_rank_index)
+                  : fmt::format(
+                        "geo-rank {} of `from`: the {}-th nearest stop by "
+                        "distance",
+                        *geo_rank, geo_rank_index);
     lb_rank = false;
   } else if (lb_rank) {
-    to_desc =
-        "lower-bounds rank of `from`: the 2^n-th stop by travel-time lower "
-        "bound, n varied per query";
+    to_desc = events.enabled_
+                  ? "lower-bounds rank of `from`: among the [2^(n-1), 2^n)-th "
+                    "stops by travel-time lower bound, weighted by number of "
+                    "arrivals, n varied per query"
+                  : "lower-bounds rank of `from`: the 2^n-th stop by "
+                    "travel-time lower bound, n varied per query";
   } else {
-    to_desc = "drawn uniformly at random";
+    to_desc = events.enabled_ ? "weighted by its number of arrivals"
+                              : "drawn uniformly at random";
   }
   fmt::println("from: {}", from_desc);
   fmt::println("to:   {}", to_desc);
-
-  if (event_weighted) {
-    fmt::println(
-        "weighting from_place by departure counts and to_place by arrival "
-        "counts within [{}, {})",
-        *first_day, *last_day);
-  }
-
-  // picks a stop from master_stops with probability proportional to its
-  // departure weight (dep_cum_ is a cumulative sum over master_stops).
-  auto const weighted_from_stop =
-      [&](std::vector<n::location_idx_t> const& stops) -> n::location_idx_t {
-    if (dep_cum.empty() || dep_cum.back() <= 0.0) {
-      return random_stop(*d.tt_, stops);
-    }
-    auto const x = dep_cum.back() *
-                   (static_cast<double>(rand_in(0U, 1'000'000U)) / 1'000'000.0);
-    auto const it = std::upper_bound(dep_cum.begin(), dep_cum.end(), x);
-    auto const idx =
-        std::min(static_cast<std::size_t>(std::distance(dep_cum.begin(), it)),
-                 master_stops.size() - 1U);
-    return master_stops[idx];
-  };
-
-  // picks a stop from stops[lo, hi) with probability proportional to its
-  // weight, falling back to a uniform pick within the range if all weights
-  // in range are zero.
-  auto const weighted_pick_in_range =
-      [&](std::vector<n::location_idx_t> const& stops,
-          std::vector<double> const& weight, std::size_t lo,
-          std::size_t hi) -> n::location_idx_t {
-    hi = std::min(hi, stops.size());
-    lo = std::min(lo, hi > 0U ? hi - 1U : 0U);
-    auto total = 0.0;
-    for (auto k = lo; k != hi; ++k) {
-      total += weight[to_idx(stops[k])];
-    }
-    if (total <= 0.0) {
-      return stops[lo + rand_in(0U, static_cast<std::uint32_t>(hi - lo))];
-    }
-    auto const x =
-        total * (static_cast<double>(rand_in(0U, 1'000'000U)) / 1'000'000.0);
-    auto acc = 0.0;
-    for (auto k = lo; k != hi; ++k) {
-      acc += weight[to_idx(stops[k])];
-      if (x <= acc) {
-        return stops[k];
-      }
-    }
-    return stops[hi - 1U];
-  };
 
   auto t = utl::scoped_timer{"generate queries"};
   auto out = std::ofstream{"queries.txt"};
@@ -597,10 +443,10 @@ int generate(int ac, char** av) {
           from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
           rank_stop = seed.rank_stop_;
         } else {
-          rank_stop = event_weighted ? weighted_from_stop(s.stops_)
-                      : population.from_
+          rank_stop = population.from_
                           ? random_population_weighted_stop(*population.from_)
-                          : random_stop(*d.tt_, s.stops_);
+                      : events.enabled_ ? events.random_from(*d.tt_, s.stops_)
+                                        : random_stop(*d.tt_, s.stops_);
           from_place = get_place(rank_stop);
           if (!from_place) {
             continue;
@@ -620,9 +466,9 @@ int generate(int ac, char** av) {
             return s.ss_.travel_time_lower_bound_[to_idx(a)] <
                    s.ss_.travel_time_lower_bound_[to_idx(b)];
           });
-          to_place = event_weighted ? get_place(weighted_pick_in_range(
-                                          s.stops_, arr_weight, r / 2U, r))
-                                    : get_place(s.stops_[r]);
+          to_place =
+              get_place(events.enabled_ ? events.random_to(s.stops_, r / 2U, r)
+                                        : s.stops_[r]);
         } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
           auto const& rank_stop_pos = d.tt_->locations_.coordinates_[rank_stop];
           auto const lng_degrees =
@@ -634,17 +480,16 @@ int generate(int ac, char** av) {
           utl::sort(s.stops_, [&](auto const& a, auto const& b) {
             return s.geo_distance_[a] < s.geo_distance_[b];
           });
-          to_place = event_weighted ? get_place(weighted_pick_in_range(
-                                          s.stops_, arr_weight,
-                                          geo_rank_index / 2UL, geo_rank_index))
-                                    : get_place(s.stops_[geo_rank_index]);
-        } else if (event_weighted) {
-          to_place = get_place(weighted_pick_in_range(s.stops_, arr_weight, 0U,
-                                                      s.stops_.size()));
+          to_place = get_place(
+              events.enabled_ ? events.random_to(s.stops_, geo_rank_index / 2UL,
+                                                 geo_rank_index)
+                              : s.stops_[geo_rank_index]);
         } else {
           to_place = get_place(
               population.to_ ? random_population_weighted_stop(*population.to_)
-                             : random_stop(*d.tt_, s.stops_));
+              : events.enabled_
+                  ? events.random_to(s.stops_, 0U, s.stops_.size())
+                  : random_stop(*d.tt_, s.stops_));
         }
         if (to_place) {
           break;
