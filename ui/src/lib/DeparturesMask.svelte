@@ -12,6 +12,17 @@
 
 	let from = $state<Location>() as Location;
 	let fromItems = $state<Array<Location>>([]);
+	const refreshStops = (location?: Location) => {
+		let selectedStop =
+			location && location.match
+				? { label: location.label, id: location.match.id }
+				: from && from.match
+					? { label: from.label, id: from.match.id }
+					: null;
+		if (selectedStop) {
+			onClickStop(selectedStop.label, selectedStop.id, time);
+		}
+	};
 </script>
 
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
@@ -21,10 +32,6 @@
 		bind:selected={from}
 		bind:items={fromItems}
 		type="STOP"
-		onChange={(location) => {
-			if (location.match) {
-				onClickStop(location.label, location.match.id, time);
-			}
-		}}
+		onChange={refreshStops}
 	/>
 </div>
