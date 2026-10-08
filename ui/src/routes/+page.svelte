@@ -1138,7 +1138,7 @@
 				<Card
 					class="max-h-[calc(97dvh-2.5rem)] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 				>
-					<DeparturesMask bind:time />
+					<DeparturesMask />
 				</Card>
 			</Tabs.Content>
 			<Tabs.Content value="isochrones" class="min-h-0 overflow-hidden">

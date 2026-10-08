@@ -3,13 +3,10 @@
 	import { type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
 	import { onClickStop } from '$lib/utils';
+	import { page } from '$app/state';
+	import DateInput from '$lib/DateInput.svelte';
 
-	let {
-		time = $bindable()
-	}: {
-		time: Date;
-	} = $props();
-
+	let time = $derived(page.state.selectedStop?.time ?? new Date(Date.now()));
 	let from = $state<Location>() as Location;
 	let fromItems = $state<Array<Location>>([]);
 	const refreshStops = (location?: Location) => {
@@ -34,4 +31,18 @@
 		type="STOP"
 		onChange={refreshStops}
 	/>
+	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
+		<DateInput
+			bind:value={
+				() => time,
+				(v) => {
+					// Using $effect on time to refresh the stops is not possible
+					// because it leads to an infinite effect-update loop,
+					// so we refresh the stops in the setter part of bind
+					time = v;
+					refreshStops();
+				}
+			}
+		/>
+	</div>
 </div>
