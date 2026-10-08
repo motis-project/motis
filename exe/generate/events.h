@@ -19,9 +19,10 @@ struct event_sampler {
   // adds --event_weighted
   void add_options(boost::program_options::options_description&);
 
-  // rejects the combination with --population_from/--population_to: both
-  // decide how `from` and `to` are picked
-  void verify(bool use_population) const;
+  // rejects the combination with --modes FLEX, which draws `from` from the
+  // flex areas, and with --population_from/--population_to: both decide how
+  // `from` and `to` are picked
+  void verify(bool use_flex, bool use_population) const;
 
   // counts departure and arrival events per stop within
   // [first_day, last_day), no-op without --event_weighted

@@ -215,14 +215,47 @@ TEST_F(event_sampler_test, random_to_without_arrivals_is_uniform_in_range) {
   EXPECT_EQ((std::set{loc("D"), loc("A")}), drawn);
 }
 
+TEST(event_sampler, random_from_resolves_small_weights) {
+  // with a total weight of 10^6, a draw with only 10^6 distinct positions
+  // lands on whole numbers and never on a stop in [k + 0.25, k + 0.75)
+  // between stops in [k, k + 0.25) and [k + 0.75, k + 1); the first 10^5
+  // units follow this pattern, so these stops hold 5% of the weight
+  constexpr auto kUnits = 100'000U;
+  constexpr auto kTotal = 1'000'000.0;
+
+  auto s = event_sampler{};
+  auto acc = 0.0;
+  auto const add_stop = [&](double const weight) {
+    s.stops_.emplace_back(s.stops_.size());
+    s.dep_cum_.push_back(acc += weight);
+  };
+  for (auto i = 0U; i != kUnits; ++i) {
+    add_stop(0.25);
+    add_stop(0.5);
+    add_stop(0.25);
+  }
+  add_stop(kTotal - kUnits);
+  ASSERT_EQ(kTotal, s.dep_cum_.back());
+
+  auto const tt = n::timetable{};
+  auto n_between = 0U;
+  for (auto i = 0U; i != kDraws; ++i) {
+    auto const l = to_idx(s.random_from(tt, s.stops_));
+    n_between += l < 3U * kUnits && l % 3U == 1U ? 1U : 0U;
+  }
+  EXPECT_NEAR(0.05, static_cast<double>(n_between) / kDraws, 0.02);
+}
+
 TEST(event_sampler, verify) {
   auto s = event_sampler{};
-  EXPECT_NO_THROW(s.verify(false));
-  EXPECT_NO_THROW(s.verify(true));
+  EXPECT_NO_THROW(s.verify(false, false));
+  EXPECT_NO_THROW(s.verify(true, false));
+  EXPECT_NO_THROW(s.verify(false, true));
 
   s.enabled_ = true;
-  EXPECT_NO_THROW(s.verify(false));
-  EXPECT_THROW(s.verify(true), std::runtime_error);
+  EXPECT_NO_THROW(s.verify(false, false));
+  EXPECT_THROW(s.verify(true, false), std::runtime_error);
+  EXPECT_THROW(s.verify(false, true), std::runtime_error);
 }
 
 TEST(event_sampler, options) {

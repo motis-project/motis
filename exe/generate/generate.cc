@@ -187,7 +187,8 @@ int generate(int ac, char** av) {
   population.verify(
       use_flex, geo_rank.has_value(),
       vm.count("lb_rank") != 0U && !vm["lb_rank"].defaulted() && lb_rank);
-  events.verify(population.from_.has_value() || population.to_.has_value());
+  events.verify(use_flex,
+                population.from_.has_value() || population.to_.has_value());
 
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");

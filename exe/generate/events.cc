@@ -21,10 +21,14 @@ void event_sampler::add_options(po::options_description& desc) {
        "count and to_place with probability proportional to its arrival "
        "count within [first_day, last_day); with lb_rank/geo_rank, the "
        "weighting is applied within the respective rank bucket instead of "
-       "picking the exact rank");
+       "picking the exact rank; not supported with FLEX");
 }
 
-void event_sampler::verify(bool const use_population) const {
+void event_sampler::verify(bool const use_flex,
+                           bool const use_population) const {
+  utl::verify(!enabled_ || !use_flex,
+              "--event_weighted cannot be combined with --modes FLEX: FLEX "
+              "draws `from` from the flex areas");
   utl::verify(!enabled_ || !use_population,
               "--event_weighted cannot be combined with --population_from/"
               "--population_to: both decide how `from` and `to` are picked");
@@ -91,8 +95,7 @@ n::location_idx_t event_sampler::random_from(
   if (dep_cum_.empty() || dep_cum_.back() <= 0.0) {
     return random_stop(tt, stops);
   }
-  auto const x = dep_cum_.back() *
-                 (static_cast<double>(rand_in(0U, 1'000'000U)) / 1'000'000.0);
+  auto const x = dep_cum_.back() * rand_unit();
   auto const it = std::upper_bound(dep_cum_.begin(), dep_cum_.end(), x);
   auto const idx =
       std::min(static_cast<std::size_t>(std::distance(dep_cum_.begin(), it)),
@@ -113,12 +116,13 @@ n::location_idx_t event_sampler::random_to(
   if (total <= 0.0) {
     return stops[lo + rand_in(0U, static_cast<std::uint32_t>(hi - lo))];
   }
-  auto const x =
-      total * (static_cast<double>(rand_in(0U, 1'000'000U)) / 1'000'000.0);
+  // stop k is drawn for x in [acc before k, acc after k): never if its
+  // weight is zero
+  auto const x = total * rand_unit();
   auto acc = 0.0;
   for (auto k = lo; k != hi; ++k) {
     acc += arr_weight_[to_idx(stops[k])];
-    if (x <= acc) {
+    if (x < acc) {
       return stops[k];
     }
   }
