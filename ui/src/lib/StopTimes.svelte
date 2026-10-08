@@ -8,10 +8,9 @@
 	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import Time from '$lib/Time.svelte';
 	import Route from '$lib/Route.svelte';
-	import { Button } from '$lib/components/ui/button';
 	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
-	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { onClickTrip } from '$lib/utils';
 	import { normalizedContains } from '$lib/normalizedContains';
 	import { getModeLabel } from './map/getModeLabel';
 	import { posToLocation } from './Location';
@@ -21,7 +20,6 @@
 
 	let {
 		stopId,
-		stopName,
 		time: queryTime,
 		stopNameFromResponse = $bindable(),
 		stop = $bindable(),
@@ -30,7 +28,6 @@
 		exactRadius = false
 	}: {
 		stopId: string;
-		stopName: string;
 		time: Date;
 		arriveBy?: boolean;
 		stopNameFromResponse: string;
@@ -71,21 +68,6 @@
 		});
 </script>
 
-<div class="flex justify-center mb-4">
-	<Button
-		class="font-bold"
-		variant="outline"
-		onclick={() => {
-			onClickStop(stopName, stopId, queryTime, !arriveBy, false, exactRadius);
-		}}
-	>
-		{#if arriveBy}
-			{t.switchToDepartures}
-		{:else}
-			{t.switchToArrivals}
-		{/if}
-	</Button>
-</div>
 {#each responses as r, rI (rI)}
 	{#await r}
 		<div class="flex items-center justify-center">

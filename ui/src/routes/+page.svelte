@@ -1303,7 +1303,6 @@
 				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[60vh]">
 					<StopTimes
 						stopId={page.state.selectedStop.stopId}
-						stopName={page.state.selectedStop.name}
 						time={page.state.selectedStop.time}
 						bind:stop
 						bind:stopMarker

@@ -5,8 +5,10 @@
 	import { onClickStop } from '$lib/utils';
 	import { page } from '$app/state';
 	import DateInput from '$lib/DateInput.svelte';
+	import DepartureArrivalSwitch from '$lib/DepartureArrivalSwitch.svelte';
 
 	let time = $derived(page.state.selectedStop?.time ?? new Date(Date.now()));
+	let arriveBy = $derived(page.state.stopArriveBy ?? false);
 	let from = $state<Location>() as Location;
 	let fromItems = $state<Array<Location>>([]);
 	const refreshStops = (location?: Location) => {
@@ -17,7 +19,7 @@
 					? { label: page.state.selectedStop.name, id: page.state.selectedStop.stopId }
 					: null;
 		if (selectedStop) {
-			onClickStop(selectedStop.label, selectedStop.id, time);
+			onClickStop(selectedStop.label, selectedStop.id, time, arriveBy);
 		}
 	};
 </script>
@@ -40,6 +42,15 @@
 					// because it leads to an infinite effect-update loop,
 					// so we refresh the stops in the setter part of bind
 					time = v;
+					refreshStops();
+				}
+			}
+		/>
+		<DepartureArrivalSwitch
+			bind:arriveBy={
+				() => arriveBy,
+				(v) => {
+					arriveBy = v;
 					refreshStops();
 				}
 			}
