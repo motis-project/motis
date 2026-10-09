@@ -27,7 +27,15 @@
 					? { label: page.state.selectedStop.name, id: page.state.selectedStop.stopId }
 					: null;
 		if (selectedStop) {
-			onClickStop(selectedStop.label, selectedStop.id, time, arriveBy);
+			onClickStop(
+				selectedStop.label,
+				selectedStop.id,
+				time,
+				arriveBy,
+				false,
+				// preserve exactRadius unless a search result was selected
+				location ? false : page.state.exactRadius
+			);
 		}
 	};
 </script>
