@@ -16,8 +16,8 @@
 		let selectedStop =
 			location && location.match
 				? { label: location.label, id: location.match.id }
-				: from && from.match
-					? { label: from.label, id: from.match.id }
+				: page.state.selectedStop
+					? { label: page.state.selectedStop.name, id: page.state.selectedStop.stopId }
 					: null;
 		if (selectedStop) {
 			onClickStop(selectedStop.label, selectedStop.id, time);
