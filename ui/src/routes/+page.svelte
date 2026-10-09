@@ -564,6 +564,8 @@
 	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
+	let stopsTransitModes = $state<Mode[]>(possibleTransitModes);
+
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
@@ -1079,7 +1081,9 @@
 		>
 			<Tabs.List class="grid shrink-0 grid-cols-3">
 				<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
-				<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
+				<Tabs.Trigger value="departures"
+					>{page.state.stopArriveBy ? t.arrivals : t.departures}</Tabs.Trigger
+				>
 				<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 			</Tabs.List>
 			<Tabs.Content value="connections" class="min-h-0 overflow-hidden">
@@ -1138,7 +1142,7 @@
 				<Card
 					class="max-h-[calc(97dvh-2.5rem)] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 				>
-					<DeparturesMask bind:time />
+					<DeparturesMask bind:modes={stopsTransitModes} />
 				</Card>
 			</Tabs.Content>
 			<Tabs.Content value="isochrones" class="min-h-0 overflow-hidden">
@@ -1284,12 +1288,10 @@
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
 						{#if page.state.stopArriveBy}
-							{t.arrivals}
+							{t.arrivalsAt(stopNameFromResponse)}
 						{:else}
-							{t.departures}
+							{t.departuresAt(stopNameFromResponse)}
 						{/if}
-						in
-						{stopNameFromResponse}
 					</h2>
 					<Button
 						variant="ghost"
@@ -1303,13 +1305,13 @@
 				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[60vh]">
 					<StopTimes
 						stopId={page.state.selectedStop.stopId}
-						stopName={page.state.selectedStop.name}
 						time={page.state.selectedStop.time}
 						bind:stop
 						bind:stopMarker
 						bind:stopNameFromResponse
 						arriveBy={page.state.stopArriveBy}
 						exactRadius={page.state.exactRadius}
+						modes={stopsTransitModes}
 					/>
 				</div>
 			</Card>
