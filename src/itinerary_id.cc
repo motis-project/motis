@@ -773,8 +773,9 @@ api::Itinerary reconstruct_itinerary(
     return journey_to_response(
                stop_times_ep.w_, routing.l_, stop_times_ep.pl_,
                stop_times_ep.tt_, stop_times_ep.tags_, routing.fa_, rt.e_.get(),
-               rt.rtt_.get(), stop_times_ep.matches_, routing.elevations_,
-               routing.shapes_, gbfs_rd, stop_times_ep.ae_, stop_times_ep.tz_,
+               rt.rtt_.get(), stop_times_ep.matches_, routing.r_, routing.ta_,
+               routing.f_, routing.elevations_, routing.shapes_, gbfs_rd,
+               stop_times_ep.ae_, stop_times_ep.tz_,
                {.legs_ = {l},
                 .start_time_ = l.dep_time_,
                 .dest_time_ = l.arr_time_,

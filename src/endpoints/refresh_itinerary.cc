@@ -60,7 +60,10 @@ ep::routing make_routing(Endpoint const& ep) {
                      .tz_ = ep.tz_,
                      .odm_bounds_ = ep.odm_bounds_,
                      .ride_sharing_bounds_ = ep.ride_sharing_bounds_,
-                     .metrics_ = ep.metrics_};
+                     .metrics_ = ep.metrics_,
+                     .r_ = ep.r_,
+                     .ta_ = ep.t_,
+                     .f_ = ep.f_};
 }
 
 // Caps the API parameter with the `max_max_matching_distance` config limit.

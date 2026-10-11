@@ -40,6 +40,10 @@
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
+
+#include "adr/guess_context.h"
+#include "adr/reverse.h"
+#include "motis/itinerary_start_end.h"
 #if defined(NIGIRI_CUDA)
 #include "nigiri/routing/gpu/raptor.h"
 #endif
@@ -635,6 +639,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         std::chrono::seconds{itinerary.duration_});
     if (duration < fastest_direct) {
       fastest_direct = duration;
+    }
+    if (r_ && ta_ && f_) {
+      resolve_itinerary_start_end(itinerary, *r_, *ta_, *f_, ae_, tt_, tags_,
+                                  w_, pl_, matches_);
     }
     itineraries.emplace_back(std::move(itinerary));
     return true;
@@ -1257,9 +1265,9 @@ api::plan_response routing::route(api::plan_params const& query,
     auto itineraries = utl::to_vec(
         journeys, [&, cache = street_routing_cache_t{}](auto&& j) mutable {
           return journey_to_response(
-              w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
-              elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
-              blocked.get(),
+              w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_, r_,
+              ta_, f_, elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest,
+              cache, blocked.get(),
               query.requireCarTransport_ && query.useRoutedTransfers_,
               osr_params, query.pedestrianProfile_, query.elevationCosts_,
               query.joinInterlinedLegs_, detailed_transfers,
@@ -1324,7 +1332,10 @@ api::plan_response routing_post::operator()(
                          .tz_ = tz_,
                          .odm_bounds_ = odm_bounds_,
                          .ride_sharing_bounds_ = ride_sharing_bounds_,
-                         .metrics_ = metrics_
+                         .metrics_ = metrics_,
+                         .r_ = r_,
+                         .ta_ = ta_,
+                         .f_ = f_
 #if defined(NIGIRI_CUDA)
                          ,
                          .gpu_pool_ = gpu_pool_
