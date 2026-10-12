@@ -121,7 +121,8 @@ std::vector<api::ParetoSet> transit_durations(
                          ep.elevations_, &ep.tt_, nullptr,     &ep.tags_,
                          ep.loc_tree_,   ep.fa_,  ep.matches_, ep.way_matches_,
                          ep.rt_,         nullptr, ep.gbfs_,    nullptr,
-                         nullptr,        nullptr, nullptr,     ep.metrics_};
+                         nullptr,        nullptr, nullptr,     ep.metrics_,
+                         nullptr,        nullptr, nullptr};
   auto gbfs_rd = gbfs::gbfs_routing_data{ep.w_, ep.l_, ep.gbfs_};
 
   auto prepare_stats = std::map<std::string, std::uint64_t>{};

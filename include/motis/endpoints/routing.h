@@ -118,6 +118,7 @@ struct routing {
       double max_matching_distance,
       double fastest_direct_factor,
       bool detailed_legs,
+      bool reverse_geocode_locations,
       unsigned api_version) const;
 
   config const& config_;
@@ -140,6 +141,9 @@ struct routing {
   odm::bounds const* odm_bounds_;
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
+  adr::reverse const* r_;
+  adr::typeahead const* ta_;
+  adr::formatter const* f_;
 #if defined(NIGIRI_CUDA)
   gpu_search_pool* gpu_pool_{nullptr};
 #endif
@@ -169,6 +173,9 @@ struct routing_post {
   odm::bounds const* odm_bounds_;
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
+  adr::reverse const* r_;
+  adr::typeahead const* ta_;
+  adr::formatter const* f_;
 #if defined(NIGIRI_CUDA)
   gpu_search_pool* gpu_pool_{nullptr};
 #endif

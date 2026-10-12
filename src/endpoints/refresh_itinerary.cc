@@ -60,7 +60,10 @@ ep::routing make_routing(Endpoint const& ep) {
                      .tz_ = ep.tz_,
                      .odm_bounds_ = ep.odm_bounds_,
                      .ride_sharing_bounds_ = ep.ride_sharing_bounds_,
-                     .metrics_ = ep.metrics_};
+                     .metrics_ = ep.metrics_,
+                     .r_ = ep.r_,
+                     .ta_ = ep.t_,
+                     .f_ = ep.f_};
 }
 
 // Caps the API parameter with the `max_max_matching_distance` config limit.
@@ -91,7 +94,8 @@ api::Itinerary refresh_itinerary::operator()(
       make_routing(*this), stop_times_ep, *rt, query.itineraryId_,
       query.requireDisplayNameMatch_, query.joinInterlinedLegs_,
       query.detailedTransfers_.value_or(query.detailedLegs_),
-      query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
+      query.detailedLegs_, query.withScheduledSkippedStops_,
+      query.reverseGeocodeLocations_, query.language_,
       static_cast<std::size_t>(query.numLegAlternatives_),
       to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
       query.requireCarTransport_, query.noCompulsoryReservation_,
@@ -123,7 +127,8 @@ api::Itinerary refresh_itinerary_post::operator()(
       net::encode_base64(data), query.requireDisplayNameMatch_,
       query.joinInterlinedLegs_,
       query.detailedTransfers_.value_or(query.detailedLegs_),
-      query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
+      query.detailedLegs_, query.withScheduledSkippedStops_,
+      query.reverseGeocodeLocations_, query.language_,
       static_cast<std::size_t>(query.numLegAlternatives_),
       to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
       query.requireCarTransport_, query.noCompulsoryReservation_,

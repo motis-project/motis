@@ -37,6 +37,7 @@
 #include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/itinerary_id.h"
+#include "motis/itinerary_start_end.h"
 #include "motis/odm/odm.h"
 #include "motis/osr/default_output.h"
 #include "motis/osr/mode_to_profile.h"
@@ -304,6 +305,9 @@ api::Itinerary journey_to_response(
     elevators const* e,
     n::rt_timetable const* rtt,
     platform_matches_t const* matches,
+    adr::reverse const* r,
+    adr::typeahead const* ta,
+    adr::formatter const* f,
     osr::elevation_storage const* elevations,
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
@@ -328,6 +332,7 @@ api::Itinerary journey_to_response(
     unsigned const api_version,
     bool const ignore_start_rental_return_constraints,
     bool const ignore_dest_rental_return_constraints,
+    bool const reverse_geocode_locations,
     n::lang_t const& lang,
     bool const set_itinerary_id_field,
     alternatives_context const& alternatives,
@@ -495,8 +500,8 @@ api::Itinerary journey_to_response(
           auto const& alt_from_loc = alt.legs_.front().from_;
           auto const& alt_to_loc = alt.legs_.back().to_;
           return journey_to_response(
-                     w, l, pl, tt, tags, fl, e, rtt, matches, elevations,
-                     shapes, gbfs_rd, ae, tz_map, alt,
+                     w, l, pl, tt, tags, fl, e, rtt, matches, r, ta, f,
+                     elevations, shapes, gbfs_rd, ae, tz_map, alt,
                      n::is_special(alt_from_loc)
                          ? alt_start
                          : place_t{tt_location{alt_from_loc}},
@@ -509,8 +514,9 @@ api::Itinerary journey_to_response(
                      with_scheduled_skipped_stops,
                      timetable_max_matching_distance, max_matching_distance,
                      api_version, ignore_start_rental_return_constraints,
-                     ignore_dest_rental_return_constraints, lang, false, {},
-                     nullptr, alt_states)
+                     ignore_dest_rental_return_constraints,
+                     reverse_geocode_locations, lang, false, {}, nullptr,
+                     alt_states)
               .legs_;
         });
       };
@@ -835,6 +841,11 @@ api::Itinerary journey_to_response(
   }
 
   cleanup_intermodal(itinerary);
+
+  if (reverse_geocode_locations && r && ta && f) {
+    resolve_itinerary_start_end(itinerary, *r, *ta, *f, ae, &tt, &tags, w, pl,
+                                matches);
+  }
 
   if (set_itinerary_id_field) {
     itinerary.id_ = generate_itinerary_id(j, tags, tt, rtt, w, pl, matches, ae,
