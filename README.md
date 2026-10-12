@@ -114,3 +114,9 @@ See its [README](https://github.com/motis-project/pkg/blob/master/README.md) for
 ## Configuration
 
 - [Advanced Setups](docs/setup.md)
+
+## Contributing
+
+- Please open an issue to discuss major changes or features before you invest a lot of time working on them.
+- Feel free to join the MOTIS developer meeting every Friday at 2 PM in our [BBB room](https://tu-darmstadt.heconf.de/r?room=motis).
+- Communication intended to be read by humans on any channel (Matrix, Issues, PRs, etc.) should be written by humans, not by AI.
