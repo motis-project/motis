@@ -114,7 +114,7 @@
             <StartTime>2019-05-01T01:55:00Z</StartTime>
             <EndTime>2019-05-01T02:14:00Z</EndTime>
             <Transfers>0</Transfers>
-            <Distance>102</Distance>
+            <Distance>104</Distance>
             <Leg>
               <Id>1</Id>
               <Duration>PT10M</Duration>
@@ -139,7 +139,7 @@
                   <PersonalMode>foot</PersonalMode>
                 </Service>
                 <Duration>PT10M</Duration>
-                <Length>57</Length>
+                <Length>58</Length>
                 <LegTrack>
                   <TrackSection>
                     <TrackSectionStart>
@@ -388,7 +388,7 @@
                       </Position>
                     </LinkProjection>
                     <Duration>PT10M</Duration>
-                    <Length>57</Length>
+                    <Length>58</Length>
                   </TrackSection>
                 </LegTrack>
               </ContinuousLeg>
@@ -494,7 +494,7 @@
                   <PersonalMode>foot</PersonalMode>
                 </Service>
                 <Duration>PT4M</Duration>
-                <Length>43</Length>
+                <Length>44</Length>
                 <LegTrack>
                   <TrackSection>
                     <TrackSectionStart>
@@ -687,7 +687,7 @@
                       </Position>
                     </LinkProjection>
                     <Duration>PT4M</Duration>
-                    <Length>43</Length>
+                    <Length>44</Length>
                   </TrackSection>
                 </LegTrack>
               </ContinuousLeg>
@@ -702,7 +702,7 @@
             <StartTime>2019-05-01T02:05:00Z</StartTime>
             <EndTime>2019-05-01T02:24:00Z</EndTime>
             <Transfers>0</Transfers>
-            <Distance>118</Distance>
+            <Distance>120</Distance>
             <Leg>
               <Id>1</Id>
               <Duration>PT10M</Duration>
@@ -727,7 +727,7 @@
                   <PersonalMode>foot</PersonalMode>
                 </Service>
                 <Duration>PT10M</Duration>
-                <Length>80</Length>
+                <Length>81</Length>
                 <LegTrack>
                   <TrackSection>
                     <TrackSectionStart>
@@ -1068,7 +1068,7 @@
                       </Position>
                     </LinkProjection>
                     <Duration>PT10M</Duration>
-                    <Length>80</Length>
+                    <Length>81</Length>
                   </TrackSection>
                 </LegTrack>
               </ContinuousLeg>
@@ -1174,7 +1174,7 @@
                   <PersonalMode>foot</PersonalMode>
                 </Service>
                 <Duration>PT4M</Duration>
-                <Length>36</Length>
+                <Length>37</Length>
                 <LegTrack>
                   <TrackSection>
                     <TrackSectionStart>
@@ -1307,7 +1307,7 @@
                       </Position>
                     </LinkProjection>
                     <Duration>PT4M</Duration>
-                    <Length>36</Length>
+                    <Length>37</Length>
                   </TrackSection>
                 </LegTrack>
               </ContinuousLeg>
