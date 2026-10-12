@@ -88,6 +88,12 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
+  auto const rt = std::atomic_load(&rt_);
+  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::REALTIME
+                       ? rt->rtt_.get()
+                       : nullptr;
+  auto const e = rt->e_.get();
+
   auto const r = routing{
       config_, w_,        l_,      pl_,      elevations_,  &tt_,    nullptr,
       &tags_,  loc_tree_, fa_,     matches_, way_matches_, rt_,     nullptr,
@@ -101,14 +107,14 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .start_match_mode_ = r.is_osr_loaded()
                                ? n::routing::location_match_mode::kIntermodal
                                : n::routing::location_match_mode::kEquivalent,
-      .start_ = r.get_offsets(
-          nullptr, one, one_dir, one_modes, rental_options{}, osr_params,
-          query.pedestrianProfile_, query.elevationCosts_, one_max_time,
-          max_matching_distance, gbfs_rd, prepare_stats),
+      .start_ = r.get_offsets(rtt, one, one_dir, one_modes, rental_options{},
+                              osr_params, query.pedestrianProfile_,
+                              query.elevationCosts_, one_max_time,
+                              max_matching_distance, gbfs_rd, prepare_stats),
       .td_start_ = r.get_td_offsets(
-          nullptr, nullptr, one, one_dir, one_modes, osr_params,
-          query.pedestrianProfile_, query.elevationCosts_,
-          max_matching_distance, one_max_time, time, prepare_stats),
+          rtt, e, one, one_dir, one_modes, osr_params, query.pedestrianProfile_,
+          query.elevationCosts_, max_matching_distance, one_max_time, time,
+          prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,
@@ -139,8 +145,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto const state =
       query.arriveBy_
-          ? n::routing::one_to_all<n::direction::kBackward>(tt_, nullptr, q)
-          : n::routing::one_to_all<n::direction::kForward>(tt_, nullptr, q);
+          ? n::routing::one_to_all<n::direction::kBackward>(tt_, rtt, q)
+          : n::routing::one_to_all<n::direction::kForward>(tt_, rtt, q);
 
   auto reachable = nigiri::bitvec{tt_.n_locations()};
   for (auto i = 0U; i != tt_.n_locations(); ++i) {

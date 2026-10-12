@@ -3352,6 +3352,18 @@ export type OneToAllData = {
          */
         preTransitModes?: Array<Mode>;
         /**
+         * Optional. Default is `REALTIME`.
+         *
+         * Controls whether realtime data is used for routing.
+         * - `REALTIME`: Use the realtime timetable (delays, cancellations,
+         * added/changed trips).
+         * - `REALTIME_ANNOTATION_ONLY`: behaves like `OFF` since this
+         * endpoint does not annotate its response with realtime data.
+         * - `OFF`: only the scheduled timetable is used.
+         *
+         */
+        realtimeMode?: RealtimeMode;
+        /**
          * Optional. Default is `false`.
          *
          * If set to `true`, all used transit trips are required to allow bike carriage.
