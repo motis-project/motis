@@ -77,11 +77,10 @@ std::optional<std::string_view> get_track(std::string_view s) {
 }
 
 template <typename Collection>
-double get_routes_bonus(n::timetable const& tt,
-                        n::location_idx_t const l,
+double get_routes_bonus(n::hash_set<std::string_view> const& routes,
                         Collection&& names) {
   auto matches = 0U;
-  for (auto const& r : get_location_routes(tt, l)) {
+  for (auto const& r : routes) {
     for (auto const& x : names) {
       if (r == x.view()) {
         ++matches;
@@ -205,43 +204,42 @@ std::optional<geo::latlng> get_platform_center(osr::platforms const& pl,
   return closest;
 }
 
-vector_map<n::location_idx_t, osr::platform_idx_t> get_matches(
-    nigiri::timetable const& tt, osr::platforms const& pl, osr::ways const& w) {
-  auto m = n::vector_map<n::location_idx_t, osr::platform_idx_t>{};
-  m.resize(tt.n_locations());
-  utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
-    auto const l = n::location_idx_t{i};
-    m[l] = get_match(tt, pl, w, l);
-  });
-  return m;
-}
-
-osr::platform_idx_t get_match(n::timetable const& tt,
-                              osr::platforms const& pl,
-                              osr::ways const& w,
-                              n::location_idx_t const l) {
+template <typename GetCenter>
+osr::platform_idx_t get_best_match(n::timetable const& tt,
+                                   osr::platforms const& pl,
+                                   osr::ways const& w,
+                                   n::location_idx_t const l,
+                                   GetCenter&& get_center) {
   auto const ref = tt.locations_.coordinates_[l];
+  auto const id = tt.locations_.ids_[l].view();
+  auto const name = tt.get_default_translation(tt.locations_.names_[l]);
+  auto const platform_code =
+      tt.get_default_translation(tt.locations_.platform_codes_[l]);
   auto best = osr::platform_idx_t::invalid();
   auto best_score = std::numeric_limits<double>::max();
 
+  // The route names depend only on the location, but collecting them visits
+  // every transport of every route there: once per location, on first use.
+  auto routes = std::optional<n::hash_set<std::string_view>>{};
+
   pl.find(ref, [&](osr::platform_idx_t const x) {
-    auto const center = get_platform_center(pl, w, x);
+    auto const center = get_center(x);
     if (!center.has_value()) {
       return;
     }
+    if (!routes.has_value()) {
+      routes = get_location_routes(tt, l);
+    }
 
     auto const dist = geo::distance(*center, ref);
-    auto const match_bonus =
-        get_match_bonus(pl.platform_names_[x], tt.locations_.ids_[l].view(),
-                        tt.get_default_translation(tt.locations_.names_[l]));
+    auto const match_bonus = get_match_bonus(pl.platform_names_[x], id, name);
     auto const lvl = pl.get_level(w, x);
     auto const lvl_bonus =
         lvl != osr::kNoLevel && lvl.to_float() != 0.0F ? 5 : 0;
     auto const way_bonus = osr::is_way(pl.platform_ref_[x].front()) ? 20 : 0;
-    auto const routes_bonus = get_routes_bonus(tt, l, pl.platform_names_[x]);
-    auto const code_bonus = compare_platform_code(
-        pl.platform_names_[x],
-        tt.get_default_translation(tt.locations_.platform_codes_[l]));
+    auto const routes_bonus = get_routes_bonus(*routes, pl.platform_names_[x]);
+    auto const code_bonus =
+        compare_platform_code(pl.platform_names_[x], platform_code);
 
     auto const score =
         dist - match_bonus - way_bonus - lvl_bonus - routes_bonus - code_bonus;
@@ -257,6 +255,36 @@ osr::platform_idx_t get_match(n::timetable const& tt,
   }
 
   return best;
+}
+
+vector_map<n::location_idx_t, osr::platform_idx_t> get_matches(
+    nigiri::timetable const& tt, osr::platforms const& pl, osr::ways const& w) {
+  // A platform's center does not depend on the location: compute it once
+  // instead of once per (location, nearby platform) pair.
+  auto centers =
+      std::vector<std::optional<geo::latlng>>(pl.platform_ref_.size());
+  utl::parallel_for_run(centers.size(), [&](auto const i) {
+    centers[i] = get_platform_center(pl, w, osr::platform_idx_t{i});
+  });
+
+  auto m = n::vector_map<n::location_idx_t, osr::platform_idx_t>{};
+  m.resize(tt.n_locations());
+  utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
+    auto const l = n::location_idx_t{i};
+    m[l] = get_best_match(tt, pl, w, l, [&](osr::platform_idx_t const x) {
+      return centers[to_idx(x)];
+    });
+  });
+  return m;
+}
+
+osr::platform_idx_t get_match(n::timetable const& tt,
+                              osr::platforms const& pl,
+                              osr::ways const& w,
+                              n::location_idx_t const l) {
+  return get_best_match(tt, pl, w, l, [&](osr::platform_idx_t const x) {
+    return get_platform_center(pl, w, x);
+  });
 }
 
 way_matches_storage::way_matches_storage(std::filesystem::path path,
