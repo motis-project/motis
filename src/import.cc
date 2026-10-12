@@ -3,6 +3,7 @@
 #include <fstream>
 #include <map>
 #include <ostream>
+#include <thread>
 #include <tuple>
 #include <vector>
 
@@ -621,7 +622,18 @@ void import(config const& c,
         {
           auto pool = ::tiles::shard_pool{dir};
 
+          // While the coastlines are processed (CPU-bound):
+          // pull or keep (after osr & adr) OSM files into page cache
+          auto prefetch_osm = std::jthread{};
           if (c.tiles_->coastline_.has_value()) {
+            prefetch_osm = std::jthread{[&]() {
+              auto in = std::ifstream{*c.osm_, std::ios::binary};
+              auto buf = std::vector<char>(std::size_t{8U} << 20U);
+              while (in.read(buf.data(),
+                             static_cast<std::streamsize>(buf.size()))) {
+              }
+            }};
+
             progress_tracker->status("Load Coastlines").out_bounds(0, 20);
             ::tiles::load_coastlines(db_handle, pool.acquire(),
                                      c.tiles_->coastline_->generic_string());
@@ -643,7 +655,9 @@ void import(config const& c,
       },
       {tiles_version(), osm_hash, tiles_hash}};
 
-  auto all_tasks = std::vector{&tiles,        &osr,     &adr,
+  // Run order (dependencies permitting). osr, adr and tiles all read the OSM
+  // file; running them back to back keeps it in the page cache.
+  auto all_tasks = std::vector{&osr,          &adr,     &tiles,
                                &tt,           &tbd,     &adr_extend,
                                &osr_footpath, &matches, &route_shapes_task};
   auto todo = std::set<task*>{};
@@ -671,7 +685,13 @@ void import(config const& c,
     todo.insert(begin(all_tasks), end(all_tasks));
   }
 
-  auto tasks = std::vector<task*>{begin(todo), end(todo)};
+  // In all_tasks order, not in pointer order (std::set<task*>).
+  auto tasks = std::vector<task*>{};
+  for (auto* t : all_tasks) {
+    if (todo.contains(t)) {
+      tasks.push_back(t);
+    }
+  }
   utl::erase_if(tasks, [&](task* t) {
     if (!t->should_run_ || t->ready_for_load(data_path)) {
       t->done_ = true;
