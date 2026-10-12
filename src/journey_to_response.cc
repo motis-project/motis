@@ -332,6 +332,7 @@ api::Itinerary journey_to_response(
     unsigned const api_version,
     bool const ignore_start_rental_return_constraints,
     bool const ignore_dest_rental_return_constraints,
+    bool const reverse_geocode_locations,
     n::lang_t const& lang,
     bool const set_itinerary_id_field,
     alternatives_context const& alternatives,
@@ -513,8 +514,9 @@ api::Itinerary journey_to_response(
                      with_scheduled_skipped_stops,
                      timetable_max_matching_distance, max_matching_distance,
                      api_version, ignore_start_rental_return_constraints,
-                     ignore_dest_rental_return_constraints, lang, false, {},
-                     nullptr, alt_states)
+                     ignore_dest_rental_return_constraints,
+                     reverse_geocode_locations, lang, false, {}, nullptr,
+                     alt_states)
               .legs_;
         });
       };
@@ -840,7 +842,7 @@ api::Itinerary journey_to_response(
 
   cleanup_intermodal(itinerary);
 
-  if (r && ta && f) {
+  if (reverse_geocode_locations && r && ta && f) {
     resolve_itinerary_start_end(itinerary, *r, *ta, *f, ae, &tt, &tags, w, pl,
                                 matches);
   }

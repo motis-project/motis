@@ -614,6 +614,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     double const max_matching_distance,
     double const fastest_direct_factor,
     bool const detailed_legs,
+    bool const reverse_geocode_locations,
     unsigned const api_version) const {
   if (!w_ || !l_) {
     return {};
@@ -640,7 +641,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     if (duration < fastest_direct) {
       fastest_direct = duration;
     }
-    if (r_ && ta_ && f_) {
+    if (reverse_geocode_locations && r_ && ta_ && f_) {
       resolve_itinerary_start_end(itinerary, *r_, *ta_, *f_, ae_, tt_, tags_,
                                   w_, pl_, matches_);
     }
@@ -933,7 +934,8 @@ api::plan_response routing::route(api::plan_params const& query,
                              config_.get_limits()
                                  .street_routing_max_direct_seconds_}),
                 max_matching_distance, query.fastestDirectFactor_,
-                query.detailedLegs_, api_version)
+                query.detailedLegs_, query.reverseGeocodeLocations_,
+                api_version)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
@@ -1276,8 +1278,8 @@ api::plan_response routing::route(api::plan_params const& query,
               config_.timetable_.value().max_matching_distance_,
               max_matching_distance, api_version,
               query.ignorePreTransitRentalReturnConstraints_,
-              query.ignorePostTransitRentalReturnConstraints_, query.language_,
-              true,
+              query.ignorePostTransitRentalReturnConstraints_,
+              query.reverseGeocodeLocations_, query.language_, true,
               query.numLegAlternatives_ > 0
                   ? alternatives_context{query_alternatives{
                         q_for_alts,
