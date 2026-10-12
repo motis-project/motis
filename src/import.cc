@@ -632,12 +632,11 @@ void import(config const& c,
                             c.tiles_->profile_.generic_string(),
                             dir.generic_string(), c.tiles_->flush_threshold_);
 
-          progress_tracker->status("Merge Shards").out_bounds(70, 80);
+          // merge_shards writes every tile optimally packed (quad tree
+          // index), so no separate pack_features pass is needed.
+          progress_tracker->status("Merge Shards").out_bounds(70, 90);
           ::tiles::merge_shards(pool, db_handle, pack_handle);
         }
-
-        progress_tracker->status("Pack Features").out_bounds(80, 90);
-        ::tiles::pack_features(db_handle, pack_handle);
 
         progress_tracker->status("Prepare Tiles").out_bounds(90, 100);
         ::tiles::prepare_tiles(db_handle, pack_handle, 10);
