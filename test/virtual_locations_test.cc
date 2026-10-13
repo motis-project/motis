@@ -42,10 +42,10 @@ using namespace date;
 using namespace std::chrono_literals;
 namespace n = nigiri;
 
-// FA (RF1) stops at a virtual location below U (the RF1 -> RF3 rule); FB and
-// FB2 (RF2) leave from U itself. The RB trips stop at a virtual location of Z
-// (the rule qualified on its from side only: arriving on RB); the RB2 trips
-// stay at Z.
+// FA (RF1) stops at a virtual location below U (the RF1 -> RF3 rule forbids
+// FA -> FC); FB and FB2 (RF2) leave from U itself. The RB trips stop at a
+// virtual location of Z (the rule qualified on its to side only: departing on
+// RB forbids TB1 -> TB2); the RB2 trips stay at Z.
 constexpr auto const kPlainGTFS = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -72,6 +72,8 @@ route_id,service_id,trip_id
 RF1,S1,FA
 RF2,S1,FB
 RF2,S1,FB2
+RF3,S1,FC
+RB2,S1,TB1
 RB,S1,TB2
 RB,S1,TB3
 RB2,S1,TB5
@@ -85,6 +87,10 @@ FB,10:33:00,10:33:00,U,0
 FB,11:00:00,11:00:00,M,1
 FB2,10:50:00,10:50:00,U,0
 FB2,11:20:00,11:20:00,M,1
+FC,10:33:00,10:33:00,U,0
+FC,11:00:00,11:00:00,L,1
+TB1,12:00:00,12:00:00,F,0
+TB1,12:30:00,12:30:00,Z,1
 TB2,12:35:00,12:35:00,Z,0
 TB2,13:00:00,13:00:00,F,1
 TB3,12:45:00,12:45:00,Z,0
@@ -99,7 +105,7 @@ from_stop_id,to_stop_id,transfer_type,min_transfer_time,from_route_id,to_route_i
 U,U,2,120,,,,
 U,U,2,300,RF1,RF3,,
 Z,Z,2,120,,,,
-Z,Z,2,600,RB,,,
+Z,Z,2,600,,RB,,
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -141,7 +147,7 @@ RC3,S1,CT3,1
 trip_id,arrival_time,departure_time,stop_id,stop_sequence
 CT1,10:00:00,10:00:00,CX,0
 CT1,10:30:00,10:30:00,CA,1
-CT9,10:40:00,10:40:00,CA,0
+CT9,10:33:00,10:33:00,CA,0
 CT9,11:00:00,11:00:00,CY,1
 CT2,10:45:00,10:45:00,CB,0
 CT2,11:10:00,11:10:00,CY,1
@@ -196,9 +202,9 @@ data& with_osm() {
   return d;
 }
 
-// The trip-qualified transfers.txt row differs from the unqualified one of the
-// stop pair, so trip A stops at a virtual location below S1 (and B below S2).
-// Real time: A arrives at S1 5 min late.
+// The trip-qualified transfers.txt row allows A -> B in less time than the
+// unqualified one of the stop pair, so trip A stops at a virtual location
+// below S1 (and B below S2). Real time: A arrives at S1 5 min late.
 constexpr auto const kStationGTFS = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -226,13 +232,13 @@ RB,S1,B,,
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
 A,10:00:00,10:00:00,X,0,0,0
 A,10:10:00,10:10:00,S1,1,0,0
-B,10:30:00,10:30:00,S2,0,0,0
-B,10:40:00,10:40:00,Y,1,0,0
+B,10:18:00,10:18:00,S2,0,0,0
+B,10:28:00,10:28:00,Y,1,0,0
 
 # transfers.txt
 from_stop_id,to_stop_id,from_trip_id,to_trip_id,transfer_type,min_transfer_time
-S1,S2,,,2,180
-S1,S2,A,B,2,600
+S1,S2,,,2,600
+S1,S2,A,B,2,180
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -267,6 +273,12 @@ data& station() {
 
 n::location_idx_t lidx(data const& d, char const* id) {
   return d.tt_->locations_.location_id_to_idx_.at({id, n::source_idx_t{0U}});
+}
+
+bool has_virts(data const& d, char const* id) {
+  return utl::any_of(
+      d.tt_->locations_.children_[lidx(d, id)],
+      [&](n::location_idx_t const c) { return d.tt_->locations_.is_virt(c); });
 }
 
 // Every stop id occurs once (U among them).
@@ -426,6 +438,7 @@ TEST(virtual_locations, map_routes_lists_each_stop_once) {
 // its virtual locations (TB2, TB3) - not only the ones left at Z (TB5, TB6).
 TEST(virtual_locations, stop_times_exact_radius_lists_moved_departures) {
   auto& d = plain();
+  ASSERT_TRUE(has_virts(d, "Z")) << "precondition";
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
   auto const res = stop_times(
       "/api/v5/stoptimes?stopId=test_Z&time=2019-05-01T10:00:00Z&n=10"
@@ -439,6 +452,7 @@ TEST(virtual_locations, stop_times_exact_radius_lists_moved_departures) {
 
 TEST(virtual_locations, refresh_itinerary_through_virtual_location) {
   auto& d = plain();
+  ASSERT_TRUE(has_virts(d, "U")) << "precondition";
   auto const original = plan(d, "L", "M");
   ASSERT_FALSE(original.legs_.empty());
 
@@ -475,10 +489,7 @@ TEST(virtual_locations, debug_transfers_name_their_targets) {
   auto& d = with_osm();
   auto const transfers = utl::init_from<ep::transfers>(d).value();
   auto const res = transfers("/api/debug/transfers?id=test_CA");
-  ASSERT_TRUE(utl::any_of(
-      d.tt_->locations_.children_[lidx(d, "CA")],
-      [&](n::location_idx_t const c) { return d.tt_->locations_.is_virt(c); }))
-      << "precondition: CA has virtual locations";
+  ASSERT_TRUE(has_virts(d, "CA")) << "precondition";
   ASSERT_FALSE(res.transfers_.empty()) << "precondition";
   for (auto const& t : res.transfers_) {
     EXPECT_TRUE(t.to_.stopId_.has_value() && !t.to_.stopId_->empty())
@@ -492,6 +503,7 @@ TEST(virtual_locations, debug_transfers_name_their_targets) {
 TEST(virtual_locations, car_profile_connects_stops_with_virtual_locations) {
   auto& d = with_osm();
   auto const& tt = *d.tt_;
+  ASSERT_TRUE(has_virts(d, "CA")) << "precondition";
   auto const ca = lidx(d, "CA");
   auto const cb = lidx(d, "CB");
   ASSERT_FALSE(tt.locations_.footpaths_out_[n::kCarProfile].empty())

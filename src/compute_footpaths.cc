@@ -87,6 +87,14 @@ elevator_footpath_map_t compute_footpaths(
         n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
             mode.writes_default_profile_ ? tt.n_locations() : 0U);
 
+    // both stops of a source with complete transfers (HRDF): no routed walk
+    auto const is_complete = [&](n::location_idx_t const a,
+                                 n::location_idx_t const b) {
+      return mode.writes_default_profile_ &&
+             tt.has_complete_transfers(tt.locations_.src_[a]) &&
+             tt.has_complete_transfers(tt.locations_.src_[b]);
+    };
+
     auto const is_candidate = [&](n::location_idx_t const l) {
       if (tt.locations_.is_virt(l)) {
         return false;
@@ -148,14 +156,15 @@ elevator_footpath_map_t compute_footpaths(
             return;
           }
 
-          loc_rtree.in_radius(tt.locations_.coordinates_[l],
-                              get_max_distance(mode.profile_, osr_parameters{},
-                                               mode.max_duration_),
-                              [&](n::location_idx_t const x) {
-                                if (x != l && is_candidate(x)) {
-                                  s.neighbors_.emplace_back(x);
-                                }
-                              });
+          loc_rtree.in_radius(
+              tt.locations_.coordinates_[l],
+              get_max_distance(mode.profile_, osr_parameters{},
+                               mode.max_duration_),
+              [&](n::location_idx_t const x) {
+                if (x != l && is_candidate(x) && !is_complete(l, x)) {
+                  s.neighbors_.emplace_back(x);
+                }
+              });
 
           auto const results =
               osr::route_one_to_many(
@@ -220,6 +229,17 @@ elevator_footpath_map_t compute_footpaths(
             }
           }
 
+          // the loader's walks between stops of a source with complete
+          // transfers (HRDF)
+          if (mode.writes_default_profile_) {
+            for (auto const fp :
+                 tt.locations_.footpaths_out_[n::kDefaultProfile][l]) {
+              if (is_complete(l, fp.target())) {
+                transfers[l].push_back(fp);
+              }
+            }
+          }
+
           utl::erase_if(transfers[l], [&](n::footpath fp) {
             return fp.duration() > mode.max_duration_;
           });
@@ -261,7 +281,6 @@ elevator_footpath_map_t compute_footpaths(
                                            tt, l, fp.target(), fp.duration())});
         }
       }
-      n::loader::write_default_profile(tt);
     }
 
     n_done += tt.n_locations();

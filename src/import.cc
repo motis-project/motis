@@ -27,6 +27,7 @@
 #include "tiles/osm/load_osm.h"
 
 #include "nigiri/loader/assistance.h"
+#include "nigiri/loader/build_footpaths.h"
 #include "nigiri/loader/load.h"
 #include "nigiri/loader/loader_interface.h"
 #include "nigiri/clasz.h"
@@ -397,7 +398,8 @@ void import(config const& c,
             {.merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_,
-             .merge_stats_dir_ = data_path},
+             .merge_stats_dir_ = data_path,
+             .apply_transfer_rules_ = !c.osr_footpath_},
             interval, assistance.get(), shapes.get(), false))};
 
         tt->write(data_path / "tt.bin");
@@ -527,6 +529,21 @@ void import(config const& c,
             *d.w_, *d.l_, *d.pl_, *d.tt_, *d.matches_, d.way_matches_.get(),
             d.elevations_.get(), profiles);
 
+        auto shapes = std::unique_ptr<n::shapes_storage>{};
+        if (c.timetable_->with_shapes_) {
+          shapes = std::make_unique<n::shapes_storage>(
+              data_path, cista::mmap::protection::MODIFY);
+          // drop the routes split off by an earlier run
+          auto const n_routes = d.tt_->n_routes();
+          auto& segments = shapes->route_segment_bboxes_;
+          if (shapes->route_bboxes_.size() > n_routes) {
+            shapes->route_bboxes_.resize(n_routes);
+            segments.resize(n_routes);
+            segments.data_.resize(segments.bucket_starts_[n_routes]);
+          }
+        }
+        n::loader::apply_transfer_rules(*d.tt_, shapes.get());
+
         cista::write(data_path / "elevator_footpath_map.bin",
                      elevator_footpath_map);
         d.tt_->write(data_path / "tt_ext.bin");
@@ -558,13 +575,35 @@ void import(config const& c,
                   },
                   std::move(tbd_hashes)};
 
+  // after osr_footpath: it splits routes
+  auto route_shapes_hashes =
+      meta_t{tt_hash,
+             osm_hash,
+             osr_version(),
+             n_version(),
+             routed_shapes_version(),
+             route_shapes_clasz_hash,
+             {"route_shapes_mode",
+              static_cast<std::uint64_t>(
+                  c.timetable_.value_or(config::timetable{})
+                      .route_shapes_.value_or(config::timetable::route_shapes{})
+                      .mode_)},
+             {"cache_reuse_old_osm_data",
+              c.timetable_.value_or(config::timetable{})
+                  .route_shapes_.value_or(config::timetable::route_shapes{})
+                  .cache_reuse_old_osm_data_}};
+  if (c.osr_footpath_) {
+    route_shapes_hashes.insert(begin(osr_footpath.hashes_),
+                               end(osr_footpath.hashes_));
+  }
   auto route_shapes_task = task{
       "route_shapes",
-      {&tt, &osr},
+      c.osr_footpath_ ? std::vector<task*>{&tt, &osr, &osr_footpath}
+                      : std::vector<task*>{&tt, &osr},
       route_shapes_task_enabled,
       [&]() {
         auto d = data{data_path};
-        d.load_tt("tt.bin");
+        d.load_tt(c.osr_footpath_ ? "tt_ext.bin" : "tt.bin");
         d.load_osr();
 
         auto shape_cache = std::unique_ptr<motis::shape_cache>{};
@@ -587,21 +626,7 @@ void import(config const& c,
         route_shapes(*d.w_, *d.l_, *d.tt_, shapes, *c.timetable_->route_shapes_,
                      route_shapes_clasz_enabled, shape_cache.get());
       },
-      {tt_hash,
-       osm_hash,
-       osr_version(),
-       n_version(),
-       routed_shapes_version(),
-       route_shapes_clasz_hash,
-       {"route_shapes_mode",
-        static_cast<std::uint64_t>(
-            c.timetable_.value_or(config::timetable{})
-                .route_shapes_.value_or(config::timetable::route_shapes{})
-                .mode_)},
-       {"cache_reuse_old_osm_data",
-        c.timetable_.value_or(config::timetable{})
-            .route_shapes_.value_or(config::timetable::route_shapes{})
-            .cache_reuse_old_osm_data_}}};
+      route_shapes_hashes};
 
   auto tiles = task{
       "tiles",

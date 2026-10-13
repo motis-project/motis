@@ -245,9 +245,9 @@ R3,S1,T3,Parent1,
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type,ticketing_type
 T1,10:00:00,10:00:00,Child1A,1,0,0,0
-T1,11:00:00,11:00:00,Child2,2,0,0,0
+T1,13:55:00,13:55:00,Child2,2,0,0,0
 T2,12:00:00,12:00:00,Child1A,1,0,0,0
-T2,13:00:00,13:00:00,Child2B,2,0,0,1
+T2,13:55:00,13:55:00,Child2B,2,0,0,1
 T3,14:00:00,14:00:00,Child2,1,0,0,0
 T3,15:00:00,15:00:00,Child1A,2,0,0,0
 

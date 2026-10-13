@@ -20,6 +20,7 @@
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
+#include "nigiri/rt/rt_transfer_rules.h"
 
 #if defined(NIGIRI_CUDA)
 #include "nigiri/routing/gpu/raptor.h"
@@ -352,7 +353,8 @@ awaitable<void> update_rt(config const& c,
     }
   }
 
-  // Update lbs.
+  // Update transfer rules and lbs.
+  n::rt::resolve_conflicts(*d.tt_, *rtt);
   rtt->update_lbs(*d.tt_);
 
   // Update real-time timetable shared pointer.
@@ -385,6 +387,7 @@ void apply_canned_rt_update(config const& c, data& d) {
   auto rtt = std::make_unique<n::rt_timetable>(
       n::rt::create_rt_timetable(*d.tt_, today));
   apply_canned(d, endpoints, *rtt);
+  n::rt::resolve_conflicts(*d.tt_, *rtt);
   rtt->update_lbs(*d.tt_);
   upload_gpu_rtt(d, *rtt);
 

@@ -297,8 +297,13 @@ data::data(std::filesystem::path p, config const& c)
       "mismatch: n_routes={}, n_route_bboxes={}, n_route_segment_bboxes={}",
       tt_->n_routes(), shapes_->route_bboxes_.size(),
       shapes_->route_segment_bboxes_.size());
+  // osr_footpath adds virtual locations after matching: they use the match of
+  // their parent
   utl_verify(matches_ == nullptr || tt_ == nullptr ||
-                 matches_->size() == tt_->n_locations(),
+                 matches_->size() == tt_->n_locations() ||
+                 (matches_->size() < tt_->n_locations() &&
+                  tt_->locations_.is_virt(n::location_idx_t{
+                      static_cast<std::uint32_t>(matches_->size())})),
              "mismatch: n_matches={}, n_locations={}", matches_->size(),
              tt_->n_locations());
 
