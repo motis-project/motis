@@ -447,7 +447,7 @@ TEST(virtual_locations, stop_times_exact_radius_lists_moved_departures) {
 }
 
 // ===========================================================================
-// Transfers that exist only through a hub: FA's virtual location -> U.
+// Itineraries through virtual locations: FA's virtual location -> U.
 // ===========================================================================
 
 TEST(virtual_locations, refresh_itinerary_through_virtual_location) {

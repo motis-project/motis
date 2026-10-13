@@ -78,7 +78,7 @@ data import_with(bool const use_osr_footpath, char const* dir) {
   return data{path, c};
 }
 
-// The shortest transfer a -> b the routing sees: a footpath or a hub.
+// The shortest footpath a -> b the routing sees.
 std::optional<int> minutes(n::timetable const& tt,
                            n::profile_idx_t const prf,
                            char const* from,
