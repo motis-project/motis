@@ -423,90 +423,78 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   auto extra_place_idx = adr_extra_place_idx_t{0U};
   for (auto const [prio, locations, representative] :
        utl::zip(ret.place_importance_, place_location, most_important)) {
-    try {
-      auto const repr_name =
-          representative != n::location_idx_t::invalid()
-              ? tt.get_default_translation(tt.locations_.names_[representative])
-              : std::string_view{};
-      utl::sort(
-          locations, [&](n::location_idx_t const a, n::location_idx_t const b) {
-            if (a == b) {
-              return false;
-            }
-            if (a == representative) {
-              return true;
-            }
-            if (b == representative) {
-              return false;
-            }
-            auto const an = tt.get_default_translation(tt.locations_.names_[a]);
-            auto const bn = tt.get_default_translation(tt.locations_.names_[b]);
-            return (an != repr_name) < (bn != repr_name);
-          });
-
-      auto const place_idx = a::place_idx_t{t.place_names_.size()};
-
-      auto names = std::vector<std::pair<a::string_idx_t, a::language_idx_t>>{};
-      auto const add_names = [&](n::location_idx_t const loc) {
-        for (auto const [lang, text] :
-             n::get_translation_view(tt, tt.locations_.names_[loc])) {
-          names.emplace_back(add_string(text, place_idx),
-                             t.get_or_create_lang_idx(tt.languages_.get(lang)));
-        }
-      };
-
-      for (auto const l : locations) {
-        add_names(l);
-        for (auto const& c : tt.locations_.children_[l]) {
-          if (tt.locations_.types_[c] == nigiri::location_type::kStation &&
-              tt.get_default_translation(tt.locations_.names_[c]) !=
-                  tt.get_default_translation(tt.locations_.names_[l])) {
-            add_names(c);
+    auto const repr_name =
+        representative != n::location_idx_t::invalid()
+            ? tt.get_default_translation(tt.locations_.names_[representative])
+            : std::string_view{};
+    utl::sort(
+        locations, [&](n::location_idx_t const a, n::location_idx_t const b) {
+          if (a == b) {
+            return false;
           }
+          if (a == representative) {
+            return true;
+          }
+          if (b == representative) {
+            return false;
+          }
+          auto const an = tt.get_default_translation(tt.locations_.names_[a]);
+          auto const bn = tt.get_default_translation(tt.locations_.names_[b]);
+          return (an != repr_name) < (bn != repr_name);
+        });
+
+    auto const place_idx = a::place_idx_t{t.place_names_.size()};
+
+    auto names = std::vector<std::pair<a::string_idx_t, a::language_idx_t>>{};
+    auto const add_names = [&](n::location_idx_t const loc) {
+      for (auto const [lang, text] :
+           n::get_translation_view(tt, tt.locations_.names_[loc])) {
+        names.emplace_back(add_string(text, place_idx),
+                           t.get_or_create_lang_idx(tt.languages_.get(lang)));
+      }
+    };
+
+    for (auto const l : locations) {
+      add_names(l);
+      for (auto const& c : tt.locations_.children_[l]) {
+        if (tt.locations_.types_[c] == nigiri::location_type::kStation &&
+            tt.get_default_translation(tt.locations_.names_[c]) !=
+                tt.get_default_translation(tt.locations_.names_[l])) {
+          add_names(c);
         }
       }
+    }
 
-      auto const pos_loc = representative != n::location_idx_t::invalid()
-                               ? representative
-                               : locations[0];
-      auto const pos =
-          a::coordinates::from_latlng(tt.locations_.coordinates_[pos_loc]);
-      auto const rtree_coord = pos.as_latlng().lnglat_float();
-      ret.place_rtree_.insert(rtree_coord, rtree_coord, extra_place_idx);
+    auto const pos_loc = representative != n::location_idx_t::invalid()
+                             ? representative
+                             : locations[0];
+    auto const pos =
+        a::coordinates::from_latlng(tt.locations_.coordinates_[pos_loc]);
+    auto const rtree_coord = pos.as_latlng().lnglat_float();
+    ret.place_rtree_.insert(rtree_coord, rtree_coord, extra_place_idx);
 
-      t.place_type_.emplace_back(a::amenity_category::kExtra);
-      t.place_names_.emplace_back(
-          names | std::views::transform([](auto&& n) { return n.first; }));
-      t.place_name_lang_.emplace_back(
-          names | std::views::transform([](auto&& n) { return n.second; }));
-      t.place_coordinates_.emplace_back(pos);
-      t.place_osm_ids_.emplace_back(
-          locations |
-          std::views::transform([&](auto&& l) { return to_idx(l); }));
-      t.place_population_.emplace_back(static_cast<std::uint16_t>(
-          (prio * 1'000'000) / a::population::kCompressionFactor));
-      t.place_is_way_.resize(t.place_is_way_.size() + 1U);
+    t.place_type_.emplace_back(a::amenity_category::kExtra);
+    t.place_names_.emplace_back(
+        names | std::views::transform([](auto&& n) { return n.first; }));
+    t.place_name_lang_.emplace_back(
+        names | std::views::transform([](auto&& n) { return n.second; }));
+    t.place_coordinates_.emplace_back(pos);
+    t.place_osm_ids_.emplace_back(
+        locations | std::views::transform([&](auto&& l) { return to_idx(l); }));
+    t.place_population_.emplace_back(static_cast<std::uint16_t>(
+        (prio * 1'000'000) / a::population::kCompressionFactor));
+    t.place_is_way_.resize(t.place_is_way_.size() + 1U);
 
-      if (area_db == nullptr) {
-        t.place_areas_.emplace_back(no_areas_idx);
-      } else {
-        area_db->lookup(t, a::coordinates::from_latlng(pos), areas);
-        t.place_areas_.emplace_back(
-            utl::get_or_create(area_set_lookup, areas, [&]() {
-              auto const set_idx = a::area_set_idx_t{t.area_sets_.size()};
-              t.area_sets_.emplace_back(areas);
-              return set_idx;
-            }));
-      }
-
-    } catch (std::exception const& e) {
-      throw utl::fail(
-          "adr_extend: adding place {} (location {}, {} locations): {}",
-          to_idx(extra_place_idx),
-          n::loc{tt, representative != n::location_idx_t::invalid()
-                         ? representative
-                         : locations[0]},
-          locations.size(), e.what());
+    if (area_db == nullptr) {
+      t.place_areas_.emplace_back(no_areas_idx);
+    } else {
+      area_db->lookup(t, a::coordinates::from_latlng(pos), areas);
+      t.place_areas_.emplace_back(
+          utl::get_or_create(area_set_lookup, areas, [&]() {
+            auto const set_idx = a::area_set_idx_t{t.area_sets_.size()};
+            t.area_sets_.emplace_back(areas);
+            return set_idx;
+          }));
     }
 
     ++extra_place_idx;
