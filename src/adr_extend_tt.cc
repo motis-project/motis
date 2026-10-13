@@ -228,11 +228,9 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     auto const get_normalized =
         [&](n::location_idx_t const x) -> std::string const& {
       auto& norm = normalized[x];
-      if (!norm.has_value()) {
-        norm =
-            normalize_name(tt.get_default_translation(tt.locations_.names_[x]));
-      }
-      return *norm;
+      return norm ? *norm
+                  : norm.emplace(normalize_name(
+                        tt.get_default_translation(tt.locations_.names_[x])));
     };
     for (auto l = n::location_idx_t{nigiri::kNSpecialStations};
          l != tt.n_locations(); ++l) {
