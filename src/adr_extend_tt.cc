@@ -223,10 +223,11 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     // Map each location + its equivalents with the same name to one
     // place_idx.
     auto sift4_dist = std::vector<adr::sift_offset>{};
-    auto normalized = std::vector<std::optional<std::string>>(tt.n_locations());
+    auto normalized = vector_map<n::location_idx_t, std::optional<std::string>>(
+        tt.n_locations());
     auto const get_normalized =
         [&](n::location_idx_t const x) -> std::string const& {
-      auto& norm = normalized[to_idx(x)];
+      auto& norm = normalized[x];
       if (!norm.has_value()) {
         norm =
             normalize_name(tt.get_default_translation(tt.locations_.names_[x]));
@@ -311,11 +312,10 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   most_important.resize(place_location.size(), n::location_idx_t::invalid());
   {
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
-    auto route_days = std::vector<unsigned>(tt.n_routes());
+    auto route_days = vector_map<n::route_idx_t, unsigned>(tt.n_routes());
     for (auto r = n::route_idx_t{0U}; r != tt.n_routes(); ++r) {
       for (auto const tr : tt.route_transport_ranges_[r]) {
-        route_days[to_idx(r)] +=
-            tt.bitfields_[tt.transport_traffic_days_[tr]].count();
+        route_days[r] += tt.bitfields_[tt.transport_traffic_days_[tr]].count();
       }
     }
     for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
@@ -325,7 +325,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
       for (auto const& r : tt.location_routes_[l]) {
         auto const clasz =
             static_cast<std::underlying_type_t<n::clasz>>(tt.route_clasz_[r]);
-        transport_counts[clasz] += route_days[to_idx(r)];
+        transport_counts[clasz] += route_days[r];
       }
 
       constexpr auto const prio =
