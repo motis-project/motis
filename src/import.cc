@@ -622,8 +622,8 @@ void import(config const& c,
         {
           auto pool = ::tiles::shard_pool{dir};
 
-          // While the coastlines are processed (CPU-bound):
-          // pull or keep (after osr & adr) OSM files into page cache
+          // While the coastlines are processed (CPU-bound), read the OSM
+          // file into the page cache.
           auto prefetch_osm = std::jthread{};
           if (c.tiles_->coastline_.has_value()) {
             prefetch_osm = std::jthread{[&]() {
@@ -655,11 +655,12 @@ void import(config const& c,
       },
       {tiles_version(), osm_hash, tiles_hash}};
 
-  // Run order (dependencies permitting). osr, adr and tiles all read the OSM
-  // file; running them back to back keeps it in the page cache.
-  auto all_tasks = std::vector{&osr,          &adr,     &tiles,
-                               &tt,           &tbd,     &adr_extend,
-                               &osr_footpath, &matches, &route_shapes_task};
+  // Run order (dependencies permitting). tiles runs last: it has by far the
+  // most memory traffic and evicts the other steps' inputs and outputs from
+  // the page cache.
+  auto all_tasks = std::vector{
+      &osr,        &adr,     &tt,           &tbd,  &route_shapes_task,
+      &adr_extend, &matches, &osr_footpath, &tiles};
   auto todo = std::set<task*>{};
   if (task_filter.has_value()) {
     auto q = std::vector<task*>{};
