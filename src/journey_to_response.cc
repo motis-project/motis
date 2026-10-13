@@ -583,6 +583,21 @@ api::Itinerary journey_to_response(
                          exit_stop.is_flag_set(f, nigiri::event_type::kArr);
                 };
 
+                auto const display_to_string = [](nigiri::display_type display)
+                    -> std::optional<api::DisplayTypeEnum> {
+                  switch (display) {
+                    case n::display_type::kRequired:
+                      return api::DisplayTypeEnum::REQUIRED;
+                    case n::display_type::kOptional:
+                      return api::DisplayTypeEnum::OPTIONAL;
+                    case n::display_type::kDetailsOnly:
+                      return api::DisplayTypeEnum::DETAILS_ONLY;
+                    case nigiri::kUnset: return std::nullopt;
+                  }
+
+                  return std::nullopt;
+                };
+
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
                     .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
                                      api_version),
@@ -667,10 +682,18 @@ api::Itinerary journey_to_response(
                                               n::event_type::kDep, lang)
                                         : enter_stop.display_name(
                                               n::event_type::kDep, lang)}},
+                    .routeShortNameDisplay_ =
+                        display_to_string(enter_stop.route_short_name_display(
+                            n::event_type::kDep)),
                     .routeLongName_ = {std::string{
                         enter_stop.route_long_name(n::event_type::kDep, lang)}},
+                    .routeLongNameDisplay_ =
+                        display_to_string(enter_stop.route_long_name_display(
+                            n::event_type::kDep)),
                     .tripShortName_ = {std::string{
                         enter_stop.trip_short_name(n::event_type::kDep, lang)}},
+                    .tripShortNameDisplay_ = display_to_string(
+                        tt.trip_short_names_display_[fr.trip_idx()]),
                     .displayName_ = {std::string{
                         enter_stop.display_name(n::event_type::kDep, lang)}},
                     .cancelled_ = fr.is_cancelled(),
@@ -692,9 +715,10 @@ api::Itinerary journey_to_response(
                         check_flag_enter_exit(nigiri::kReservationNotRequired)
                             ? api::ReservationEnum::NONE
                             : api::ReservationEnum::COMPULSORY,
-
                     .ticketUrls_ = get_ticketing_urls(tt, fr.id().src_, tags,
-                                                      enter_stop, exit_stop)});
+                                                      enter_stop, exit_stop),
+
+                });
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
