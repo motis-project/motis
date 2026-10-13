@@ -3591,6 +3591,88 @@ paths:
                     type: boolean
                     description: Always false for this endpoint.
 
+  /api/experimental/map/route-search:
+    get:
+      tags:
+        - map
+      operationId: routeSearch
+      summary: |
+        Search transit routes (lines) by name.
+        The text is matched case- and accent-insensitively against the short name
+        and long name. Exact matches rank above prefix matches, which rank above
+        substring matches, and short name matches above long name matches.
+      parameters:
+        - name: text
+          in: query
+          required: true
+          description: the (potentially partially typed) route name to search for
+          schema:
+            type: string
+        - name: place
+          in: query
+          required: false
+          description: |
+            Optional. Used for biasing results towards the coordinate.
+
+            Format: latitude,longitude in degrees
+          schema:
+            type: string
+        - name: placeBias
+          in: query
+          required: false
+          description: |
+            Optional. Used for biasing results towards the coordinate. Higher number = higher bias.
+          schema:
+            type: number
+            default: 1
+        - name: numResults
+          in: query
+          required: false
+          description: |
+            Optional. Number of transit routes to return.
+            If omitted, 10 are returned by default.
+            Must be <= server config variable `route_search_max_results`.
+          schema:
+            type: integer
+            minimum: 1
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+      responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: transit routes matching the search text, best match first
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteMatch'
+
   /api/v1/rentals:
     get:
       tags:
@@ -6295,6 +6377,38 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RouteSegment'
+
+    RouteMatch:
+      type: object
+      description: |
+        A transit route (line) matching a name search.
+      required:
+        - mode
+        - transitRoute
+        - routeIndexes
+        - score
+      properties:
+        mode:
+          $ref: '#/components/schemas/Mode'
+          description: Transport mode for this transit route
+        transitRoute:
+          $ref: '#/components/schemas/TransitRouteInfo'
+        agencyName:
+          type: string
+          description: Name of the agency operating this transit route
+        routeIndexes:
+          type: array
+          items:
+            type: integer
+          description: |
+            Internal route indexes this transit route is operated on, one per
+            stop sequence variant. Pass any of them as `routeIdx` to
+            `/api/experimental/map/route-details` to get stops and shapes.
+        score:
+          type: number
+          description: |
+            Match score. Higher is better, results are sorted descending.
+            Only meaningful relative to the other results of the same query.
 
     HealthResponse:
       type: object
