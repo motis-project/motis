@@ -44,7 +44,7 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
           tt_, l, [&](n::location_idx_t, n::route_idx_t const r) {
             location_clasz_mask |= n::routing::to_mask(tt_.route_clasz_[r]);
           });
-      if (location_clasz_mask == 0) {
+      if ((location_clasz_mask & mask) == 0) {
         return;
       }
 

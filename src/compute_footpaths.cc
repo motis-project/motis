@@ -33,15 +33,14 @@ namespace motis {
 
 constexpr auto const kMaxMissingFootpathDistance = 100.0;
 
-elevator_footpath_map_t compute_footpaths(
-    osr::ways const& w,
-    osr::lookup const& lookup,
-    osr::platforms const& pl,
-    nigiri::timetable& tt,
-    platform_matches_t const& matches,
-    way_matches_storage const* way_matches,
-    osr::elevation_storage const* elevations,
-    std::vector<routed_transfers_settings> const& settings) {
+void compute_footpaths(osr::ways const& w,
+                       osr::lookup const& lookup,
+                       osr::platforms const& pl,
+                       nigiri::timetable& tt,
+                       platform_matches_t const& matches,
+                       way_matches_storage const* way_matches,
+                       osr::elevation_storage const* elevations,
+                       std::vector<routed_transfers_settings> const& settings) {
   fmt::println(std::clog, "creating r-tree");
   auto const loc_rtree = [&]() {
     auto t = point_rtree<n::location_idx_t>{};
@@ -53,18 +52,6 @@ elevator_footpath_map_t compute_footpaths(
 
   auto const pt = utl::get_active_progress_tracker();
   pt->in_high(2U * tt.n_locations() * settings.size());
-
-  auto elevator_in_paths_mutex = std::mutex{};
-  auto elevator_in_paths = elevator_footpath_map_t{};
-  auto const add_if_elevator = [&](osr::node_idx_t const n,
-                                   n::location_idx_t const a,
-                                   n::location_idx_t const b) {
-    if (n != osr::node_idx_t::invalid() &&
-        w.r_->node_properties_[n].is_elevator()) {
-      auto l = std::unique_lock{elevator_in_paths_mutex};
-      elevator_in_paths[n].emplace(a, b);
-    }
-  };
 
   struct state {
     std::vector<n::location_idx_t> neighbors_;
@@ -87,18 +74,7 @@ elevator_footpath_map_t compute_footpaths(
         n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
             mode.writes_default_profile_ ? tt.n_locations() : 0U);
 
-    // both stops of a source with complete transfers (HRDF): no routed walk
-    auto const is_complete = [&](n::location_idx_t const a,
-                                 n::location_idx_t const b) {
-      return mode.writes_default_profile_ &&
-             tt.has_complete_transfers(tt.locations_.src_[a]) &&
-             tt.has_complete_transfers(tt.locations_.src_[b]);
-    };
-
     auto const is_candidate = [&](n::location_idx_t const l) {
-      if (tt.locations_.is_virt(l)) {
-        return false;
-      }
       return !mode.is_candidate_ || mode.is_candidate_(l);
     };
 
@@ -156,15 +132,14 @@ elevator_footpath_map_t compute_footpaths(
             return;
           }
 
-          loc_rtree.in_radius(
-              tt.locations_.coordinates_[l],
-              get_max_distance(mode.profile_, osr_parameters{},
-                               mode.max_duration_),
-              [&](n::location_idx_t const x) {
-                if (x != l && is_candidate(x) && !is_complete(l, x)) {
-                  s.neighbors_.emplace_back(x);
-                }
-              });
+          loc_rtree.in_radius(tt.locations_.coordinates_[l],
+                              get_max_distance(mode.profile_, osr_parameters{},
+                                               mode.max_duration_),
+                              [&](n::location_idx_t const x) {
+                                if (x != l && is_candidate(x)) {
+                                  s.neighbors_.emplace_back(x);
+                                }
+                              });
 
           auto const results =
               osr::route_one_to_many(
@@ -196,13 +171,6 @@ elevator_footpath_map_t compute_footpaths(
             auto const duration = n::duration_t{
                 static_cast<unsigned>(std::ceil(r->cost_ / 60.0))};
             transfers[l].emplace_back(n::footpath{n, duration});
-
-            if (mode.profile_ == osr::search_profile::kWheelchair) {
-              for (auto const& seg : r->segments_) {
-                add_if_elevator(seg.from_, l, n);
-                add_if_elevator(seg.from_, n, l);
-              }
-            }
           }
 
           if (mode.extend_missing_ || mode.writes_default_profile_) {
@@ -225,17 +193,6 @@ elevator_footpath_map_t compute_footpaths(
                          (is_close || tt.locations_.get_root_idx(l) ==
                                           tt.locations_.get_root_idx(n))) {
                 default_estimates[l].push_back(estimate);
-              }
-            }
-          }
-
-          // the loader's walks between stops of a source with complete
-          // transfers (HRDF)
-          if (mode.writes_default_profile_) {
-            for (auto const fp :
-                 tt.locations_.footpaths_out_[n::kDefaultProfile][l]) {
-              if (is_complete(l, fp.target())) {
-                transfers[l].push_back(fp);
               }
             }
           }
@@ -285,8 +242,6 @@ elevator_footpath_map_t compute_footpaths(
 
     n_done += tt.n_locations();
   }
-
-  return elevator_in_paths;
 }
 
 }  // namespace motis

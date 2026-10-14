@@ -6,7 +6,6 @@
 #include "osr/lookup.h"
 #include "osr/types.h"
 
-#include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
 #include "motis/data.h"
@@ -16,12 +15,6 @@ namespace motis {
 
 using platform_matches_t =
     vector_map<nigiri::location_idx_t, osr::platform_idx_t>;
-
-inline osr::platform_idx_t get_match(nigiri::timetable const& tt,
-                                     platform_matches_t const& matches,
-                                     nigiri::location_idx_t const l) {
-  return matches[l < matches.size() ? l : tt.locations_.parents_[l]];
-}
 
 struct way_matches_storage {
   way_matches_storage(std::filesystem::path,

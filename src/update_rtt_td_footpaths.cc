@@ -225,33 +225,4 @@ void update_rtt_td_footpaths(osr::ways const& w,
   }
 }
 
-void update_rtt_td_footpaths(osr::ways const& w,
-                             osr::lookup const& l,
-                             osr::platforms const& pl,
-                             nigiri::timetable const& tt,
-                             point_rtree<n::location_idx_t> const& loc_rtree,
-                             elevators const& e,
-                             elevator_footpath_map_t const& elevators_in_paths,
-                             platform_matches_t const& matches,
-                             nigiri::rt_timetable& rtt,
-                             std::chrono::seconds const max) {
-  auto tasks = hash_set<n::location_idx_t>{};
-  for (auto const& [e_in_path, from_to] : elevators_in_paths) {
-    auto const e_idx =
-        match_elevator(e.elevators_rtree_, e.elevators_, w, e_in_path);
-    if (e_idx == elevator_idx_t::invalid()) {
-      continue;
-    }
-    auto const& el = e.elevators_[e_idx];
-    if (el.out_of_service_.empty() && el.status_) {
-      continue;
-    }
-    for (auto const& [from, to] : from_to) {
-      tasks.emplace(from);
-    }
-  }
-  update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, tasks, nullptr,
-                          rtt, max);
-}
-
 }  // namespace motis

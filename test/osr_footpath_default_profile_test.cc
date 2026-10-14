@@ -171,8 +171,8 @@ S1,20190501,1
 )";
 
 // The trip-based transfers are precomputed at import time: with osr_footpath
-// they have to come from the timetable the server routes on (tt_ext.bin), or
-// they would allow the 3 min beeline walk to S3a.
+// they have to come from the routed walks, or they would allow the 3 min
+// beeline walk to S3a.
 TEST(motis, trip_based_transfers_follow_osr_footpath) {
   auto const path = std::filesystem::path{"test/data/default_profile_tb"};
   auto ec = std::error_code{};

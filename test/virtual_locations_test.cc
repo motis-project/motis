@@ -416,6 +416,24 @@ TEST(virtual_locations, one_to_all_lists_each_stop_once) {
                         });
 }
 
+// arriveBy: of a stop and its virtual locations, the latest departure counts
+// (the durations are negative). FC leaves U 10:33 for L: from U itself at
+// 10:31 (U's 2 min to change), FA's arrival location only reaches it through
+// the 5 min rule walk.
+TEST(virtual_locations, one_to_all_arrive_by_keeps_the_fastest_location) {
+  auto& d = plain();
+  auto const one_to_all = utl::init_from<ep::one_to_all>(d).value();
+  auto const res = one_to_all(
+      "/api/v6/one-to-all?one=test_L&time=2019-05-01T09:00:00Z"
+      "&maxTravelTime=90&arriveBy=true");
+  ASSERT_TRUE(res.all_.has_value());
+  auto const it = utl::find_if(*res.all_, [](api::ReachablePlace const& p) {
+    return p.place_->stopId_ == "test_U";
+  });
+  ASSERT_NE(end(*res.all_), it);
+  EXPECT_EQ(29, it->duration_.value());
+}
+
 TEST(virtual_locations, map_stops_lists_each_stop_once) {
   auto& d = plain();
   auto const stops = utl::init_from<ep::stops>(d).value();

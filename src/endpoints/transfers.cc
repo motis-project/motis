@@ -91,7 +91,7 @@ api::transfers_response transfers::operator()(
         .stopId_ = std::string{tt_.locations_.ids_[l].view()},
         .lat_ = tt_.locations_.coordinates_[l].lat(),
         .lon_ = tt_.locations_.coordinates_[l].lng(),
-        .level_ = pl_.get_level(w_, get_match(tt_, matches_, l)).to_float(),
+        .level_ = pl_.get_level(w_, matches_[l]).to_float(),
         .vertexType_ = api::VertexTypeEnum::NORMAL};
   };
 

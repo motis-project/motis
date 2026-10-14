@@ -136,9 +136,8 @@ std::vector<n::routing::offset> client_offsets(
 
 osr::location stop_to_osr_location(routing const& r,
                                    n::location_idx_t const l) {
-  return osr::location{
-      r.tt_->locations_.coordinates_[l],
-      r.pl_->get_level(*r.w_, get_match(*r.tt_, *r.matches_, l))};
+  return osr::location{r.tt_->locations_.coordinates_[l],
+                       r.pl_->get_level(*r.w_, (*r.matches_)[l])};
 }
 
 n::routing::td_offsets_t get_td_offsets(

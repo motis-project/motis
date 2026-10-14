@@ -182,15 +182,17 @@ api::Itinerary street_routing(osr::ways const& w,
       return precomputed.state_->reconstruct(w, l, precomputed.dest_idx_,
                                              out.get_sharing_data());
     }
-    auto const& [e_nodes, e_states] = *s;
     assert(blocked_mem.none());
-    auto const reset =
-        utl::finally{[&]() { reset_blocked(e_nodes, blocked_mem); }};
+    auto const reset = utl::finally{[&]() {
+      if (s.has_value()) {
+        reset_blocked(s->first, blocked_mem);
+      }
+    }};
     auto const profile = out.get_profile();
     return osr::route(
         to_profile_parameters(profile, osr_params), w, l, profile, from, to,
         static_cast<osr::cost_t>(max.count()), osr_dir, max_matching_distance,
-        s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
+        s ? &set_blocked(s->first, s->second, blocked_mem) : nullptr,
         out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi,
         osr_start_time);
   });
