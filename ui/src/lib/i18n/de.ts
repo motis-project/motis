@@ -51,11 +51,11 @@ const translations: Translations = {
 	tripIntermediateStops: (n: number) => {
 		switch (n) {
 			case 0:
-				return 'Fahrt ohne Zwischenhalt';
+				return 'Ohne Zwischenhalt';
 			case 1:
-				return 'Fahrt eine Station';
+				return 'Ein Zwischenhalt';
 			default:
-				return `Fahrt ${n} Stationen`;
+				return `${n} Zwischenhalte`;
 		}
 	},
 	sharingProvider: 'Anbieter',
