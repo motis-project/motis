@@ -485,7 +485,8 @@ void import(config const& c,
         auto const progress_tracker = utl::get_active_progress_tracker();
         progress_tracker->status("Prepare Platform Matches").out_bounds(0, 30);
         cista::write(data_path / "matches.bin",
-                     get_matches(*d.tt_, *d.pl_, *d.w_));
+                     get_matches(*d.tt_, *d.pl_, *d.w_, *d.l_,
+                                 c.timetable_->max_matching_distance_));
 
         d.load_matches();
         if (c.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
@@ -501,7 +502,10 @@ void import(config const& c,
       {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
        std::pair{"way_matches",
                  cista::build_hash(c.timetable_.value_or(config::timetable{})
-                                       .preprocess_max_matching_distance_)}}};
+                                       .preprocess_max_matching_distance_)},
+       std::pair{"max_matching_distance",
+                 cista::build_hash(c.timetable_.value_or(config::timetable{})
+                                       .max_matching_distance_)}}};
 
   auto osr_footpath = task{
       "osr_footpath",

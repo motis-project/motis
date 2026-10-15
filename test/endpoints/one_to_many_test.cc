@@ -285,7 +285,7 @@ TEST(one_to_many, post_request_backward) {
               {{.duration_ = 1020.0, .transfers_ = 0}},
               {},
               {{.duration_ = 3360.0, .transfers_ = 1}},  // from DA_10: 3420.0
-              {},
+              {{.duration_ = 3600.0, .transfers_ = 1}},
           }}}),
       durations);
 }
@@ -667,13 +667,13 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
 
   ASSERT_EQ(4U, td.size());
   ASSERT_EQ(1U, td.at(0).size());
-  EXPECT_DOUBLE_EQ(1320.0, td.at(0).at(0).duration_);
+  EXPECT_DOUBLE_EQ(2040.0, td.at(0).at(0).duration_);
   EXPECT_EQ(0, td.at(0).at(0).transfers_);
   ASSERT_EQ(1U, td.at(1).size());
-  EXPECT_DOUBLE_EQ(1860.0, td.at(1).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1800.0, td.at(1).at(0).duration_);
   EXPECT_EQ(0, td.at(1).at(0).transfers_);
   ASSERT_EQ(1U, td.at(2).size());
-  EXPECT_DOUBLE_EQ(1800.0, td.at(2).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1440.0, td.at(2).at(0).duration_);
   EXPECT_EQ(0, td.at(2).at(0).transfers_);
   ASSERT_EQ(1U, td.at(3).size());
   EXPECT_DOUBLE_EQ(4440.0, td.at(3).at(0).duration_);
