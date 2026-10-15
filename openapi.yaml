@@ -4363,6 +4363,22 @@ components:
         - NORMAL
         - NOT_ALLOWED
 
+    RealTimeState:
+      type: string
+      description: |
+        Nature of the real-time data an arrival/departure time is based on.
+        - `NO_RT_DATA` - no real-time data available, the time is the scheduled time
+        - `INCONSISTENT` - no consistent real-time data available for this event, the time was changed by MOTIS, e.g. to prevent the vehicle from arriving before departing at a previous stop, or because the real-time data could not be matched unambiguously
+        - `OBSERVED` - the time was observed/recorded
+        - `PROPAGATED` - the time was computed by propagating the delay of a preceding event
+        - `PREDICTED` - the time was predicted by the real-time data source
+      enum:
+        - NO_RT_DATA
+        - INCONSISTENT
+        - OBSERVED
+        - PROPAGATED
+        - PREDICTED
+
     WheelchairAccessibility:
       type: string
       enum:
@@ -4455,6 +4471,16 @@ components:
         cancelled:
           description: Whether this stop is cancelled due to the realtime situation.
           type: boolean
+        arrivalRealTimeState:
+          description: |
+            Nature of the real-time data the arrival time is based on.
+            Only set for stops of transit trips with an arrival.
+          $ref: '#/components/schemas/RealTimeState'
+        departureRealTimeState:
+          description: |
+            Nature of the real-time data the departure time is based on.
+            Only set for stops of transit trips with a departure.
+          $ref: '#/components/schemas/RealTimeState'
         alerts:
           description: Alerts for this stop.
           type: array
@@ -4550,7 +4576,7 @@ components:
           $ref: '#/components/schemas/Mode'
           description: Transport mode for this leg
         realTime:
-          description: Whether there is real-time data about this leg
+          description: Whether there is real-time data for this arrival/departure (i.e. `place.arrivalRealTimeState`/`place.departureRealTimeState` is neither `NO_RT_DATA` nor `INCONSISTENT`)
           type: boolean
         headsign:
           description: |
@@ -4704,7 +4730,7 @@ components:
           type: string
           format: date-time
         realTime:
-          description: Whether there is real-time data about this leg
+          description: Whether there is real-time data for the departure or arrival of this leg
           type: boolean
         polyline:
           description: Google polyline encoded coordinate sequence (with precision 5) where the trip travels on this segment.
@@ -5323,7 +5349,7 @@ components:
           format: date-time
           description: scheduled leg arrival time
         realTime:
-          description: Whether there is real-time data about this leg
+          description: Whether there is real-time data for the departure or arrival of this leg (i.e. `from.departureRealTimeState` or `to.arrivalRealTimeState` is neither `NO_RT_DATA` nor `INCONSISTENT`)
           type: boolean
         scheduled:
           description: |

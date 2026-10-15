@@ -8,6 +8,7 @@
 #include "osr/platforms.h"
 
 #include "nigiri/rt/frun.h"
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/special_stations.h"
 #include "nigiri/timetable.h"
 
@@ -18,6 +19,19 @@
 namespace n = nigiri;
 
 namespace motis {
+
+api::RealTimeStateEnum to_api(n::rt_data_state const s) {
+  switch (s) {
+    case n::rt_data_state::kNoRtData: return api::RealTimeStateEnum::NO_RT_DATA;
+    case n::rt_data_state::kInconsistent:
+      return api::RealTimeStateEnum::INCONSISTENT;
+    case n::rt_data_state::kObserved: return api::RealTimeStateEnum::OBSERVED;
+    case n::rt_data_state::kPropagated:
+      return api::RealTimeStateEnum::PROPAGATED;
+    case n::rt_data_state::kPredicted: return api::RealTimeStateEnum::PREDICTED;
+  }
+  return api::RealTimeStateEnum::NO_RT_DATA;
+}
 
 tt_location::tt_location(nigiri::rt::run_stop const& stop)
     : l_{stop.get_location_idx()},
@@ -219,6 +233,12 @@ api::Place to_place(n::timetable const* tt,
   p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
                                    (s.get_scheduled_stop().in_allowed() ||
                                     s.get_scheduled_stop().out_allowed()));
+  if (s.stop_idx_ != 0U) {
+    p.arrivalRealTimeState_ = to_api(s.data_state(n::event_type::kArr));
+  }
+  if (s.stop_idx_ != s.fr_->size() - 1U) {
+    p.departureRealTimeState_ = to_api(s.data_state(n::event_type::kDep));
+  }
   return p;
 }
 

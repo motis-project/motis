@@ -11,7 +11,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
-	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { isRealtime, onClickStop, onClickTrip } from '$lib/utils';
 	import { normalizedContains } from '$lib/normalizedContains';
 	import { getModeLabel } from './map/getModeLabel';
 	import { posToLocation } from './Location';
@@ -124,7 +124,12 @@
 					<Time
 						variant="schedule"
 						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
+						isRealtime={isRealtime(
+							arriveBy
+								? stopTime.place.arrivalRealTimeState
+								: stopTime.place.departureRealTimeState,
+							stopTime.realTime
+						)}
 						{timestamp}
 						{scheduledTimestamp}
 						queriedTime={queryTime.toISOString()}
@@ -133,7 +138,12 @@
 					<Time
 						variant="realtime"
 						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
+						isRealtime={isRealtime(
+							arriveBy
+								? stopTime.place.arrivalRealTimeState
+								: stopTime.place.departureRealTimeState,
+							stopTime.realTime
+						)}
 						{timestamp}
 						{scheduledTimestamp}
 						{arriveBy}

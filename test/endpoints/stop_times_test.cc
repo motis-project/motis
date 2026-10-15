@@ -162,7 +162,13 @@ TEST(motis, stop_times) {
     EXPECT_EQ("2019-04-30 22:45",
               format_time(ice.place_.scheduledArrival_.value()));
     EXPECT_EQ(true, ice.realTime_);
+    EXPECT_EQ(api::RealTimeStateEnum::PREDICTED,
+              ice.place_.arrivalRealTimeState_);
+    EXPECT_FALSE(ice.place_.departureRealTimeState_.has_value());
     EXPECT_EQ(1, ice.previousStops_->size());
+    // The update starts at the second stop -> no real-time data for DA.
+    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
+              ice.previousStops_->at(0).departureRealTimeState_);
     EXPECT_EQ(1, ice.place_.alerts_->size());
 
     auto const& sbahn = res.stopTimes_[2];
@@ -179,6 +185,8 @@ TEST(motis, stop_times) {
     EXPECT_EQ("2019-04-30 23:20",
               format_time(sbahn.place_.scheduledArrival_.value()));
     EXPECT_EQ(false, sbahn.realTime_);
+    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
+              sbahn.place_.arrivalRealTimeState_);
     EXPECT_EQ(2, sbahn.previousStops_->size());
   }
 
@@ -428,6 +436,52 @@ T2,08:20:00,08:20:00,C,1
 service_id,date,exception_type
 S1,20190501,1
 )";
+
+TEST(motis, stop_times_alert_only_no_rt_data) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_rt_state_alert", ec);
+
+  auto const c = config{.timetable_ = config::timetable{
+                            .first_day_ = "2019-05-01",
+                            .num_days_ = 2,
+                            .datasets_ = {{"test", {.path_ = kGTFS}}}}};
+  import(c, "test/data_rt_state_alert");
+  auto d = data{"test/data_rt_state_alert", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  // An alert for the ICE creates an RT transport without any real-time times.
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      to_feed_msg({alert{.header_ = "Hello",
+                         .description_ = "World",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "ICE",
+                                                   .start_time_ = {"00:35:00"},
+                                                   .date_ = {"20190501"}}}}}}},
+                  date::sys_days{2019_y / May / 1} + 9h));
+  EXPECT_EQ(1U, stats.alert_total_resolve_success_);
+
+  {
+    auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_DA_10"
+        "&time=2019-04-30T22:30:00.000Z"
+        "&n=1"
+        "&fetchStops=true");
+    ASSERT_EQ(1, res.stopTimes_.size());
+
+    auto const& ice = res.stopTimes_[0];
+    EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
+    EXPECT_TRUE(ice.place_.alerts_.has_value());
+    EXPECT_FALSE(ice.realTime_);
+    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
+              ice.place_.departureRealTimeState_);
+    EXPECT_FALSE(ice.place_.arrivalRealTimeState_.has_value());
+    EXPECT_EQ(ice.place_.scheduledDeparture_, ice.place_.departure_);
+    ASSERT_EQ(1, ice.nextStops_->size());
+    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
+              ice.nextStops_->at(0).arrivalRealTimeState_);
+  }
+}
 
 TEST(motis, stop_times_reservation) {
   auto ec = std::error_code{};

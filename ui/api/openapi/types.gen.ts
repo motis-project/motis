@@ -466,6 +466,17 @@ export type VertexType = 'NORMAL' | 'BIKESHARE' | 'TRANSIT';
  */
 export type PickupDropoffType = 'NORMAL' | 'NOT_ALLOWED';
 
+/**
+ * Nature of the real-time data an arrival/departure time is based on.
+ * - `NO_RT_DATA` - no real-time data available, the time is the scheduled time
+ * - `INCONSISTENT` - no consistent real-time data available for this event, the time was changed by MOTIS, e.g. to prevent the vehicle from arriving before departing at a previous stop, or because the real-time data could not be matched unambiguously
+ * - `OBSERVED` - the time was observed/recorded
+ * - `PROPAGATED` - the time was computed by propagating the delay of a preceding event
+ * - `PREDICTED` - the time was predicted by the real-time data source
+ *
+ */
+export type RealTimeState = 'NO_RT_DATA' | 'INCONSISTENT' | 'OBSERVED' | 'PROPAGATED' | 'PREDICTED';
+
 export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
 
 export type Reservation = 'NONE' | 'COMPULSORY';
@@ -559,6 +570,18 @@ export type Place = {
      */
     cancelled?: boolean;
     /**
+     * Nature of the real-time data the arrival time is based on.
+     * Only set for stops of transit trips with an arrival.
+     *
+     */
+    arrivalRealTimeState?: RealTimeState;
+    /**
+     * Nature of the real-time data the departure time is based on.
+     * Only set for stops of transit trips with a departure.
+     *
+     */
+    departureRealTimeState?: RealTimeState;
+    /**
      * Alerts for this stop.
      */
     alerts?: Array<Alert>;
@@ -637,7 +660,7 @@ export type StopTime = {
      */
     mode: Mode;
     /**
-     * Whether there is real-time data about this leg
+     * Whether there is real-time data for this arrival/departure (i.e. `place.arrivalRealTimeState`/`place.departureRealTimeState` is neither `NO_RT_DATA` nor `INCONSISTENT`)
      */
     realTime: boolean;
     /**
@@ -773,7 +796,7 @@ export type TripSegment = {
      */
     scheduledArrival: string;
     /**
-     * Whether there is real-time data about this leg
+     * Whether there is real-time data for the departure or arrival of this leg
      */
     realTime: boolean;
     /**
@@ -1300,7 +1323,7 @@ export type Leg = {
      */
     scheduledEndTime: string;
     /**
-     * Whether there is real-time data about this leg
+     * Whether there is real-time data for the departure or arrival of this leg (i.e. `from.departureRealTimeState` or `to.arrivalRealTimeState` is neither `NO_RT_DATA` nor `INCONSISTENT`)
      */
     realTime: boolean;
     /**

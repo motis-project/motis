@@ -27,7 +27,7 @@
 	import Alerts from '$lib/Alerts.svelte';
 	import { getModeName } from '$lib/getModeName';
 	import { language, t } from '$lib/i18n/translation';
-	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { isRealtime, onClickStop, onClickTrip } from '$lib/utils';
 	import { normalizedContains } from '$lib/normalizedContains';
 	import { formatDate, formatTime } from './toDateTime';
 	import { getModeLabel } from './map/getModeLabel';
@@ -383,7 +383,14 @@
 			</div>
 
 			<div class="pt-4 pb-2 pl-4 sm:pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
+				{@render stopTimes(
+					l.startTime,
+					l.scheduledStartTime,
+					isRealtime(l.from.departureRealTimeState, l.realTime),
+					l.from,
+					l.mode,
+					-1
+				)}
 				<div class="flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">
@@ -556,14 +563,28 @@
 						</summary>
 						<div class="grid gap-2 items-start content-start pb-2">
 							{#each l.intermediateStops! as s, i (i)}
-								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, l.mode, 0)}
+								{@render stopTimes(
+									s.arrival!,
+									s.scheduledArrival!,
+									isRealtime(s.arrivalRealTimeState, l.realTime),
+									s,
+									l.mode,
+									0
+								)}
 							{/each}
 						</div>
 					</details>
 				{/if}
 
 				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
-					{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to, l.mode, 1)}
+					{@render stopTimes(
+						l.endTime!,
+						l.scheduledEndTime!,
+						isRealtime(l.to.arrivalRealTimeState, l.realTime),
+						l.to,
+						l.mode,
+						1
+					)}
 				{/if}
 
 				{#if isLast || (isLastPred && !isRelevantLeg(next!))}
@@ -599,7 +620,7 @@
 			{@render stopTimes(
 				lastLeg!.endTime,
 				lastLeg!.scheduledEndTime,
-				lastLeg!.realTime,
+				isRealtime(lastLeg!.to.arrivalRealTimeState, lastLeg!.realTime),
 				lastLeg!.to,
 				lastLeg!.mode,
 				1
