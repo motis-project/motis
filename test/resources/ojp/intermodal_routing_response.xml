@@ -114,7 +114,7 @@
             <StartTime>2019-05-01T01:55:00Z</StartTime>
             <EndTime>2019-05-01T02:14:00Z</EndTime>
             <Transfers>0</Transfers>
-            <Distance>104</Distance>
+            <Distance>102</Distance>
             <Leg>
               <Id>1</Id>
               <Duration>PT10M</Duration>
@@ -139,7 +139,7 @@
                   <PersonalMode>foot</PersonalMode>
                 </Service>
                 <Duration>PT10M</Duration>
-                <Length>58</Length>
+                <Length>57</Length>
                 <LegTrack>
                   <TrackSection>
                     <TrackSectionStart>
@@ -388,7 +388,7 @@
                       </Position>
                     </LinkProjection>
                     <Duration>PT10M</Duration>
-                    <Length>58</Length>
+                    <Length>57</Length>
                   </TrackSection>
                 </LegTrack>
               </ContinuousLeg>
@@ -494,7 +494,7 @@
                   <PersonalMode>foot</PersonalMode>
                 </Service>
                 <Duration>PT4M</Duration>
-                <Length>44</Length>
+                <Length>43</Length>
                 <LegTrack>
                   <TrackSection>
                     <TrackSectionStart>
@@ -687,7 +687,7 @@
                       </Position>
                     </LinkProjection>
                     <Duration>PT4M</Duration>
-                    <Length>44</Length>
+                    <Length>43</Length>
                   </TrackSection>
                 </LegTrack>
               </ContinuousLeg>
@@ -702,7 +702,7 @@
             <StartTime>2019-05-01T02:05:00Z</StartTime>
             <EndTime>2019-05-01T02:24:00Z</EndTime>
             <Transfers>0</Transfers>
-            <Distance>120</Distance>
+            <Distance>118</Distance>
             <Leg>
               <Id>1</Id>
               <Duration>PT10M</Duration>
@@ -727,7 +727,7 @@
                   <PersonalMode>foot</PersonalMode>
                 </Service>
                 <Duration>PT10M</Duration>
-                <Length>81</Length>
+                <Length>80</Length>
                 <LegTrack>
                   <TrackSection>
                     <TrackSectionStart>
@@ -1068,7 +1068,7 @@
                       </Position>
                     </LinkProjection>
                     <Duration>PT10M</Duration>
-                    <Length>81</Length>
+                    <Length>80</Length>
                   </TrackSection>
                 </LegTrack>
               </ContinuousLeg>
@@ -1174,7 +1174,7 @@
                   <PersonalMode>foot</PersonalMode>
                 </Service>
                 <Duration>PT4M</Duration>
-                <Length>37</Length>
+                <Length>36</Length>
                 <LegTrack>
                   <TrackSection>
                     <TrackSectionStart>
@@ -1198,12 +1198,44 @@
                         <siri:Latitude>50.11404</siri:Latitude>
                       </Position>
                       <Position>
-                        <siri:Longitude>8.67823</siri:Longitude>
-                        <siri:Latitude>50.11404</siri:Latitude>
+                        <siri:Longitude>8.67826</siri:Longitude>
+                        <siri:Latitude>50.11403</siri:Latitude>
                       </Position>
                       <Position>
-                        <siri:Longitude>8.67823</siri:Longitude>
-                        <siri:Latitude>50.11404</siri:Latitude>
+                        <siri:Longitude>8.67826</siri:Longitude>
+                        <siri:Latitude>50.11403</siri:Latitude>
+                      </Position>
+                      <Position>
+                        <siri:Longitude>8.67828</siri:Longitude>
+                        <siri:Latitude>50.11408</siri:Latitude>
+                      </Position>
+                      <Position>
+                        <siri:Longitude>8.67828</siri:Longitude>
+                        <siri:Latitude>50.11408</siri:Latitude>
+                      </Position>
+                      <Position>
+                        <siri:Longitude>8.67792</siri:Longitude>
+                        <siri:Latitude>50.11411</siri:Latitude>
+                      </Position>
+                      <Position>
+                        <siri:Longitude>8.67792</siri:Longitude>
+                        <siri:Latitude>50.11411</siri:Latitude>
+                      </Position>
+                      <Position>
+                        <siri:Longitude>8.67791</siri:Longitude>
+                        <siri:Latitude>50.11408</siri:Latitude>
+                      </Position>
+                      <Position>
+                        <siri:Longitude>8.67791</siri:Longitude>
+                        <siri:Latitude>50.11408</siri:Latitude>
+                      </Position>
+                      <Position>
+                        <siri:Longitude>8.67811</siri:Longitude>
+                        <siri:Latitude>50.11406</siri:Latitude>
+                      </Position>
+                      <Position>
+                        <siri:Longitude>8.67811</siri:Longitude>
+                        <siri:Latitude>50.11406</siri:Latitude>
                       </Position>
                       <Position>
                         <siri:Longitude>8.67819</siri:Longitude>
@@ -1307,7 +1339,7 @@
                       </Position>
                     </LinkProjection>
                     <Duration>PT4M</Duration>
-                    <Length>37</Length>
+                    <Length>36</Length>
                   </TrackSection>
                 </LegTrack>
               </ContinuousLeg>

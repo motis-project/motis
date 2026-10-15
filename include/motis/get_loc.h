@@ -18,8 +18,7 @@ inline osr::location get_loc(
   auto const lvl = matches[l] == osr::platform_idx_t::invalid()
                        ? osr::level_t{0.F}
                        : pl.get_level(w, matches[l]);
-  return {
-      .pos_ = tt.locations_.coordinates_[l], .lvl_ = lvl, .must_reach_ = true};
+  return {.pos_ = tt.locations_.coordinates_[l], .lvl_ = lvl};
 }
 
 }  // namespace motis

@@ -81,8 +81,7 @@ osr::location get_location(api::Place const& p) {
                       .transform([](auto const lvl) {
                         return osr::level_t{static_cast<float>(lvl)};
                       })
-                      .value_or(osr::kNoLevel),
-          .must_reach_ = p.stopId_.has_value()};
+                      .value_or(osr::kNoLevel)};
 }
 
 osr::location get_location(n::timetable const* tt,
@@ -113,8 +112,7 @@ osr::location get_location(n::timetable const* tt,
             utl::verify(tt != nullptr,
                         "resolving stop coordinates: timetable not set");
             return osr::location{.pos_ = tt->locations_.coordinates_.at(l_idx),
-                                 .lvl_ = get_lvl(w, pl, matches, l_idx),
-                                 .must_reach_ = true};
+                                 .lvl_ = get_lvl(w, pl, matches, l_idx)};
           }},
       loc);
 }
