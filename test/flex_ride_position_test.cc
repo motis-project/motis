@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
+#include <map>
+#include <string>
 #include <string_view>
 #include <system_error>
 
@@ -10,10 +13,18 @@
 
 #include "utl/init_from.h"
 
+#include "nigiri/footpath.h"
+
+#include "osr/routing/route.h"
+
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
+#include "motis/flex/flex.h"
+#include "motis/flex/flex_routing_data.h"
 #include "motis/import.h"
+#include "motis/osr/one_to_many_searches.h"
+#include "motis/transport_mode.h"
 
 using namespace motis;
 using namespace date;
@@ -282,4 +293,68 @@ TEST(motis, flex_ride_position_regular_window) {
     ASSERT_EQ(1U, legs.size());
     EXPECT_EQ(utc(2, 8, 0), *legs.front().first->startTime_);
   }
+}
+
+// The duration of a FLEX offset is the osr travel time rounded up to whole
+// minutes, like every other offset: an offset promises that the stop can be
+// reached after this time. Truncating made FLEX up to a minute optimistic and
+// let a walk-only car_sharing path beat the WALK offset for the same stop.
+// Checked against the paths add_flex_td_offsets keeps for reconstruction, for
+// the first and the last mile from several positions along Traubenweg (their
+// walks to the vehicle end on different seconds).
+TEST(motis, flex_offset_duration_rounded_up) {
+  auto const f = fixture{"rounding", "10:00:00,10:40:00", "10:00:00,13:00:00"};
+  auto const r = utl::init_from<ep::routing>(*f.d_).value();
+
+  auto n_offsets = 0U;
+  auto n_fractional = 0U;  // paths whose duration is no whole minute
+  auto const check = [&](geo::latlng const& pos, osr::direction const dir) {
+    auto frd = flex::flex_routing_data{};
+    auto offsets = nigiri::routing::td_offsets_t{};
+    auto stats = std::map<std::string, std::uint64_t>{};
+    auto states = one_to_many_side{};
+    flex::add_flex_td_offsets(
+        *r.w_, *r.l_, r.pl_, r.matches_, r.way_matches_, *r.tt_, *r.fa_,
+        *r.loc_tree_,
+        nigiri::unixtime_t{sys_days{2019_y / May / 1} + hm(7, 30)},
+        osr::location{pos, osr::kNoLevel}, dir, std::chrono::hours{1}, 250.0,
+        osr_parameters{}, frd, offsets, stats, &states);
+    EXPECT_FALSE(offsets.empty());
+
+    for (auto const& [l, v] : offsets) {
+      for (auto const& o : v) {
+        if (o.duration_ == nigiri::footpath::kMaxDuration) {
+          continue;  // closes a window, no path behind it
+        }
+        auto const search = states.by_mode_.find(
+            transport_mode_t{o.transport_mode_, o.transport_mode_payload_});
+        ASSERT_NE(states.by_mode_.end(), search);
+        auto const& s = states.searches_[search->second];
+        auto const dest = s.dest_idx_.find(l);
+        ASSERT_NE(s.dest_idx_.end(), dest);
+        auto const& p = s.state_->results()[dest->second];
+        ASSERT_TRUE(p.has_value());
+
+        auto const seconds = static_cast<int>(p->duration_.count());
+        EXPECT_EQ((seconds + 59) / 60, static_cast<int>(o.duration_.count()))
+            << "path of " << seconds << " s, offset " << o.duration_.count()
+            << " min";
+        ++n_offsets;
+        if (seconds % 60 != 0) {
+          ++n_fractional;
+        }
+      }
+    }
+  };
+
+  for (auto const& pos :
+       {geo::latlng{49.87331, 8.62300}, geo::latlng{49.87330, 8.62340},
+        geo::latlng{49.87329, 8.62382}, geo::latlng{49.87328, 8.62420},
+        geo::latlng{49.87327, 8.62460}, geo::latlng{49.87326, 8.62490}}) {
+    check(pos, osr::direction::kForward);
+    check(pos, osr::direction::kBackward);
+  }
+  EXPECT_GT(n_offsets, 0U);
+  // Otherwise rounding up and truncating agree and the test proves nothing.
+  EXPECT_GT(n_fractional, 0U);
 }
