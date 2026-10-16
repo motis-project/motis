@@ -114,7 +114,7 @@ export const colors = {
 		landuseResidential: '#292929',
 		landuseRetail: '#292929',
 		landuseConstruction: 'hsl(0, 0%, 34%)',
-		landuseAgriculture: 'hsl(43, 51%, 12%)',
+		landuseAgriculture: 'hsl(43, 20%, 14%)',
 		siteHospital: 'hsl(0, 100%, 30%)',
 
 		landusePark: '#18221f',
