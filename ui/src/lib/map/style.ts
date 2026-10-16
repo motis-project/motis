@@ -86,10 +86,10 @@ export const colors = {
 	dark: {
 		background: '#292929',
 
-		water: '#1f2830',
+		water: '#03060f',
 		waterText: 'hsl(205, 40%, 65%)',
 		glacier: 'hsl(0, 0%, 10%)',
-		damPier: 'hsl(33, 48%, 5%)',
+		damPier: 'hsl(33, 48%, 8%)',
 		bridgeArea: 'rgb(22, 17, 11)',
 		bridgeCasing: 'rgb(38, 38, 38)',
 		bicycleRoad: 'hsl(203, 100%, 3%)',
