@@ -172,8 +172,9 @@ elevator_footpath_map_t compute_footpaths(
               continue;
             }
 
+            // travel time, not the search cost (which includes penalties)
             auto const duration = n::duration_t{
-                static_cast<unsigned>(std::ceil(r->cost_ / 60.0))};
+                static_cast<unsigned>(std::ceil(r->duration_.count() / 60.0))};
             transfers[l].emplace_back(n::footpath{n, duration});
 
             if (mode.profile_ == osr::search_profile::kWheelchair) {

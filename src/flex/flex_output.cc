@@ -86,65 +86,33 @@ void flex_output::annotate_leg(n::lang_t const& lang,
 
   auto const t = mode_payload_.get_flex_transport();
   auto const stop_seq = tt_.flex_stop_seq_[tt_.flex_transport_stop_seq_[t]];
-  auto from_stop = std::optional<n::stop_idx_t>{};
-  auto to_stop = std::optional<n::stop_idx_t>{};
-  for (auto i = 0U; i != stop_seq.size(); ++i) {
-    auto const stop_idx = static_cast<n::stop_idx_t>(
-        mode_payload_.get_dir() == osr::direction::kForward
-            ? i
-            : stop_seq.size() - i - 1U);
-    auto const stop = stop_seq[stop_idx];
-    if (!from_stop.has_value() &&
-        is_in_flex_stop(tt_, w_, fa_, additional_nodes_, stop, from)) {
-      from_stop = stop_idx;
-    } else if (!to_stop.has_value() &&
-               is_in_flex_stop(tt_, w_, fa_, additional_nodes_, stop, to)) {
-      to_stop = stop_idx;
-      break;
-    }
-  }
+  auto const from_stop = mode_payload_.get_from_stop();
+  auto const to_stop = mode_payload_.get_to_stop();
 
-  if (!from_stop.has_value()) {
-    n::log(n::log_lvl::error, "flex", "flex: from  [node={}] not found", from);
-    return;
-  }
-
-  if (!to_stop.has_value()) {
-    n::log(n::log_lvl::error, "flex", "flex: to [node={}] not found", to);
-    return;
-  }
-
+  // A location group stop is an additional node: show it as the timetable
+  // location. Keep the timezone the leg's place already carries: without the
+  // geocoding extension a location has none of its own.
   auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
     if (w_.is_additional_node(n)) {
       auto const l = additional_nodes_.get(n);
       p = to_place(&tt_, &tags_, &w_, pl_, matches_, ae_, tz_, lang,
-                   tt_location{l});
+                   tt_location{l}, osr::location{}, osr::location{}, "", p.tz_);
     }
   };
   write_node_info(leg.from_, from);
   write_node_info(leg.to_, to);
 
   leg.mode_ = api::ModeEnum::FLEX;
-  leg.from_.flex_ = get_flex_stop_name(tt_, lang, stop_seq[*from_stop]);
-  leg.from_.flexId_ = get_flex_id(tt_, stop_seq[*from_stop]);
-  leg.to_.flex_ = get_flex_stop_name(tt_, lang, stop_seq[*to_stop]);
-  leg.to_.flexId_ = get_flex_id(tt_, stop_seq[*to_stop]);
+  leg.from_.flex_ = get_flex_stop_name(tt_, lang, stop_seq[from_stop]);
+  leg.from_.flexId_ = get_flex_id(tt_, stop_seq[from_stop]);
+  leg.to_.flex_ = get_flex_stop_name(tt_, lang, stop_seq[to_stop]);
+  leg.to_.flexId_ = get_flex_id(tt_, stop_seq[to_stop]);
 
-  auto const time_windows = tt_.flex_transport_stop_time_windows_[t];
-
-  leg.from_.flexStartPickupDropOffWindow_ =
-      std::chrono::time_point_cast<std::chrono::days>(leg.startTime_.time_) +
-      time_windows[*from_stop].from_;
-  leg.from_.flexEndPickupDropOffWindow_ =
-      std::chrono::time_point_cast<std::chrono::days>(leg.startTime_.time_) +
-      time_windows[*from_stop].to_;
-
-  leg.to_.flexStartPickupDropOffWindow_ =
-      std::chrono::time_point_cast<std::chrono::days>(leg.endTime_.time_) +
-      time_windows[*to_stop].from_;
-  leg.to_.flexEndPickupDropOffWindow_ =
-      std::chrono::time_point_cast<std::chrono::days>(leg.endTime_.time_) +
-      time_windows[*to_stop].to_;
+  // Windows of the service day the ride belongs to, not of the calendar day
+  // of the leg (differs for windows past midnight).
+  set_flex_windows(tt_, mode_payload_,
+                   get_service_day(tt_, mode_payload_, leg.startTime_.time_),
+                   leg);
 }
 
 api::Place flex_output::get_place(n::lang_t const& lang,

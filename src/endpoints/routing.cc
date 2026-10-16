@@ -440,7 +440,7 @@ std::vector<n::routing::offset> get_offsets(
             if (p.has_value()) {
               offsets.emplace_back(l,
                                    n::duration_t{static_cast<unsigned>(
-                                       std::ceil(p->cost_ / 60.0))},
+                                       std::ceil(p->duration_.count() / 60.0))},
                                    mode);
             }
           }
@@ -456,10 +456,11 @@ std::vector<n::routing::offset> get_offsets(
       auto const paths = route(profile, nullptr, mode);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
-          offsets.emplace_back(
-              l,
-              n::duration_t{static_cast<unsigned>(std::ceil(p->cost_ / 60.0))},
-              mode);
+          // travel time, not the search cost (which includes penalties)
+          offsets.emplace_back(l,
+                               n::duration_t{static_cast<unsigned>(
+                                   std::ceil(p->duration_.count() / 60.0))},
+                               mode);
         }
       }
     }
@@ -622,22 +623,34 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   auto cache = street_routing_cache_t{};
   auto itineraries = std::vector<api::Itinerary>{};
 
-  auto const route_with_profile = [&](output const& out) {
+  // `adjust` may modify the itinerary or reject it (returns false).
+  auto const route_with_adjusted_profile = [&](output const& out,
+                                               auto&& adjust) {
     auto itinerary = street_routing(
         *w_, *l_, e, elevations_, lang, from, to, out,
         arrive_by ? std::nullopt : std::optional{time},
         arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
         osr_params, cache, *blocked, api_version, detailed_legs, max);
-    if (itinerary.legs_.empty()) {
+    if (itinerary.legs_.empty() || !adjust(itinerary)) {
       return false;
     }
-    auto const duration = std::chrono::duration_cast<n::duration_t>(
-        std::chrono::seconds{itinerary.duration_});
+    // Including waiting for a later departure (flex windows): a short ride
+    // hours after `time` must not tighten the transit search.
+    auto const span =
+        arrive_by ? time - *itinerary.startTime_ : *itinerary.endTime_ - time;
+    auto const duration =
+        std::max(std::chrono::duration_cast<n::duration_t>(
+                     std::chrono::seconds{itinerary.duration_}),
+                 std::chrono::duration_cast<n::duration_t>(span));
     if (duration < fastest_direct) {
       fastest_direct = duration;
     }
     itineraries.emplace_back(std::move(itinerary));
     return true;
+  };
+  auto const route_with_profile = [&](output const& out) {
+    return route_with_adjusted_profile(
+        out, [](api::Itinerary const&) { return true; });
   };
 
   for (auto const& m : modes) {
@@ -650,12 +663,16 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         // No one-to-many search to reconstruct from here: this owns the
         // routing data for as long as the routing runs.
         auto frd = flex::flex_routing_data{};
-        auto sharing =
-            flex::prepare_sharing_data(*tt_, *w_, *l_, pl_, *fa_, matches_,
-                                       ids.front(), ids.front().get_dir(), frd);
-        route_with_profile(flex::flex_output{
-            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, *fa_, ids.front(),
-            frd.additional_nodes_, std::move(sharing)});
+        auto sharing = flex::prepare_sharing_data(*tt_, *w_, *l_, pl_, *fa_,
+                                                  matches_, ids.front(), frd);
+        route_with_adjusted_profile(
+            flex::flex_output{*w_, pl_, matches_, ae_, tz_, *tags_, *tt_, *fa_,
+                              ids.front(), frd.additional_nodes_,
+                              std::move(sharing)},
+            [&](api::Itinerary& itinerary) {
+              return flex::fit_direct_to_windows(*tt_, ids, time, arrive_by,
+                                                 itinerary);
+            });
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
                m == api::ModeEnum::BIKE || m == api::ModeEnum::CAR_PARKING ||
@@ -765,11 +782,33 @@ void remove_slower_than_fastest_direct(n::routing::query& q) {
 
   utl::erase_if(q.start_, worse_than_fastest_direct(min_dest));
   utl::erase_if(q.destination_, worse_than_fastest_direct(min_start));
+
+  // A td offset entry is valid until the next entry. Erasing one would
+  // stretch its predecessor over the erased span and offer it at times nobody
+  // published. Close the entry instead (duration kMaxDuration, no mode) and
+  // collapse runs of closed entries into one.
+  auto const close_td = [](std::vector<n::routing::td_offset>& v,
+                           auto&& worse) {
+    for (auto& o : v) {
+      if (worse(o)) {
+        o = {.valid_from_ = o.valid_from_,
+             .duration_ = n::footpath::kMaxDuration};
+      }
+    }
+    auto const is_closed = [](n::routing::td_offset const& o) {
+      return o.duration_ == n::footpath::kMaxDuration;
+    };
+    v.erase(std::unique(begin(v), end(v),
+                        [&](auto const& a, auto const& b) {
+                          return is_closed(a) && is_closed(b);
+                        }),
+            end(v));
+  };
   for (auto& [k, v] : q.td_start_) {
-    utl::erase_if(v, worse_than_fastest_direct(min_dest));
+    close_td(v, worse_than_fastest_direct(min_dest));
   }
   for (auto& [k, v] : q.td_dest_) {
-    utl::erase_if(v, worse_than_fastest_direct(min_start));
+    close_td(v, worse_than_fastest_direct(min_start));
   }
 }
 
