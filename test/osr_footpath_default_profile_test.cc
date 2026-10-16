@@ -87,13 +87,13 @@ std::optional<int> minutes(n::timetable const& tt,
   auto const a = tt.locations_.location_id_to_idx_.at({from, src});
   auto const b = tt.locations_.location_id_to_idx_.at({to, src});
   auto best = std::optional<int>{};
-  n::routing::for_each_transfer<n::direction::kForward>(
-      tt, nullptr, prf, a, [&](n::footpath const fp) {
-        if (fp.target() == b &&
-            (!best.has_value() || fp.duration().count() < *best)) {
-          best = fp.duration().count();
-        }
-      });
+  for (auto const fp :
+       n::routing::get_transfers<n::direction::kForward>(tt, nullptr, prf, a)) {
+    if (fp.target() == b &&
+        (!best.has_value() || fp.duration().count() < *best)) {
+      best = fp.duration().count();
+    }
+  }
   return best;
 }
 

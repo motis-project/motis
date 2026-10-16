@@ -37,15 +37,15 @@ api::transfers_response transfers::operator()(
 
   auto footpaths = hash_map<n::location_idx_t, api::Transfer>{};
   auto const add = [&](n::profile_idx_t const prf, auto&& field) {
-    n::routing::for_each_transfer<n::direction::kForward>(
-        tt_, nullptr, prf, l, [&](n::footpath const fp) {
-          if (tt_.locations_.is_virt(fp.target())) {
-            return;
-          }
-          auto& d = field(footpaths[fp.target()]);
-          d = std::min(d.value_or(fp.duration().count()),
-                       static_cast<double>(fp.duration().count()));
-        });
+    for (auto const fp : n::routing::get_transfers<n::direction::kForward>(
+             tt_, nullptr, prf, l)) {
+      if (tt_.locations_.is_virt(fp.target())) {
+        continue;
+      }
+      auto& d = field(footpaths[fp.target()]);
+      d = std::min(d.value_or(fp.duration().count()),
+                   static_cast<double>(fp.duration().count()));
+    }
   };
   add(0U, [](api::Transfer& t) -> auto& { return t.default_; });
   add(n::kFootProfile, [](api::Transfer& t) -> auto& { return t.foot_; });
