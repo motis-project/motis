@@ -327,12 +327,25 @@ TEST(motis, flex_direct_respects_windows) {
         itinerary(utc(1, 10, 5), utc(1, 11, 5), api::ModeEnum::WALK)
             .legs_.front());
     j.endTime_ = utc(1, 11, 5);
+    // Street routing starts the walk after the ride at a copy of the drop-off
+    // place, annotated at the query time (here: with another day's windows).
+    auto& after = j.legs_[2].from_;
+    after.flexId_ = "da_area";
+    after.flexStartPickupDropOffWindow_ = utc(2, 8, 0);
+    after.flexEndPickupDropOffWindow_ = utc(2, 11, 0);
     ASSERT_TRUE(
         flex::fit_direct_to_windows(*d.tt_, ids, utc(1, 7, 30), false, j));
     EXPECT_EQ(utc(1, 8, 5), *j.startTime_);
     EXPECT_EQ(utc(1, 8, 10), *j.legs_[1].startTime_);
     EXPECT_EQ(utc(1, 10, 40), *j.legs_[1].endTime_);
     EXPECT_EQ(utc(1, 11, 40), *j.endTime_);
+    // The ride's windows, and the same on the copy the walk starts at.
+    EXPECT_EQ(utc(1, 8, 0), **j.legs_[1].to_.flexStartPickupDropOffWindow_);
+    EXPECT_EQ(utc(1, 11, 0), **j.legs_[1].to_.flexEndPickupDropOffWindow_);
+    EXPECT_EQ(utc(1, 8, 0), **after.flexStartPickupDropOffWindow_);
+    EXPECT_EQ(utc(1, 11, 0), **after.flexEndPickupDropOffWindow_);
+    // The walk before the ride ends at a plain street place: no windows.
+    EXPECT_FALSE(j.legs_[0].to_.flexStartPickupDropOffWindow_.has_value());
   }
 
   // Too long to end inside the drop-off window.

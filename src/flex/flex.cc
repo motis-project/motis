@@ -576,8 +576,28 @@ bool fit_direct_to_windows(n::timetable const& tt,
     move(leg.scheduledEndTime_);
     move_place(leg.from_);
     move_place(leg.to_);
-    if (leg.mode_ == api::ModeEnum::FLEX) {
-      set_flex_windows(tt, id, day, leg);
+  }
+
+  // Street routing starts each leg at a copy of the previous leg's `to`, so
+  // the leg after the ride carries the drop-off place with the windows of the
+  // query time: keep the copies in sync with the ride's windows.
+  auto const copy_windows = [](api::Place const& from, api::Place& to) {
+    if (to.flexId_.has_value()) {
+      to.flexStartPickupDropOffWindow_ = from.flexStartPickupDropOffWindow_;
+      to.flexEndPickupDropOffWindow_ = from.flexEndPickupDropOffWindow_;
+    }
+  };
+  for (auto i = 0U; i != itinerary.legs_.size(); ++i) {
+    auto& leg = itinerary.legs_[i];
+    if (leg.mode_ != api::ModeEnum::FLEX) {
+      continue;
+    }
+    set_flex_windows(tt, id, day, leg);
+    if (i != 0U) {
+      copy_windows(leg.from_, itinerary.legs_[i - 1U].to_);
+    }
+    if (i + 1U != itinerary.legs_.size()) {
+      copy_windows(leg.to_, itinerary.legs_[i + 1U].from_);
     }
   }
   return true;
