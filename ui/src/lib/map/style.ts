@@ -58,7 +58,7 @@ export const colors = {
 		livingStreet: 'rgb(248, 245, 244)',
 		footpath: 'rgb(160, 160, 160)',
 		cycleway: 'rgb(100, 145, 205)',
-		unclassified: 'rgb(232, 230, 227)',
+		unclassified: '#ffffff',
 		steps: '#ff4524',
 
 		elevatorOutline: '#808080',
@@ -136,7 +136,7 @@ export const colors = {
 		livingStreet: 'rgb(46, 46, 46)',
 		footpath: 'rgb(80, 80, 80)',
 		cycleway: 'rgb(110, 150, 205)',
-		unclassified: 'rgb(50, 50, 50)',
+		unclassified: '#414141',
 		steps: '#70504b',
 
 		elevatorOutline: '#808080',
