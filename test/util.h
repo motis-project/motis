@@ -1,9 +1,11 @@
+#include <algorithm>
 #include <chrono>
 
 #include "date/date.h"
 
 #include "gtfsrt/gtfs-realtime.pb.h"
 
+#include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
 namespace motis::test {
@@ -63,5 +65,11 @@ std::uint64_t to_unix(T&& x) {
 transit_realtime::FeedMessage to_feed_msg(
     std::vector<feed_entity> const& feed_entities,
     date::sys_seconds const msg_time);
+
+// The number of virtual locations in the timetable.
+inline std::size_t n_virts(nigiri::timetable const& tt) {
+  return static_cast<std::size_t>(
+      std::ranges::count(tt.locations_.types_, nigiri::location_type::kVirt));
+}
 
 }  // namespace motis::test

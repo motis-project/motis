@@ -31,6 +31,8 @@
 #include "nigiri/routing/direct.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/leg_alternatives.h"
+#include "nigiri/routing/search_location.h"
+#include "nigiri/routing/transfer_durations.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/special_stations.h"
 #include "nigiri/td_footpath.h"
@@ -820,10 +822,25 @@ api::Itinerary reconstruct_itinerary(
     return reconstruct(*offset, start_place, end_place);
   };
 
-  auto const reconstruct_transfer = [&](leg const& l) -> std::vector<api::Leg> {
+  // Transfer rules make the change depend on the virtual locations.
+  auto const change_location = [&](n::routing::journey::leg const& jl,
+                                   bool const is_exit) {
+    auto const& ree = std::get<n::routing::journey::run_enter_exit>(jl.uses_);
+    auto const fr = n::rt::frun{stop_times_ep.tt_, rt.rtt_.get(), ree.r_};
+    return n::routing::search_location(
+        safe_prf_idx,
+        fr[is_exit ? static_cast<n::stop_idx_t>(ree.stop_range_.to_ - 1U)
+                   : ree.stop_range_.from_]);
+  };
+
+  auto const reconstruct_transfer =
+      [&](std::vector<leg> const& legs,
+          std::size_t const i) -> std::vector<api::Leg> {
+    auto const& l = legs[i];
     auto const& h = l.input_;
-    if (l.from_ == n::location_idx_t::invalid() ||
-        l.to_ == n::location_idx_t::invalid()) {
+    auto const& prev = legs[i - 1U].transit_;
+    auto const& next = legs[i + 1U].transit_;
+    if (!prev.has_value() || !next.has_value()) {
       return {
           make_dummy_leg(h, "adjacent transit leg couldn't be reconstructed")};
     }
@@ -831,16 +848,22 @@ api::Itinerary reconstruct_itinerary(
     auto q = n::routing::query{};
     q.prf_idx_ = safe_prf_idx;
     auto const offs = std::vector<n::routing::offset>{
-        {(l.to_), n::duration_t{0}, kWalkTransportMode}};
+        {change_location(*next, false), n::duration_t{0}, kWalkTransportMode}};
 
     auto const fp_leg = n::routing::lookup_footpath(
-        l.from_, l.dep_, n::routing::side::kAlighting, stop_times_ep.tt_,
-        rt.rtt_.get(), q, offs, n::routing::location_match_mode::kExact,
+        change_location(*prev, true), l.dep_, n::routing::side::kAlighting,
+        stop_times_ep.tt_, rt.rtt_.get(), q, offs,
+        n::routing::location_match_mode::kExact,
         /*use_footpaths=*/true);
     if (!fp_leg.has_value()) {
       return {make_dummy_leg(h, "reconstruct_itinerary: no transfer footpath")};
     }
-    return reconstruct(*fp_leg, tt_location{(l.from_)}, tt_location{(l.to_)});
+    auto change = n::routing::journey{};
+    change.legs_ = {*prev, *fp_leg, *next};
+    n::routing::fix_transfer_durations(stop_times_ep.tt_, rt.rtt_.get(), q,
+                                       change);
+    return reconstruct(change.legs_[1], tt_location{l.from_},
+                       tt_location{l.to_});
   };
 
   auto const get_leg_alternatives = [&](std::vector<leg> const& legs,
@@ -866,8 +889,10 @@ api::Itinerary reconstruct_itinerary(
             .require_bike_transport_ = require_bike_transport,
             .require_car_transport_ = require_car_transport,
             .no_compulsory_reservation_ = no_compulsory_reservation},
-        has_prev_transit ? legs[i - 2U].to_ : n::location_idx_t::invalid(),
-        has_next_transit ? legs[i + 2U].from_ : n::location_idx_t::invalid());
+        has_prev_transit ? change_location(*legs[i - 2U].transit_, true)
+                         : n::location_idx_t::invalid(),
+        has_next_transit ? change_location(*legs[i + 2U].transit_, false)
+                         : n::location_idx_t::invalid());
 
     if (!has_prev_transit) {
       q.start_match_mode_ = non_dummy_match_mode;
@@ -906,6 +931,13 @@ api::Itinerary reconstruct_itinerary(
 
     auto const& original =
         std::get<n::routing::journey::run_enter_exit>(jl.uses_);
+    auto const run_of = [](leg const& l) {
+      return std::get<n::routing::journey::run_enter_exit>(l.transit_->uses_);
+    };
+    auto const prev =
+        has_prev_transit ? std::optional{run_of(legs[i - 2U])} : std::nullopt;
+    auto const next =
+        has_next_transit ? std::optional{run_of(legs[i + 2U])} : std::nullopt;
     auto const next_dep =
         has_next_transit ? legs[i + 2U].transit_->dep_time_ : jl.arr_time_;
 
@@ -914,7 +946,7 @@ api::Itinerary reconstruct_itinerary(
     if (!has_prev_transit && has_next_transit) {
       return n::routing::get_leg_alternatives(
           stop_times_ep.tt_, rt.rtt_.get(), q, n::direction::kBackward,
-          next_dep, std::nullopt, original, num_leg_alternatives);
+          next_dep, std::nullopt, original, prev, next, num_leg_alternatives);
     }
 
     // Intermediate / single / last transit leg:
@@ -937,7 +969,7 @@ api::Itinerary reconstruct_itinerary(
     return n::routing::get_leg_alternatives(
         stop_times_ep.tt_, rt.rtt_.get(), q, n::direction::kForward, prev_arr,
         has_next_transit ? std::optional{next_dep} : std::nullopt, original,
-        num_leg_alternatives);
+        prev, next, num_leg_alternatives);
   };
 
   // === Decode & verify ===
@@ -1044,7 +1076,7 @@ api::Itinerary reconstruct_itinerary(
     }
     legs[i].output_ = (i == 0U || i == legs.size() - 1U)
                           ? reconstruct_offset(legs, i)
-                          : reconstruct_transfer(legs[i]);
+                          : reconstruct_transfer(legs, i);
   }
 
   // === Assemble itinerary. ===

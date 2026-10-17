@@ -1,0 +1,120 @@
+**`get_rule_walks` makes every transfers.txt row between two stops a minimum walk for all trips, the qualified rows too.** A qualified row should only bind the trips it names, and those trips already get their own rule footpaths through their virts. Everyone else should keep the normal walk.
+
+The reviewers' probes show two effects:
+
+1. **The walk gets slower for unrelated trips** (`qualified_rule_inflates_walk_of_other_routes`).
+   - Row: `S,Y1,2,1800,RF,RG,,` (RF→RG changes from station S to stop Y1 take 30 min).
+   - Trip P (another route) arrives at S1 and wants Q at Y1. The two stops are about 50 m apart, a 2-min walk.
+   - Expected arrival 11:00, actual 11:30: the S1→Y1 walk became 30 min for everyone.
+   - The loader reviewer found the same with `BS,BY1,2,600,RB,,,`.
+
+2. **A walk appears that shouldn't exist** (`qualified_ban_creates_walk_for_other_routes`).
+   - A route-qualified ban (type 3) between two stops 2 km apart, beyond `max_footpath_length`.
+   - `get_rule_walks` records the pair, with 0 min for a ban. Rule-named pairs get a fill-in beeline walk that skips the `max_footpath_length` cap.
+   - So the ban creates a ~25-min walk for all other trips, and P→Q becomes possible, though without the row there would be no walk at all.
+
+For unqualified rows this behaviour is correct: the row is the stop pair's transfer for everyone, and may connect stops farther apart than the usual walk limit. The fix is to build `rule_walks` only from rows with no route or trip on either side.
+
+The existing test `transfer_rules_virt_walk_respects_rule_pair` even says in its comment that the 2-min walk BP1→BY1 stays, which the code currently contradicts.
+
+
+
+I found 6 confirmed bugs, 2 GPU/CPU divergences from reading the code, and 3 bugs that are also on master. The core search itself held up: a fuzzer over 40 random feeds with random rules (17 of them got virts), 60 more with random delays and track changes, about 15,000 queries, found no reconstruction failures, no forward/backward disagreement and no range-search/pong difference. It ran in these modes: default, transfer time settings, profile 1, kExact with start footpaths, intermodal, via without stay, and RT. All probes are in test/zz_probe_routing_test.cc; the failing ones are left in as repros, and the file compiles.
+
+1. Confirmed bugs (most severe first)
+a) Leg alternatives ignore transfer rules – leg_alternatives_follow_forbidden_rule, leg_alternatives_follow_shorter_rule
+
+Forbidden case: FA arrives at U; FA→FC is banned (U,U,3,,RF1,RF3). FC is still offered as an alternative for the FB leg.
+Shorter-rule case: FA→FC is allowed in 1 min by a rule (U's own time is 5 min). FC is not offered.
+Cause: src/routing/leg_alternatives.cc:140-142 queries from prev_it->to_ / next_it->from_, which are base stops after map_to_bases.
+Fix: use search_location(q.prf_idx_, frun[...]) of the previous leg's exit stop and the next leg's entry stop.
+b) Via = start with a stay, kExact start → journey lost – via_start_stay_at_virt
+
+Feed: X→Y at S is ruled, so Y leaves from a virt. Query S→B, via S with 10 min stay.
+Expected Y2 arriving 10:45. Actual: "reconstruct failed: no valid journey start found" and an empty result. With rules off it is correct.
+Cause: start_times.cc:269 adds the stay only when via.location_ == l exactly, but raptor.h:225 gives every virt of S the via slot v=1. So the virts start without the stay.
+Fix: test matches(kEquivalent, via, l) or is_via[0] there.
+c) One-to-all never reports a stop that bans transfers – one_to_all_reaches_stop_without_transfers
+
+Feed: D,D,3, no virts needed. get_fastest_one_to_all_offsets(D) returns unreachable (32767), but the stop search arrives 10:30.
+Cause: raptor.h:736-738 skips banned locations without writing round_times_. Motis one-to-all and isochrones lose these stops.
+d) Trip-pair rule walks leak into start and destination walks
+
+Probes: rule_walk_shortens_start_walk, rule_walk_shortens_dest_walk, timed_rule_gives_zero_min_start_walk.
+Feed: F→Z rule S1→S2 of 1 min; the plain walk is 2 min.
+Start S1 at 10:30 boards Z after a 1-min walk, though the passenger never rode F. With a timed rule (type 1) the walk between two different stops is 0 min.
+Destination S2 is reached at 10:31 instead of 10:32.
+Cause:
+start_times.cc:287 follows footpaths from every start member, including virts.
+raptor.h:881/990 counts a footpath into a destination virt as arrival.
+Affects kExact, and kEquivalent across stations (motis without osr). Intermodal is not affected.
+e) Direct connections, kExact start without start footpaths, miss trips that leave from virts – direct_exact_start_finds_trip_at_virt
+
+The search finds Y (10:30); get_direct_journeys finds nothing.
+Cause: direct.cc:27-35 for_each_access(kExact) drops the virts, and :129 returns early.
+f) RT: a track change makes a rule binding whose other side has no static virt; the rule is ignored – rt_track_change_rule_to_unmoved_trip
+
+T1 moves to S3, where S3,S2,3 forbids T1→T2a (route-, trip- and mixed-qualified variants). The search still takes T2a.
+Cause: rt_transfer_rules.cc:31-40,62-72 resolves the other side only through static side locations. This is in the RT area; the existing tests only use an unqualified to-side.
+2. Plausible (from reading)
+GPU start footpath: src/routing/gpu/raptor.cu:1514-1526 searches footpaths into the base stop for static runs, while the CPU searches into the boarding virt. Where these differ (rule pairs, the leak in 1d) the GPU journey loses its start walk.
+pong earliest alternative: pong.cc:469 uses from.get_stop().location_idx(), which skips RT virts. A track-changed feeder's rules could be ignored when the middle leg is replaced. Use search_location(q.prf_idx_, from).
+GPU start at destination: raptor_impl.cuh:118 sets time_at_dest_ on starts and the CPU does not. start_dest_overlap should make this unreachable, so it is harmless.
+3. Pre-existing (master) bugs
+Via = start station with a stay; child stops start without it – preexisting_via_start_station_stay_children. Confirmed by a run with rules off; master has the same compare at start_times.cc:259 (not run on master).
+pong throws "no pong for transfers=3" on a backward via query with a 4 min stay, while the range search finds journeys – preexisting_pong_via_stay_no_pong (fuzz seed 9). Confirmed with rules off; master has the same code path (pong.cc:330, not run).
+pong does not catch reconstruction exceptions (pong.cc:345; master :338), unlike search.h:464. One bad journey aborts the whole request. From reading.
+4. Test gaps
+One-to-all with virts or bans.
+Vias at stops with virts.
+Interval and pong searches over virts.
+Leg alternatives across ruled changes.
+Direct connections with kExact.
+RT track change with a qualified to-side.
+The fuzz tests I left marked // GAP: cover the passing cases; they take about 5 s in total.
+5. Simplifications
+raptor.h:44-52: the member get_transfer_time duplicates transfers.h:26; call the free function with Rt ? rtt_ : nullptr. Saves about 8 lines, low risk.
+direct.cc:27-35: replace for_each_access with for_each_meta and match tt.base(l) == tt.base(loc) in lookup_footpath. Saves about 10 lines and fixes 1e.
+reconstruct.cc:433-472 vs 506-544: the RT and static section-flag filters are copies; one helper saves about 35 lines. No hot path.
+reconstruct.cc:722-733 + 755-786: td_dest_ is already expanded to virts by expand_td_offsets, so the meta loop for td destinations repeats work. Saves about 10 lines.
+1:05 AM
+Routing review is in: 6 confirmed bugs (leg alternatives ignore rules, a via stay at a virt start, one-to-all at banned stops, rule walks leaking into start and destination walks, direct connections with kExact, and an RT track change against a static side), plus 3 bugs that are also on master. The fuzzer found no search/reconstruction disagreement. Only the virt-construction reviewer is still running.
+
+
+
+I found seven rules-not-followed bugs plus one unsound API path, each reproduced by a failing probe. The core of virtual_locations.cc (conflict detection, route parts, class sharing) held up under randomized checking; the bugs sit at its edges.
+
+The probe file is /Users/felix/code/motis/deps/nigiri/test/zz_probe_virts_test.cc. It compiles, has 8 failing repro tests and 9 passing ones marked // GAP:. The debug build hit no asserts and no "unresolved conflicts" log.
+
+Randomized oracle (passes). For about 2,400 random feeds, every (arriving trip, stop) × (departing trip, stop) pair was compared against the most specific stored rule, falling back to the stop's own transfer time or the walk between the stops. Covered: profile 0 and profile 1, midnight crossings (including negative day offsets), loops, blocks, two feeds, many route parts, and stop- and station-level rows. The oracle is shown to be sensitive: with rules switched off it objects in 83 of 200 feeds.
+
+1. Confirmed bugs (most severe first)
+merge_duplicates_keeps_rules_of_absorbed_trip. TA and TA2 are identical trips, and a timed TA2→TC transfer has a 1-minute gap. Expected 11:00, got no journey. merge() (merge_duplicates.cc:66-118) only repoints trip_transport_ranges_, so the survivor's transport_to_trip_section_ never lists TA2. get_state (virtual_locations.cc:215-226) therefore never sees TA2's rules. Bans are lost the same way. Fix: collect a transport's trips from trip_transport_ranges_, or don't merge transports that carry rules. Merging is opt-in; motis has it off by default.
+majority_stop_default_vs_station_rule_at_virt. The fold gives stop X2 a 4-minute majority default and station X a 1-minute one. A change at X2 itself takes 4 minutes, but the same pair takes 1 minute when the departure sits at a virt. Cause: majority self-rules are stored only for stops with children (gtfs/transfers.cc:258), so get_most_specific picks X's rule for (X2, virt). Fix: always store majority rules.
+qualified_rule_inflates_walk_of_other_routes. The row S,Y1,2,1800,RF,RG also stretches the S1→Y1 walk to 30 minutes for an unrelated P→Q change. Expected 11:00, got 11:30. Cause: get_rule_walks (build_footpaths.cc:38-66, applied at 539-549) takes the maximum over all rules, qualified ones included. The header calls this "not faster than the rule", but the comment in transfer_rules_virt_walk_respects_rule_pair says the 2-minute walk stays, so the two contradict. Fix: use only unqualified rules.
+qualified_ban_creates_walk_for_other_routes. A qualified ban between two stops 2 km apart creates a walk that bypasses max_footpath_length; P→Q becomes possible. Cause: the fill-in walk for rule-named pairs at build_footpaths.cc:550-556.
+u8_virt_transfer_time_clamped. A 300-minute RP1→RP2 rule: the two trips share one virt whose transfer time is clamped to 254 (to_transfer_time, footpath.h:85-89, called at transfer_rules.cc:49). A 260-minute gap therefore connects. find_conflicts compares rules, not times, so it doesn't notice. Fix: cap rule durations at 254 in the loader, or treat a self-applying side above 254 as unshareable.
+rebuild_after_virts_keeps_rules. Virts are decided on the 2-minute beeline walk, then write_default_profile gets a 12-minute walk. Y has no rule of its own but shares F's virt, so it keeps F's 0-minute F→G timed rule and makes a 6-minute change. Root: the conflict check's fallback walk (virtual_locations.cc:341-343) is frozen at decision time. motis avoids this by deciding virts on the routed walks, but nigiri's own rebuild_default_profile_test exercises this path. Fix: only allow rebuilding before virts exist, or with the same walks.
+Pre-existing (master) bugs
+u8_stop_default_clamped (P,P,2,18000). The branch clamps a 300-minute stop default to 254 minutes. Master casts it into a u8 and wraps it to 44 minutes. Confirmed by run on the branch; master confirmed by reading (register.cc).
+station_to_stop_rule_covers_change_at_the_stop (S,S1,2,600). A change at S1 itself should take 10 minutes; it takes S1's 2 minutes. Cause: get_most_specific skips from == to (transfer_rules.cc:95), and the fold only turns self pairs into transfer times. Master behaves the same (by reading gtfs/stop.cc).
+2. Plausible, not reproduced
+Transports absorbed by merging keep their rules in get_state (with empty traffic days), which builds useless virts and routes.
+3. Test gaps
+No test compares the built structure with the rules pair by pair (the random_oracle_* probes do this).
+Untested branches:
+the shapes branch of split_routes (virtual_locations.cc:1020-1025)
+the negative day-offset branch in find_conflicts (411-412)
+frequencies.txt combined with trip rules
+merging combined with rules
+rules longer than 254 minutes
+the no-transfer branch of expand_td_footpaths_to_virts (build_footpaths.cc:473)
+4. Simplifications (no behaviour change)
+Change	Lines saved	Risk
+One helper for the member expansion shared by add_virt_walks, expand_profile_to_virts and expand_td_footpaths_to_virts (build_footpaths.cc:259-290, 421-485); move the departures-only target filter into write_profile	~35	low
+Inline override_footpaths_with_rules; make get_rule_walks/get_beeline_walk file-local (no users outside this file)	~20	none
+get_state's signature code (virtual_locations.cc:205-229, 255-288) duplicates get_stop_signature (transfer_rule_sides.cc:30-65) apart from the HRDF global filter	~30	small perf (per-section cache)
+write(): one stop sequence per route part instead of per transport; move get_or_create_virt (single caller) into virtual_locations.cc and record a virt's rule sides only on creation, dropping the erase_duplicates at 1141-1142	~10	low; also far fewer pushes on big routes
+initial_day_offset_ permute (1049-1051) is dead: the field is never filled, on master either	3	none
+
+

@@ -1143,7 +1143,7 @@ api::plan_response routing::route(api::plan_params const& query,
     auto search_state = n::routing::search_state{};
 #if defined(NIGIRI_CUDA)
     auto gpu_used = false;
-    auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
+    auto const gpu_supported = n::routing::gpu::is_gpu_supported(q, rtt);
     auto const run_on_gpu = [&](bool const use_pong) -> bool {
       try {
         auto const lease = gpu_pool_->acquire();

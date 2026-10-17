@@ -14,8 +14,8 @@
 #include "nigiri/rt/gtfsrt_update.h"
 
 #include "motis-api/motis-api.h"
-#include "motis/compute_footpaths.h"
 #include "motis/config.h"
+#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
@@ -863,17 +863,20 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
                                           parse_fasta(kElevatorBlockedFasta));
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
-  // Rebuild the rt_timetable's td_footpaths from the elevator state.
-  // Mirrors what `update_elevators` does in production: the
-  // elevator-footpath map (one entry per OSR-routed footpath that
-  // traverses an elevator node, written to disk by `import()`) tells
-  // `update_rtt_td_footpaths` which (from, to) stop pairs to refresh
-  // for the wheelchair profile.
-  auto const elevator_footpath_map = cista::read<elevator_footpath_map_t>(
-      "test/data_leg_alts_td_footpath_blocked/elevator_footpath_map.bin");
+  // Rebuild the rt_timetable's td_footpaths from the elevator state, as
+  // `update_elevators` does in production: the stops near an elevator that is
+  // not always working get their wheelchair walks routed again.
+  auto tasks = hash_set<n::location_idx_t>{};
+  for (auto const& e : d.rt_->e_->elevators_) {
+    if (!e.status_ || !e.out_of_service_.empty()) {
+      d.location_rtree_->in_radius(
+          e.pos_, kElevatorUpdateRadius,
+          [&](n::location_idx_t const l) { tasks.emplace(l); });
+    }
+  }
   update_rtt_td_footpaths(
-      *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtree_, *d.rt_->e_,
-      *elevator_footpath_map, *d.matches_, *d.rt_->rtt_,
+      *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtree_, *d.rt_->e_, *d.matches_,
+      tasks, nullptr, *d.rt_->rtt_,
       std::chrono::seconds{c.timetable_->max_footpath_length_ * 60});
 
   // Delay the LOCAL 00:35 ICE alt by 1 min — this is a frequency-

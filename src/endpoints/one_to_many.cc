@@ -6,7 +6,9 @@
 #include <optional>
 
 #include "utl/enumerate.h"
+#include "utl/verify.h"
 
+#include "net/bad_request_exception.h"
 #include "net/too_many_exception.h"
 
 #include "nigiri/common/delta_t.h"
@@ -239,6 +241,9 @@ api::OneToManyIntermodalResponse run_one_to_many_intermodal(
     Query const& query,
     place_t const& one,
     std::vector<place_t> const& many) {
+  utl::verify<net::bad_request_exception>(
+      ep.w_ != nullptr && ep.l_ != nullptr,
+      "one-to-many-intermodal requires street routing (OSM)");
   ep.metrics_->one_to_many_requests_.Increment();
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));

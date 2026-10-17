@@ -10,6 +10,8 @@
 #include "osr/routing/parameters.h"
 #include "osr/routing/route.h"
 
+#include "nigiri/loader/build_footpaths.h"
+
 #include "motis/constants.h"
 #include "motis/get_loc.h"
 #include "motis/get_stops_with_traffic.h"
@@ -181,6 +183,9 @@ void update_rtt_td_footpaths(osr::ways const& w,
         }
       });
 
+  // Routed between stops: virtual locations walk like their stop.
+  n::loader::expand_td_footpaths_to_virts(tt, out);
+
   // The td footpaths of a source replace all its static footpaths:
   // has_td_footpaths_in_ marks the targets of both.
   auto in = n::vector_map<n::location_idx_t, std::vector<n::td_footpath>>{};
@@ -218,35 +223,6 @@ void update_rtt_td_footpaths(osr::ways const& w,
   for (auto const& fps : in) {
     rtt.td_footpaths_in_[2].emplace_back(fps);
   }
-}
-
-void update_rtt_td_footpaths(osr::ways const& w,
-                             osr::lookup const& l,
-                             osr::platforms const& pl,
-                             nigiri::timetable const& tt,
-                             point_rtree<n::location_idx_t> const& loc_rtree,
-                             elevators const& e,
-                             elevator_footpath_map_t const& elevators_in_paths,
-                             platform_matches_t const& matches,
-                             nigiri::rt_timetable& rtt,
-                             std::chrono::seconds const max) {
-  auto tasks = hash_set<n::location_idx_t>{};
-  for (auto const& [e_in_path, from_to] : elevators_in_paths) {
-    auto const e_idx =
-        match_elevator(e.elevators_rtree_, e.elevators_, w, e_in_path);
-    if (e_idx == elevator_idx_t::invalid()) {
-      continue;
-    }
-    auto const& el = e.elevators_[e_idx];
-    if (el.out_of_service_.empty() && el.status_) {
-      continue;
-    }
-    for (auto const& [from, to] : from_to) {
-      tasks.emplace(from);
-    }
-  }
-  update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, tasks, nullptr,
-                          rtt, max);
 }
 
 }  // namespace motis

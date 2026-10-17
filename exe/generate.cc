@@ -1,6 +1,8 @@
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <ranges>
 
 #include "conf/configuration.h"
 
@@ -8,10 +10,14 @@
 
 #include "nigiri/common/interval.h"
 #include "nigiri/flex.h"
+#include "nigiri/location_routes.h"
 #include "nigiri/routing/raptor/debug.h"
 #include "nigiri/routing/search.h"
+#include "nigiri/special_stations.h"
 #include "nigiri/timetable.h"
 
+#include "osr/routing/route.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/raii.h"
@@ -22,6 +28,7 @@
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
 #include "motis/odm/bounds.h"
+#include "motis/osr/parameters.h"
 #include "motis/point_rtree.h"
 #include "motis/tag_lookup.h"
 
@@ -73,7 +80,7 @@ n::location_idx_t random_stop(n::timetable const& tt,
   auto s = n::location_idx_t::invalid();
   do {
     s = rand_in(stops);
-  } while (tt.location_routes_[s].empty());
+  } while (!n::any_route_at(tt, s));
   return s;
 }
 
@@ -85,6 +92,7 @@ int generate(int ac, char** av) {
   auto time_of_day = std::optional<std::uint32_t>{};
   auto modes = std::optional<std::vector<api::ModeEnum>>{};
   auto max_dist = 800.0;  // m
+  auto max_direct = 0U;
   auto use_walk = false;
   auto use_bike = false;
   auto use_car = false;
@@ -175,6 +183,9 @@ int generate(int ac, char** av) {
       ("max_dist", po::value(&max_dist)->default_value(max_dist),
        "maximum distance from a public transit stop in meters, only used for "
        "intermodal queries")  //
+      ("max_direct", po::value(&max_direct)->default_value(max_direct),
+       "discard queries with a direct (walking) connection within this many "
+       "minutes, 0 = keep all")  //
       ("max_travel_time",
        po::value<std::int64_t>()->notifier(
            [&](auto const v) { master_params.maxTravelTime_ = v; }),
@@ -199,7 +210,10 @@ int generate(int ac, char** av) {
        "the source in terms of geographical distance, overrides lb_rank")  //
       ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
        "randomize locations within bounds, format: GeoJSON"
-       "(shorthand for Europe \"-b europe\")");
+       "(shorthand for Europe \"-b europe\")")  //
+      ("src", po::value<std::string>(),
+       "restrict from/to stops to the ones of these dataset tags (comma "
+       "separated)");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -307,14 +321,37 @@ int generate(int ac, char** av) {
     fmt::println("station-to-station");
   }
 
+  auto const src_filter = [&]() -> std::optional<std::vector<n::source_idx_t>> {
+    if (!vm.count("src")) {
+      return std::nullopt;
+    }
+    auto srcs = std::vector<n::source_idx_t>{};
+    for (auto const tag : std::views::split(vm["src"].as<std::string>(), ',')) {
+      auto const t = std::string{tag.begin(), tag.end()};
+      srcs.push_back(d.tags_->get_src(t));
+      utl::verify(srcs.back() != n::source_idx_t::invalid(),
+                  "unknown dataset tag {}", t);
+    }
+    return srcs;
+  }();
   auto const master_stops = [&] {
     auto v = std::vector<n::location_idx_t>{};
     for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
+      if (n::is_special(l)) {
+        continue;
+      }
+      if (src_filter && utl::find(*src_filter, d.tt_->locations_.src_[l]) ==
+                            end(*src_filter)) {
+        continue;
+      }
 
       if (!in_bounds(d.tt_->locations_.coordinates_[l]) ||
           (use_odm_bounds &&
            !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l]))) {
+        continue;
+      }
+      if (d.tt_->locations_.is_virt(l)) {
         continue;
       }
       v.emplace_back(l);
@@ -322,8 +359,8 @@ int generate(int ac, char** av) {
     return v;
   }();
 
-  if (bounds != nullptr) {
-    fmt::println("in bounds: {}/{} stops", master_stops.size(),
+  if (bounds != nullptr || src_filter) {
+    fmt::println("eligible: {}/{} stops", master_stops.size(),
                  d.tt_->n_locations());
   }
 
@@ -392,6 +429,7 @@ int generate(int ac, char** av) {
     n::routing::raptor_state rs_;
     hash_map<n::location_idx_t, double> geo_distance_;
   };
+  auto n_rejected = std::atomic_uint{0U};
   utl::parallel_for_run_threadlocal<state>(ranks.size(), [&](state& s,
                                                              auto const i) {
     auto const r = ranks[i];
@@ -400,8 +438,10 @@ int generate(int ac, char** av) {
     s.geo_distance_.reserve(master_stops.size());
 
     auto const get_place =
-        [&](n::location_idx_t const l) -> std::optional<std::string> {
+        [&](n::location_idx_t const l,
+            geo::latlng& pos_out) -> std::optional<std::string> {
       if (!modes) {
+        pos_out = d.tt_->locations_.coordinates_[l];
         return d.tags_->id(*d.tt_, l);
       }
 
@@ -412,12 +452,30 @@ int generate(int ac, char** av) {
       }
 
       auto const pos = d.w_->get_node_pos(rand_in(nodes));
+      pos_out = geo::latlng{pos.lat(), pos.lng()};
       return fmt::format("{},{}", pos.lat(), pos.lng());
+    };
+
+    auto const has_short_direct = [&](geo::latlng const& from,
+                                      geo::latlng const& to) {
+      if (max_direct == 0U || d.w_ == nullptr || d.l_ == nullptr) {
+        return false;
+      }
+      auto const max_cost = static_cast<osr::cost_t>(max_direct * 60U);
+      auto const p = osr::route(
+          to_profile_parameters(osr::search_profile::kFoot, {}), *d.w_, *d.l_,
+          osr::search_profile::kFoot, osr::location{from, osr::level_t{}},
+          osr::location{to, osr::level_t{}}, max_cost, osr::direction::kForward,
+          kMaxMatchingDistance);
+      return p.has_value() && p->cost_ <= max_cost;
     };
 
     auto const random_from_to = [&] {
       auto from_place = std::optional<std::string>{};
       auto to_place = std::optional<std::string>{};
+
+      auto from_pos = geo::latlng{};
+      auto to_pos = geo::latlng{};
 
       for (auto x = 0U; x != 1000U; ++x) {
         // stop used to lb-rank the destination (invalid -> random
@@ -425,11 +483,12 @@ int generate(int ac, char** av) {
         auto rank_stop = n::location_idx_t::invalid();
         if (use_flex) {
           auto const seed = rand_in(flex_seeds);
+          from_pos = seed.from_;
           from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
           rank_stop = seed.rank_stop_;
         } else {
           rank_stop = random_stop(*d.tt_, s.stops_);
-          from_place = get_place(rank_stop);
+          from_place = get_place(rank_stop, from_pos);
           if (!from_place) {
             continue;
           }
@@ -448,7 +507,7 @@ int generate(int ac, char** av) {
             return s.ss_.travel_time_lower_bound_[to_idx(a)] <
                    s.ss_.travel_time_lower_bound_[to_idx(b)];
           });
-          to_place = get_place(s.stops_[r]);
+          to_place = get_place(s.stops_[r], to_pos);
         } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
           for (auto const l : s.stops_) {
             s.geo_distance_[l] =
@@ -458,17 +517,22 @@ int generate(int ac, char** av) {
           utl::sort(s.stops_, [&](auto const& a, auto const& b) {
             return s.geo_distance_[a] < s.geo_distance_[b];
           });
-          to_place = get_place(s.stops_[geo_rank_index]);
+          to_place = get_place(s.stops_[geo_rank_index], to_pos);
         } else {
-          to_place = get_place(random_stop(*d.tt_, s.stops_));
+          to_place = get_place(random_stop(*d.tt_, s.stops_), to_pos);
         }
-        if (to_place) {
+        if (to_place && !has_short_direct(from_pos, to_pos)) {
           break;
         }
+        to_place.reset();
       }
 
+      if (!from_place.has_value() || !to_place.has_value()) {
+        return false;
+      }
       s.p_.fromPlace_ = *from_place;
       s.p_.toPlace_ = *to_place;
+      return true;
     };
 
     auto const random_time = [&] {
@@ -480,7 +544,10 @@ int generate(int ac, char** av) {
                    (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
     };
 
-    random_from_to();
+    if (!random_from_to()) {
+      ++n_rejected;
+      return;
+    }
     random_time();
 
     auto guard = std::lock_guard{mutex};
@@ -488,6 +555,13 @@ int generate(int ac, char** av) {
     progress_tracker->increment();
   });
 
+  if (n_rejected != 0U) {
+    std::cerr << fmt::format(
+        "{} of {} queries not written: every pair drawn (1000 per query) was "
+        "rejected, check --max_direct, --src, --bounds\n",
+        n_rejected.load(), ranks.size());
+    return 1;
+  }
   return 0;
 }
 
