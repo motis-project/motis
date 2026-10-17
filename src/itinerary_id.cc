@@ -946,8 +946,7 @@ api::Itinerary reconstruct_itinerary(
     if (!has_prev_transit && has_next_transit) {
       return n::routing::get_leg_alternatives(
           stop_times_ep.tt_, rt.rtt_.get(), q, n::direction::kBackward,
-          next_dep, std::nullopt, original, prev, next,
-          num_leg_alternatives);
+          next_dep, std::nullopt, original, prev, next, num_leg_alternatives);
     }
 
     // Intermediate / single / last transit leg:
