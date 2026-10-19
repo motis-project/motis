@@ -175,6 +175,7 @@ const translations: Translations = {
 	earlierAlternatives: 'Frühere Alternativen',
 	laterAlternatives: 'Spätere Alternativen',
 	differentStops: 'Andere Haltestellen',
+	onDemandDeparture: 'Abfahrt nach Bedarf',
 	rent: 'Ausleihen',
 	copyToClipboard: 'In die Zwischenablage kopieren',
 	rideThroughAllowed: 'Durchfahrt erlaubt',

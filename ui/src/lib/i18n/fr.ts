@@ -178,6 +178,7 @@ const translations: Translations = {
 	earlierAlternatives: 'Alternatives plus tôt',
 	laterAlternatives: 'Alternatives plus tard',
 	differentStops: 'Arrêts différents',
+	onDemandDeparture: 'Départ à la demande',
 	rent: 'Louer',
 	copyToClipboard: 'Copier dans le presse-papiers',
 	rideThroughAllowed: 'Passage autorisé',

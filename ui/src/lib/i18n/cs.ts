@@ -180,6 +180,7 @@ const translations: Translations = {
 	earlierAlternatives: 'Dřívější alternativy',
 	laterAlternatives: 'Pozdější alternativy',
 	differentStops: 'Jiné zastávky',
+	onDemandDeparture: 'Odjezd na vyžádání',
 	rent: 'Půjčit si',
 	copyToClipboard: 'Kopírovat do schránky',
 	rideThroughAllowed: 'Průjezd povolen',

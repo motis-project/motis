@@ -7,13 +7,16 @@
 		disabled,
 		step,
 		min,
-		max
+		max,
+		fill = true
 	}: {
 		value: number;
 		disabled?: boolean;
 		step?: number;
 		min?: number;
 		max?: number;
+		/** Highlight the track between the minimum and the thumb. */
+		fill?: boolean;
 	} = $props();
 </script>
 
@@ -28,7 +31,9 @@
 		class="relative bg-slate-200 flex rounded w-full touch-none select-none items-center"
 	>
 		<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
-			<Slider.Range class="bg-foreground absolute h-full" />
+			{#if fill}
+				<Slider.Range class="bg-foreground absolute h-full" />
+			{/if}
 		</span>
 		<Slider.Thumb
 			index={0}

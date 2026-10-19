@@ -178,6 +178,7 @@ const translations: Translations = {
 	earlierAlternatives: 'Earlier alternatives',
 	laterAlternatives: 'Later alternatives',
 	differentStops: 'Different stops',
+	onDemandDeparture: 'Departure on demand',
 	rent: 'Rent',
 	copyToClipboard: 'Copy to clipboard',
 	rideThroughAllowed: 'Riding through allowed',

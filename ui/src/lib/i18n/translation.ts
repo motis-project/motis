@@ -175,6 +175,7 @@ export type Translations = {
 	earlierAlternatives: string;
 	laterAlternatives: string;
 	differentStops: string;
+	onDemandDeparture: string;
 	DEBUG_BUS_ROUTE: string;
 	DEBUG_RAILWAY_ROUTE: string;
 	DEBUG_FERRY_ROUTE: string;

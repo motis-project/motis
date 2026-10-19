@@ -180,6 +180,7 @@ const translations: Translations = {
 	earlierAlternatives: 'Wcześniejsze alternatywy',
 	laterAlternatives: 'Późniejsze alternatywy',
 	differentStops: 'Inne przystanki',
+	onDemandDeparture: 'Odjazd na żądanie',
 	rent: 'Wypożycz',
 	copyToClipboard: 'Kopiuj do schowka',
 	rideThroughAllowed: 'Przejazd dozwolony',

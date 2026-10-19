@@ -69,6 +69,7 @@
 				{#each r.direct as d, i (i)}
 					<DirectConnection
 						{d}
+						queriedTime={baseQuery?.query.time}
 						onclick={() => {
 							selectItinerary(d);
 						}}

@@ -575,7 +575,7 @@ export type Place = {
      */
     flexStartPickupDropOffWindow?: string;
     /**
-     * Time that on-demand service ends
+     * Time that on-demand service ends (exclusive; a one minute window is a fixed departure)
      */
     flexEndPickupDropOffWindow?: string;
     /**
