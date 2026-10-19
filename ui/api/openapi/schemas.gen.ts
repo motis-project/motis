@@ -548,16 +548,16 @@ export const PickupDropoffTypeSchema = {
     enum: ['NORMAL', 'NOT_ALLOWED']
 } as const;
 
-export const RealTimeStateSchema = {
+export const TimestampReasonSchema = {
     type: 'string',
-    description: `Nature of the real-time data an arrival/departure time is based on.
+    description: `Reason for an arrival/departure timestamp, i.e. what the time is based on.
 - \`NO_RT_DATA\` - no real-time data available, the time is the scheduled time
-- \`INCONSISTENT\` - no consistent real-time data available for this event, the time was changed by MOTIS, e.g. to prevent the vehicle from arriving before departing at a previous stop, or because the real-time data could not be matched unambiguously
-- \`OBSERVED\` - the time was observed/recorded
-- \`PROPAGATED\` - the time was computed by propagating the delay of a preceding event
-- \`PREDICTED\` - the time was predicted by the real-time data source
+- \`INCONSISTENT_RT\` - no consistent real-time data available for this event, the time was changed by MOTIS, e.g. to prevent the vehicle from arriving before departing at a previous stop, or because the real-time data could not be matched unambiguously
+- \`OBSERVED\` - the time is a real-time time that was observed/recorded by the real-time data source
+- \`PROPAGATED\` - the time is a real-time time that was computed by propagating the real-time delay of a preceding event
+- \`PREDICTED\` - the time is a real-time time that was predicted by the real-time data source
 `,
-    enum: ['NO_RT_DATA', 'INCONSISTENT', 'OBSERVED', 'PROPAGATED', 'PREDICTED']
+    enum: ['NO_RT_DATA', 'INCONSISTENT_RT', 'OBSERVED', 'PROPAGATED', 'PREDICTED']
 } as const;
 
 export const WheelchairAccessibilitySchema = {
@@ -667,17 +667,17 @@ Comes from the GTFS \`stop_code\` field.
             description: 'Whether this stop is cancelled due to the realtime situation.',
             type: 'boolean'
         },
-        arrivalRealTimeState: {
-            description: `Nature of the real-time data the arrival time is based on.
+        arrivalTimestampReason: {
+            description: `Reason for the arrival timestamp, i.e. what the arrival time is based on.
 Only set for stops of transit trips with an arrival.
 `,
-            '$ref': '#/components/schemas/RealTimeState'
+            '$ref': '#/components/schemas/TimestampReason'
         },
-        departureRealTimeState: {
-            description: `Nature of the real-time data the departure time is based on.
+        departureTimestampReason: {
+            description: `Reason for the departure timestamp, i.e. what the departure time is based on.
 Only set for stops of transit trips with a departure.
 `,
-            '$ref': '#/components/schemas/RealTimeState'
+            '$ref': '#/components/schemas/TimestampReason'
         },
         alerts: {
             description: 'Alerts for this stop.',
@@ -773,7 +773,7 @@ export const StopTimeSchema = {
             description: 'Transport mode for this leg'
         },
         realTime: {
-            description: 'Whether there is real-time data for this arrival/departure (i.e. `place.arrivalRealTimeState`/`place.departureRealTimeState` is neither `NO_RT_DATA` nor `INCONSISTENT`)',
+            description: 'Whether there is real-time data for this arrival/departure (i.e. `place.arrivalTimestampReason`/`place.departureTimestampReason` is neither `NO_RT_DATA` nor `INCONSISTENT_RT`)',
             type: 'boolean'
         },
         headsign: {
@@ -1636,7 +1636,7 @@ If leg is footpath:
             description: 'scheduled leg arrival time'
         },
         realTime: {
-            description: 'Whether there is real-time data for the departure or arrival of this leg (i.e. `from.departureRealTimeState` or `to.arrivalRealTimeState` is neither `NO_RT_DATA` nor `INCONSISTENT`)',
+            description: 'Whether there is real-time data for the departure or arrival of this leg (i.e. `from.departureTimestampReason` or `to.arrivalTimestampReason` is neither `NO_RT_DATA` nor `INCONSISTENT_RT`)',
             type: 'boolean'
         },
         scheduled: {

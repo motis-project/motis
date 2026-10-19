@@ -32,7 +32,7 @@ inline std::ostream& operator<<(std::ostream& out, place_t const p) {
   return std::visit([&](auto const l) -> std::ostream& { return out << l; }, p);
 }
 
-api::RealTimeStateEnum to_api(nigiri::rt_data_state);
+api::TimestampReasonEnum to_api(nigiri::rt_data_state);
 
 osr::level_t get_lvl(osr::ways const*,
                      osr::platforms const*,

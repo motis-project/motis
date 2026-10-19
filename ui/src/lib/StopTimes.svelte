@@ -126,8 +126,8 @@
 						timeZone={stopTime.place.tz}
 						isRealtime={isRealtime(
 							arriveBy
-								? stopTime.place.arrivalRealTimeState
-								: stopTime.place.departureRealTimeState,
+								? stopTime.place.arrivalTimestampReason
+								: stopTime.place.departureTimestampReason,
 							stopTime.realTime
 						)}
 						{timestamp}
@@ -140,8 +140,8 @@
 						timeZone={stopTime.place.tz}
 						isRealtime={isRealtime(
 							arriveBy
-								? stopTime.place.arrivalRealTimeState
-								: stopTime.place.departureRealTimeState,
+								? stopTime.place.arrivalTimestampReason
+								: stopTime.place.departureTimestampReason,
 							stopTime.realTime
 						)}
 						{timestamp}

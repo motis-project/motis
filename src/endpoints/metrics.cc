@@ -70,7 +70,7 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
     auto& rt_data_state_metrics = rt_data_state_metric_by_agency.emplace_back();
     for (auto const state : kRtDataStates) {
       auto state_labels = labels;
-      state_labels.emplace("rt_state",
+      state_labels.emplace("timestamp_reason",
                            fmt::to_string(fmt::streamed(to_api(state))));
       auto& g = metrics.total_rt_events_count_.Add(state_labels);
       g.Set(0);

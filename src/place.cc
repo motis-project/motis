@@ -20,17 +20,19 @@ namespace n = nigiri;
 
 namespace motis {
 
-api::RealTimeStateEnum to_api(n::rt_data_state const s) {
+api::TimestampReasonEnum to_api(n::rt_data_state const s) {
   switch (s) {
-    case n::rt_data_state::kNoRtData: return api::RealTimeStateEnum::NO_RT_DATA;
+    case n::rt_data_state::kNoRtData:
+      return api::TimestampReasonEnum::NO_RT_DATA;
     case n::rt_data_state::kInconsistent:
-      return api::RealTimeStateEnum::INCONSISTENT;
-    case n::rt_data_state::kObserved: return api::RealTimeStateEnum::OBSERVED;
+      return api::TimestampReasonEnum::INCONSISTENT_RT;
+    case n::rt_data_state::kObserved: return api::TimestampReasonEnum::OBSERVED;
     case n::rt_data_state::kPropagated:
-      return api::RealTimeStateEnum::PROPAGATED;
-    case n::rt_data_state::kPredicted: return api::RealTimeStateEnum::PREDICTED;
+      return api::TimestampReasonEnum::PROPAGATED;
+    case n::rt_data_state::kPredicted:
+      return api::TimestampReasonEnum::PREDICTED;
   }
-  return api::RealTimeStateEnum::NO_RT_DATA;
+  return api::TimestampReasonEnum::NO_RT_DATA;
 }
 
 tt_location::tt_location(nigiri::rt::run_stop const& stop)
@@ -234,10 +236,10 @@ api::Place to_place(n::timetable const* tt,
                                    (s.get_scheduled_stop().in_allowed() ||
                                     s.get_scheduled_stop().out_allowed()));
   if (s.stop_idx_ != 0U) {
-    p.arrivalRealTimeState_ = to_api(s.data_state(n::event_type::kArr));
+    p.arrivalTimestampReason_ = to_api(s.data_state(n::event_type::kArr));
   }
   if (s.stop_idx_ != s.fr_->size() - 1U) {
-    p.departureRealTimeState_ = to_api(s.data_state(n::event_type::kDep));
+    p.departureTimestampReason_ = to_api(s.data_state(n::event_type::kDep));
   }
   return p;
 }

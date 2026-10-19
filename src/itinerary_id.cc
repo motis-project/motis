@@ -1088,13 +1088,13 @@ api::Itinerary reconstruct_itinerary(
     if (!curr_from.cancelled_.has_value() && prev_to.cancelled_.has_value()) {
       curr_from.cancelled_ = prev_to.cancelled_;
     }
-    if (!curr_from.arrivalRealTimeState_.has_value() &&
-        prev_to.arrivalRealTimeState_.has_value()) {
-      curr_from.arrivalRealTimeState_ = prev_to.arrivalRealTimeState_;
+    if (!curr_from.arrivalTimestampReason_.has_value() &&
+        prev_to.arrivalTimestampReason_.has_value()) {
+      curr_from.arrivalTimestampReason_ = prev_to.arrivalTimestampReason_;
     }
-    if (!curr_from.departureRealTimeState_.has_value() &&
-        prev_to.departureRealTimeState_.has_value()) {
-      curr_from.departureRealTimeState_ = prev_to.departureRealTimeState_;
+    if (!curr_from.departureTimestampReason_.has_value() &&
+        prev_to.departureTimestampReason_.has_value()) {
+      curr_from.departureTimestampReason_ = prev_to.departureTimestampReason_;
     }
   }
 

@@ -386,7 +386,7 @@
 				{@render stopTimes(
 					l.startTime,
 					l.scheduledStartTime,
-					isRealtime(l.from.departureRealTimeState, l.realTime),
+					isRealtime(l.from.departureTimestampReason, l.realTime),
 					l.from,
 					l.mode,
 					-1
@@ -566,7 +566,7 @@
 								{@render stopTimes(
 									s.arrival!,
 									s.scheduledArrival!,
-									isRealtime(s.arrivalRealTimeState, l.realTime),
+									isRealtime(s.arrivalTimestampReason, l.realTime),
 									s,
 									l.mode,
 									0
@@ -580,7 +580,7 @@
 					{@render stopTimes(
 						l.endTime!,
 						l.scheduledEndTime!,
-						isRealtime(l.to.arrivalRealTimeState, l.realTime),
+						isRealtime(l.to.arrivalTimestampReason, l.realTime),
 						l.to,
 						l.mode,
 						1
@@ -620,7 +620,7 @@
 			{@render stopTimes(
 				lastLeg!.endTime,
 				lastLeg!.scheduledEndTime,
-				isRealtime(lastLeg!.to.arrivalRealTimeState, lastLeg!.realTime),
+				isRealtime(lastLeg!.to.arrivalTimestampReason, lastLeg!.realTime),
 				lastLeg!.to,
 				lastLeg!.mode,
 				1

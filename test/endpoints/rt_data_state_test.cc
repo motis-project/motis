@@ -158,8 +158,8 @@ std::vector<std::string> gtfsrt_export(data& d) {
   return stus;
 }
 
-// Values of the total_rt_events_count metric by rt_state label.
-std::map<std::string, double> rt_state_metrics(data& d) {
+// Values of the total_rt_events_count metric by timestamp_reason label.
+std::map<std::string, double> timestamp_reason_metrics(data& d) {
   auto registry = metrics_registry{};
   auto const metrics_ep = ep::metrics{.tt_ = d.tt_.get(),
                                       .tags_ = d.tags_.get(),
@@ -182,7 +182,7 @@ std::map<std::string, double> rt_state_metrics(data& d) {
     if (!line.starts_with("total_rt_events_count{")) {
       continue;
     }
-    auto const state_start = line.find("rt_state=\"") + 10U;
+    auto const state_start = line.find("timestamp_reason=\"") + 18U;
     auto const state_end = line.find('"', state_start);
     values[line.substr(state_start, state_end - state_start)] +=
         std::stod(line.substr(line.rfind(' ') + 1U));
@@ -231,10 +231,10 @@ TEST(motis, rt_data_state) {
     auto const& intermediate = leg.intermediateStops_->at(0);
     EXPECT_EQ("15:13", format_time(intermediate.arrival_));
     EXPECT_EQ("15:14", format_time(intermediate.departure_));
-    EXPECT_EQ(api::RealTimeStateEnum::PROPAGATED,
-              intermediate.arrivalRealTimeState_);
-    EXPECT_EQ(api::RealTimeStateEnum::PROPAGATED,
-              intermediate.departureRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::PROPAGATED,
+              intermediate.arrivalTimestampReason_);
+    EXPECT_EQ(api::TimestampReasonEnum::PROPAGATED,
+              intermediate.departureTimestampReason_);
 
     auto const stop_times = utl::init_from<ep::stop_times>(d).value();
     auto const st = stop_times(
@@ -245,8 +245,8 @@ TEST(motis, rt_data_state) {
     auto const& dep = st.stopTimes_.front();
     EXPECT_TRUE(dep.realTime_);
     EXPECT_EQ("15:14", format_time(dep.place_.departure_));
-    EXPECT_EQ(api::RealTimeStateEnum::PROPAGATED,
-              dep.place_.departureRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::PROPAGATED,
+              dep.place_.departureTimestampReason_);
 
     // GTFS-RT export: unchanged delay is not repeated.
     EXPECT_EQ((std::vector<std::string>{"1: dep=300"}), gtfsrt_export(d));
@@ -283,21 +283,22 @@ TEST(motis, rt_data_state) {
     EXPECT_TRUE(leg.realTime_);
 
     EXPECT_EQ("15:05", format_time(leg.from_.departure_));
-    EXPECT_EQ(api::RealTimeStateEnum::PREDICTED,
-              leg.from_.departureRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::PREDICTED,
+              leg.from_.departureTimestampReason_);
 
     ASSERT_TRUE(leg.intermediateStops_.has_value());
     ASSERT_EQ(1, leg.intermediateStops_->size());
     auto const& intermediate = leg.intermediateStops_->at(0);
     EXPECT_EQ("15:13", format_time(intermediate.arrival_));
     EXPECT_EQ("15:14", format_time(intermediate.departure_));
-    EXPECT_EQ(api::RealTimeStateEnum::INCONSISTENT,
-              intermediate.arrivalRealTimeState_);
-    EXPECT_EQ(api::RealTimeStateEnum::INCONSISTENT,
-              intermediate.departureRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::INCONSISTENT_RT,
+              intermediate.arrivalTimestampReason_);
+    EXPECT_EQ(api::TimestampReasonEnum::INCONSISTENT_RT,
+              intermediate.departureTimestampReason_);
 
     EXPECT_EQ("15:24", format_time(leg.to_.arrival_));
-    EXPECT_EQ(api::RealTimeStateEnum::PREDICTED, leg.to_.arrivalRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::PREDICTED,
+              leg.to_.arrivalTimestampReason_);
 
     auto const stop_times = utl::init_from<ep::stop_times>(d).value();
     auto const st = stop_times(
@@ -308,20 +309,20 @@ TEST(motis, rt_data_state) {
     auto const& dep = st.stopTimes_.front();
     EXPECT_FALSE(dep.realTime_);
     EXPECT_EQ("15:14", format_time(dep.place_.departure_));
-    EXPECT_EQ(api::RealTimeStateEnum::INCONSISTENT,
-              dep.place_.departureRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::INCONSISTENT_RT,
+              dep.place_.departureTimestampReason_);
 
     // GTFS-RT export: intermediate stop without real-time data -> NO_DATA.
     EXPECT_EQ(
         (std::vector<std::string>{"1: dep=300", "2: NO_DATA", "3: arr=300"}),
         gtfsrt_export(d));
 
-    EXPECT_EQ((std::map<std::string, double>{{"INCONSISTENT", 2.0},
+    EXPECT_EQ((std::map<std::string, double>{{"INCONSISTENT_RT", 2.0},
                                              {"NO_RT_DATA", 0.0},
                                              {"OBSERVED", 0.0},
                                              {"PREDICTED", 2.0},
                                              {"PROPAGATED", 0.0}}),
-              rt_state_metrics(d));
+              timestamp_reason_metrics(d));
   }
 
   {
@@ -347,10 +348,10 @@ TEST(motis, rt_data_state) {
     auto const& intermediate = leg.intermediateStops_->at(0);
     EXPECT_EQ("15:20", format_time(intermediate.arrival_));
     EXPECT_EQ("15:20", format_time(intermediate.departure_));
-    EXPECT_EQ(api::RealTimeStateEnum::INCONSISTENT,
-              intermediate.arrivalRealTimeState_);
-    EXPECT_EQ(api::RealTimeStateEnum::INCONSISTENT,
-              intermediate.departureRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::INCONSISTENT_RT,
+              intermediate.arrivalTimestampReason_);
+    EXPECT_EQ(api::TimestampReasonEnum::INCONSISTENT_RT,
+              intermediate.departureTimestampReason_);
 
     auto const stop_times = utl::init_from<ep::stop_times>(d).value();
     auto const st = stop_times(
@@ -361,8 +362,8 @@ TEST(motis, rt_data_state) {
     auto const& dep = st.stopTimes_.front();
     EXPECT_FALSE(dep.realTime_);
     EXPECT_EQ("15:20", format_time(dep.place_.departure_));
-    EXPECT_EQ(api::RealTimeStateEnum::INCONSISTENT,
-              dep.place_.departureRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::INCONSISTENT_RT,
+              dep.place_.departureTimestampReason_);
 
     // GTFS-RT export: inconsistent times are not exported -> NO_DATA.
     EXPECT_EQ(
@@ -399,21 +400,21 @@ TEST(motis, rt_data_state) {
     auto const& intermediate = leg.intermediateStops_->at(0);
     EXPECT_EQ("15:06", format_time(intermediate.arrival_));
     EXPECT_EQ("15:09", format_time(intermediate.departure_));
-    EXPECT_EQ(api::RealTimeStateEnum::PREDICTED,
-              intermediate.arrivalRealTimeState_);
-    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
-              intermediate.departureRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::PREDICTED,
+              intermediate.arrivalTimestampReason_);
+    EXPECT_EQ(api::TimestampReasonEnum::NO_RT_DATA,
+              intermediate.departureTimestampReason_);
 
     // GTFS-RT export: departure without real-time data is omitted.
     EXPECT_EQ((std::vector<std::string>{"1: dep=0", "2: arr=-120", "3: arr=0"}),
               gtfsrt_export(d));
 
-    EXPECT_EQ((std::map<std::string, double>{{"INCONSISTENT", 0.0},
+    EXPECT_EQ((std::map<std::string, double>{{"INCONSISTENT_RT", 0.0},
                                              {"NO_RT_DATA", 1.0},
                                              {"OBSERVED", 0.0},
                                              {"PREDICTED", 3.0},
                                              {"PROPAGATED", 0.0}}),
-              rt_state_metrics(d));
+              timestamp_reason_metrics(d));
   }
 
   {
@@ -503,16 +504,16 @@ TEST(motis, rt_data_state) {
     ASSERT_EQ(1, res.legs_.size());
     auto const& leg = res.legs_.front();
     EXPECT_FALSE(leg.realTime_);
-    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
-              leg.from_.departureRealTimeState_);
-    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
-              leg.to_.arrivalRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::NO_RT_DATA,
+              leg.from_.departureTimestampReason_);
+    EXPECT_EQ(api::TimestampReasonEnum::NO_RT_DATA,
+              leg.to_.arrivalTimestampReason_);
 
     ASSERT_TRUE(leg.intermediateStops_.has_value());
     ASSERT_EQ(1, leg.intermediateStops_->size());
     auto const& intermediate = leg.intermediateStops_->at(0);
     EXPECT_EQ("15:13", format_time(intermediate.arrival_));
-    EXPECT_EQ(api::RealTimeStateEnum::PREDICTED,
-              intermediate.arrivalRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::PREDICTED,
+              intermediate.arrivalTimestampReason_);
   }
 }

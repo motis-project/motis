@@ -120,7 +120,7 @@
 											<div class="text-xs font-bold uppercase text-slate-400">{t.departure}</div>
 											<Time
 												isRealtime={isRealtime(
-													it.legs[0].from.departureRealTimeState,
+													it.legs[0].from.departureTimestampReason,
 													it.legs[0].realTime
 												)}
 												timestamp={it.startTime}
@@ -135,7 +135,7 @@
 											<div class="text-xs font-bold uppercase text-slate-400">{t.arrival}</div>
 											<Time
 												isRealtime={isRealtime(
-													it.legs[it.legs.length - 1].to.arrivalRealTimeState,
+													it.legs[it.legs.length - 1].to.arrivalTimestampReason,
 													it.legs[it.legs.length - 1].realTime
 												)}
 												timestamp={it.endTime}

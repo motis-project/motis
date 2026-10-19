@@ -109,7 +109,7 @@ metrics_registry::metrics_registry(
           prometheus::BuildGauge()
               .Name("total_rt_events_count")
               .Help("The total number of arrival/departure events of "
-                    "transports that have RT data, by RT data state")
+                    "transports that have RT data, by timestamp reason")
               .Register(registry_)},
       timetable_first_day_timestamp_{
           prometheus::BuildGauge()

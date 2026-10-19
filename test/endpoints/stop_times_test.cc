@@ -162,13 +162,13 @@ TEST(motis, stop_times) {
     EXPECT_EQ("2019-04-30 22:45",
               format_time(ice.place_.scheduledArrival_.value()));
     EXPECT_EQ(true, ice.realTime_);
-    EXPECT_EQ(api::RealTimeStateEnum::PREDICTED,
-              ice.place_.arrivalRealTimeState_);
-    EXPECT_FALSE(ice.place_.departureRealTimeState_.has_value());
+    EXPECT_EQ(api::TimestampReasonEnum::PREDICTED,
+              ice.place_.arrivalTimestampReason_);
+    EXPECT_FALSE(ice.place_.departureTimestampReason_.has_value());
     EXPECT_EQ(1, ice.previousStops_->size());
     // The update starts at the second stop -> no real-time data for DA.
-    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
-              ice.previousStops_->at(0).departureRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::NO_RT_DATA,
+              ice.previousStops_->at(0).departureTimestampReason_);
     EXPECT_EQ(1, ice.place_.alerts_->size());
 
     auto const& sbahn = res.stopTimes_[2];
@@ -185,8 +185,8 @@ TEST(motis, stop_times) {
     EXPECT_EQ("2019-04-30 23:20",
               format_time(sbahn.place_.scheduledArrival_.value()));
     EXPECT_EQ(false, sbahn.realTime_);
-    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
-              sbahn.place_.arrivalRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::NO_RT_DATA,
+              sbahn.place_.arrivalTimestampReason_);
     EXPECT_EQ(2, sbahn.previousStops_->size());
   }
 
@@ -473,13 +473,13 @@ TEST(motis, stop_times_alert_only_no_rt_data) {
     EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
     EXPECT_TRUE(ice.place_.alerts_.has_value());
     EXPECT_FALSE(ice.realTime_);
-    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
-              ice.place_.departureRealTimeState_);
-    EXPECT_FALSE(ice.place_.arrivalRealTimeState_.has_value());
+    EXPECT_EQ(api::TimestampReasonEnum::NO_RT_DATA,
+              ice.place_.departureTimestampReason_);
+    EXPECT_FALSE(ice.place_.arrivalTimestampReason_.has_value());
     EXPECT_EQ(ice.place_.scheduledDeparture_, ice.place_.departure_);
     ASSERT_EQ(1, ice.nextStops_->size());
-    EXPECT_EQ(api::RealTimeStateEnum::NO_RT_DATA,
-              ice.nextStops_->at(0).arrivalRealTimeState_);
+    EXPECT_EQ(api::TimestampReasonEnum::NO_RT_DATA,
+              ice.nextStops_->at(0).arrivalTimestampReason_);
   }
 }
 
