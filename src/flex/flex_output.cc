@@ -1,5 +1,7 @@
 #include "motis/flex/flex_output.h"
 
+#include "fmt/format.h"
+
 #include "nigiri/flex.h"
 #include "nigiri/timetable.h"
 
@@ -8,6 +10,7 @@
 #include "motis/flex/flex_routing_data.h"
 #include "motis/osr/street_routing.h"
 #include "motis/place.h"
+#include "motis/tag_lookup.h"
 
 namespace n = nigiri;
 
@@ -107,6 +110,36 @@ void flex_output::annotate_leg(n::lang_t const& lang,
   leg.from_.flexId_ = get_flex_id(tt_, stop_seq[from_stop]);
   leg.to_.flex_ = get_flex_stop_name(tt_, lang, stop_seq[to_stop]);
   leg.to_.flexId_ = get_flex_id(tt_, stop_seq[to_stop]);
+
+  // Identify the service the way a transit leg does: route and agency of the
+  // flex trip. displayName_ and tripId_ stay unset, the UI and the itinerary
+  // id take a leg carrying them for a scheduled trip.
+  auto const trip = tt_.flex_transport_trip_[t];
+  if (auto const route = tt_.trip_route_id_[trip];
+      route != n::route_id_idx_t::invalid()) {
+    auto const translate = [&](n::translation_idx_t const x) {
+      return std::string{tt_.translate(lang, x)};
+    };
+    auto const src = tt_.trip_id_src_[tt_.trip_ids_[trip].front()];
+    auto const& r = tt_.route_ids_[src];
+    auto const color = r.route_id_colors_[route];
+    leg.routeId_ = fmt::format("{}_{}", tags_.get_tag(src), r.ids_.get(route));
+    leg.routeShortName_ = translate(r.route_id_short_names_[route]);
+    leg.routeLongName_ = translate(r.route_id_long_names_[route]);
+    leg.routeUrl_ = translate(r.route_id_url_[route]);
+    leg.routeType_ = to_idx(r.route_id_type_[route]);
+    leg.routeColor_ = n::to_str(color.color_);
+    leg.routeTextColor_ = n::to_str(color.text_color_);
+    if (auto const p = r.route_id_provider_[route];
+        p != n::provider_idx_t::invalid()) {
+      auto const& agency = tt_.providers_[p];
+      leg.agencyName_ = translate(agency.name_);
+      leg.agencyUrl_ = translate(agency.url_);
+      leg.agencyFareUrl_ = translate(agency.fare_url_);
+      leg.agencyId_ =
+          std::string{tt_.strings_.try_get(agency.id_).value_or("?")};
+    }
+  }
 
   // Windows of the service day the ride belongs to, not of the calendar day
   // of the leg (differs for windows past midnight).

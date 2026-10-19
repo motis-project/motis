@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <ranges>
+#include <utility>
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
@@ -479,6 +480,68 @@ void set_flex_windows(n::timetable const& tt,
   leg.from_.flexEndPickupDropOffWindow_ = day + from.to_;
   leg.to_.flexStartPickupDropOffWindow_ = day + to.from_;
   leg.to_.flexEndPickupDropOffWindow_ = day + to.to_;
+}
+
+namespace {
+
+// Takes the flex stop id and name out of a place for its lifetime and puts
+// them back afterwards: two itineraries can be compared without them, and
+// without copying either (moving an optional string does not allocate).
+struct flex_stop_guard {
+  explicit flex_stop_guard(api::Place& p)
+      : p_{p},
+        flex_{std::exchange(p.flex_, std::nullopt)},
+        id_{std::exchange(p.flexId_, std::nullopt)} {}
+  ~flex_stop_guard() {
+    p_.flex_ = std::move(flex_);
+    p_.flexId_ = std::move(id_);
+  }
+  flex_stop_guard(flex_stop_guard const&) = delete;
+  flex_stop_guard(flex_stop_guard&&) = delete;
+  flex_stop_guard& operator=(flex_stop_guard const&) = delete;
+  flex_stop_guard& operator=(flex_stop_guard&&) = delete;
+
+  api::Place& p_;
+  std::optional<std::string> flex_, id_;
+};
+
+// Street routing yields one ride per itinerary (see fit_direct_to_windows).
+api::Leg* flex_leg(api::Itinerary& it) {
+  auto const l = utl::find_if(it.legs_, [](api::Leg const& x) {
+    return x.mode_ == api::ModeEnum::FLEX;
+  });
+  return l == end(it.legs_) ? nullptr : &*l;
+}
+
+}  // namespace
+
+void remove_duplicate_rides(std::vector<api::Itinerary>& itineraries) {
+  for (auto i = 0U; i < itineraries.size(); ++i) {
+    auto* const ride = flex_leg(itineraries[i]);
+    if (ride == nullptr) {
+      continue;
+    }
+    auto const from = flex_stop_guard{ride->from_};
+    auto const to = flex_stop_guard{ride->to_};
+    // Compacts the rest of the vector, dropping what equals itinerary i.
+    auto write = i + 1U;
+    for (auto j = i + 1U; j != itineraries.size(); ++j) {
+      auto& other = itineraries[j];
+      auto* const other_ride = flex_leg(other);
+      auto const is_duplicate = other_ride != nullptr && [&]() {
+        auto const other_from = flex_stop_guard{other_ride->from_};
+        auto const other_to = flex_stop_guard{other_ride->to_};
+        return itineraries[i] == other;
+      }();
+      if (!is_duplicate) {
+        if (write != j) {
+          itineraries[write] = std::move(other);
+        }
+        ++write;
+      }
+    }
+    itineraries.resize(write);
+  }
 }
 
 bool fit_direct_to_windows(n::timetable const& tt,

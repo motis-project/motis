@@ -282,6 +282,28 @@
 				<a href={l.rental.url} target="_blank" class="hover:underline">{l.rental.systemName}</a>
 			</span>
 		{/if}
+		{#if l.mode == 'FLEX' && l.agencyName}
+			<span class="ml-6">
+				{t.sharingProvider}:
+				{#if l.agencyUrl}
+					<a href={l.agencyUrl} target="_blank" class="hover:underline">{l.agencyName}</a>
+				{:else}
+					{l.agencyName}
+				{/if}
+			</span>
+		{/if}
+		{#if l.mode == 'FLEX' && (l.routeShortName || l.routeLongName)}
+			<!-- The service's route: the on-demand counterpart of a line name. -->
+			<span class="ml-6">
+				{#if l.routeUrl}
+					<a href={l.routeUrl} target="_blank" class="hover:underline">
+						{[l.routeShortName, l.routeLongName].filter(Boolean).join(' – ')}
+					</a>
+				{:else}
+					{[l.routeShortName, l.routeLongName].filter(Boolean).join(' – ')}
+				{/if}
+			</span>
+		{/if}
 		{#if l.rental?.returnConstraint == 'ROUNDTRIP_STATION'}
 			<span class="ml-6">
 				{t.roundtripStationReturnConstraint}

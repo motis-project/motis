@@ -56,9 +56,9 @@ FFM,FFM Hbf,50.10701,8.66341,1,,
 FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10
 
 # routes.txt
-route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
-ICE,DB,ICE,,,101
-FLEX,DB,FlexDA,,,715
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_color,route_text_color
+ICE,DB,ICE,,,101,,
+FLEX,DB,FlexDA,Flex Darmstadt,,715,FDB813,000000
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
@@ -210,6 +210,17 @@ TEST(motis, flex_ride_position_fixed_departure) {
       EXPECT_EQ(hm(8, 10), utc_minute_of_day(flex->startTime_));
       EXPECT_EQ("da_south", flex->from_.flexId_.value_or("-"));
       EXPECT_EQ("da_north", flex->to_.flexId_.value_or("-"));
+      // Identified like a transit leg, but not taken for one.
+      EXPECT_EQ("Deutsche Bahn", flex->agencyName_.value_or("-"));
+      EXPECT_EQ("https://deutschebahn.com", flex->agencyUrl_.value_or("-"));
+      EXPECT_EQ("test_FLEX", flex->routeId_.value_or("-"));
+      EXPECT_EQ("FlexDA", flex->routeShortName_.value_or("-"));
+      EXPECT_EQ("Flex Darmstadt", flex->routeLongName_.value_or("-"));
+      EXPECT_EQ(715, flex->routeType_.value_or(-1));
+      EXPECT_EQ("fdb813", flex->routeColor_.value_or("-"));
+      EXPECT_EQ("000000", flex->routeTextColor_.value_or("-"));
+      EXPECT_FALSE(flex->displayName_.has_value());
+      EXPECT_FALSE(flex->tripId_.has_value());
       ASSERT_NE(nullptr, before);
       EXPECT_EQ(api::ModeEnum::WALK, before->mode_);
       EXPECT_EQ(hm(8, 10), utc_minute_of_day(before->endTime_));

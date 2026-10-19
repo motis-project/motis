@@ -37,3 +37,16 @@ export const getModeName = (l: Leg) => {
 			return `${l.mode}`;
 	}
 };
+
+// What a sharing or on-demand leg is sold as: the GBFS system, or the FLEX
+// route's short name (the branded service, e.g. "LISA"), falling back to the
+// agency, which is often the legal entity and long.
+export const getProviderName = (l: Leg): string | undefined => {
+	if (l.rental) {
+		return l.rental.systemName || undefined;
+	}
+	if (l.mode === 'FLEX') {
+		return l.routeShortName || l.agencyName || l.routeLongName || undefined;
+	}
+	return undefined;
+};

@@ -732,6 +732,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     }
   }
   utl::erase_duplicates(itineraries);
+  flex::remove_duplicate_rides(itineraries);
   return {itineraries, fastest_direct != kInfinityDuration
                            ? std::chrono::round<n::duration_t>(
                                  fastest_direct * fastest_direct_factor)

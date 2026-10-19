@@ -92,6 +92,12 @@ bool fit_direct_to_windows(nigiri::timetable const&,
                            bool arrive_by,
                            api::Itinerary&);
 
+// GTFS-Flex feeds model overlapping drop-off areas as separate trips, one per
+// pickup group and area. A direct ride ending inside several of those areas
+// comes back once per area, equal but for the area's id and name: keeps the
+// first of each such group.
+void remove_duplicate_rides(std::vector<api::Itinerary>&);
+
 void add_flex_td_offsets(osr::ways const&,
                          osr::lookup const&,
                          osr::platforms const*,

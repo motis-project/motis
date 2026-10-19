@@ -212,6 +212,46 @@ TEST(motis, flex_departure_window) {
   EXPECT_GE(none.from_, none.to_);
 }
 
+// Two rides equal but for the drop-off area (overlapping areas, one trip per
+// area in the feed) collapse into one; a different time, a different stop
+// position or a non-FLEX itinerary stay.
+TEST(motis, flex_remove_duplicate_rides) {
+  auto const ride = [](std::string_view const to_area,
+                       n::unixtime_t const dep, double const lat) {
+    auto it = api::Itinerary{};
+    it.startTime_ = dep;
+    it.endTime_ = dep + 10min;
+    auto& l = it.legs_.emplace_back();
+    l.mode_ = api::ModeEnum::FLEX;
+    l.startTime_ = dep;
+    l.endTime_ = dep + 10min;
+    l.from_.flexId_ = "group";
+    l.from_.lat_ = 49.0;
+    l.to_.flex_ = std::string{to_area};
+    l.to_.flexId_ = std::string{to_area};
+    l.to_.lat_ = lat;
+    return it;
+  };
+  auto walk = api::Itinerary{};
+  walk.legs_.emplace_back().mode_ = api::ModeEnum::WALK;
+
+  auto its = std::vector<api::Itinerary>{
+      ride("A", utc(1, 8, 0), 49.1),  ride("B", utc(1, 8, 0), 49.1),
+      ride("A", utc(1, 8, 5), 49.1),  ride("B", utc(1, 8, 0), 49.2),
+      walk,                           walk};
+  flex::remove_duplicate_rides(its);
+
+  ASSERT_EQ(5U, its.size());
+  // The kept ride has its stop names and ids back.
+  EXPECT_EQ("A", its[0].legs_[0].to_.flexId_.value_or("-"));
+  EXPECT_EQ("A", its[0].legs_[0].to_.flex_.value_or("-"));
+  EXPECT_EQ("group", its[0].legs_[0].from_.flexId_.value_or("-"));
+  EXPECT_EQ(utc(1, 8, 5), *its[1].startTime_);
+  EXPECT_EQ(49.2, its[2].legs_[0].to_.lat_);
+  EXPECT_EQ(api::ModeEnum::WALK, its[3].legs_[0].mode_);
+  EXPECT_EQ(api::ModeEnum::WALK, its[4].legs_[0].mode_);
+}
+
 // Zero-length pickup window [T, T]: a fixed departure at minute T (call-taxi
 // encoding of the Austrian feeds), here with a drop-off window from the same
 // minute to the end of the service day (28:59). The importer stores the

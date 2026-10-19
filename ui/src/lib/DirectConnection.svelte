@@ -2,6 +2,7 @@
 	import { Button, type ButtonProps } from '$lib/components/ui/button';
 	import { formatDurationSec } from '$lib/formatDuration';
 	import { getModeStyle, routeColor } from './modeStyle';
+	import { getProviderName } from './getModeName';
 	import { formatTime } from './toDateTime';
 	import { directDepartureRange } from './flexShiftRange';
 	import type { Itinerary } from '@motis-project/motis-client';
@@ -56,6 +57,9 @@
 					<use xlink:href={`#${icon}`}></use>
 				</svg>
 			{/each}
+			{#if getProviderName(leg)}
+				<span class="mr-1.5 max-w-40 truncate">{getProviderName(leg)}</span>
+			{/if}
 			{formatDurationSec(d.duration)}
 		</div>
 		{#if departures}
