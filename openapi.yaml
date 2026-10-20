@@ -4375,6 +4375,13 @@ components:
         - NONE
         - COMPULSORY
 
+    DisplayType:
+      type: string
+      enum:
+        - REQUIRED
+        - OPTIONAL
+        - DETAILS_ONLY
+
     Place:
       type: object
       required:
@@ -5373,10 +5380,17 @@ components:
           type: string
         routeShortName:
           type: string
+        routeShortNameDisplay:
+          $ref: '#/components/schemas/DisplayType'
         routeLongName:
           type: string
+        routeLongNameDisplay:
+          $ref: '#/components/schemas/DisplayType'
         tripShortName:
           type: string
+        tripShortNameDisplay:
+          $ref: '#/components/schemas/DisplayType'
+
         displayName:
           type: string
         cancelled:
