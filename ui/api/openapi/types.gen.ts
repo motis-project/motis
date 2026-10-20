@@ -466,6 +466,17 @@ export type VertexType = 'NORMAL' | 'BIKESHARE' | 'TRANSIT';
  */
 export type PickupDropoffType = 'NORMAL' | 'NOT_ALLOWED';
 
+/**
+ * Reason for an arrival/departure timestamp, i.e. what the time is based on.
+ * - `NO_RT_DATA` - no real-time data available, the time is the scheduled time
+ * - `INCONSISTENT_RT` - no consistent real-time data available for this event, the time was changed by MOTIS, e.g. to prevent the vehicle from arriving before departing at a previous stop, or because the real-time data could not be matched unambiguously
+ * - `OBSERVED` - the time is a real-time time that was observed/recorded by the real-time data source
+ * - `PROPAGATED` - the time is a real-time time that was computed by propagating the real-time delay of a preceding event
+ * - `PREDICTED` - the time is a real-time time that was predicted by the real-time data source
+ *
+ */
+export type TimestampReason = 'NO_RT_DATA' | 'INCONSISTENT_RT' | 'OBSERVED' | 'PROPAGATED' | 'PREDICTED';
+
 export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
 
 export type Reservation = 'NONE' | 'COMPULSORY';
@@ -559,6 +570,18 @@ export type Place = {
      */
     cancelled?: boolean;
     /**
+     * Reason for the arrival timestamp, i.e. what the arrival time is based on.
+     * Only set for stops of transit trips with an arrival.
+     *
+     */
+    arrivalTimestampReason?: TimestampReason;
+    /**
+     * Reason for the departure timestamp, i.e. what the departure time is based on.
+     * Only set for stops of transit trips with a departure.
+     *
+     */
+    departureTimestampReason?: TimestampReason;
+    /**
      * Alerts for this stop.
      */
     alerts?: Array<Alert>;
@@ -637,7 +660,7 @@ export type StopTime = {
      */
     mode: Mode;
     /**
-     * Whether there is real-time data about this leg
+     * Whether there is real-time data for this arrival/departure (i.e. `place.arrivalTimestampReason`/`place.departureTimestampReason` is neither `NO_RT_DATA` nor `INCONSISTENT_RT`)
      */
     realTime: boolean;
     /**
@@ -773,7 +796,7 @@ export type TripSegment = {
      */
     scheduledArrival: string;
     /**
-     * Whether there is real-time data about this leg
+     * Whether there is real-time data for the departure or arrival of this leg
      */
     realTime: boolean;
     /**
@@ -1300,7 +1323,7 @@ export type Leg = {
      */
     scheduledEndTime: string;
     /**
-     * Whether there is real-time data about this leg
+     * Whether there is real-time data for the departure or arrival of this leg (i.e. `from.departureTimestampReason` or `to.arrivalTimestampReason` is neither `NO_RT_DATA` nor `INCONSISTENT_RT`)
      */
     realTime: boolean;
     /**

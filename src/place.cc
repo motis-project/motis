@@ -8,6 +8,7 @@
 #include "osr/platforms.h"
 
 #include "nigiri/rt/frun.h"
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/special_stations.h"
 #include "nigiri/timetable.h"
 
@@ -18,6 +19,21 @@
 namespace n = nigiri;
 
 namespace motis {
+
+api::TimestampReasonEnum to_api(n::rt_data_state const s) {
+  switch (s) {
+    case n::rt_data_state::kNoRtData:
+      return api::TimestampReasonEnum::NO_RT_DATA;
+    case n::rt_data_state::kInconsistent:
+      return api::TimestampReasonEnum::INCONSISTENT_RT;
+    case n::rt_data_state::kObserved: return api::TimestampReasonEnum::OBSERVED;
+    case n::rt_data_state::kPropagated:
+      return api::TimestampReasonEnum::PROPAGATED;
+    case n::rt_data_state::kPredicted:
+      return api::TimestampReasonEnum::PREDICTED;
+  }
+  return api::TimestampReasonEnum::NO_RT_DATA;
+}
 
 tt_location::tt_location(nigiri::rt::run_stop const& stop)
     : l_{stop.get_location_idx()},
@@ -219,6 +235,12 @@ api::Place to_place(n::timetable const* tt,
   p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
                                    (s.get_scheduled_stop().in_allowed() ||
                                     s.get_scheduled_stop().out_allowed()));
+  if (s.stop_idx_ != 0U) {
+    p.arrivalTimestampReason_ = to_api(s.data_state(n::event_type::kArr));
+  }
+  if (s.stop_idx_ != s.fr_->size() - 1U) {
+    p.departureTimestampReason_ = to_api(s.data_state(n::event_type::kDep));
+  }
   return p;
 }
 
