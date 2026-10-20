@@ -5,8 +5,14 @@
 
 #include "boost/json.hpp"
 
+#ifdef NO_DATA
+#undef NO_DATA
+#endif
+#include "gtfsrt/gtfs-realtime.pb.h"
+
 #include "utl/init_from.h"
 
+#include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/timetable.h"
 
 #include "motis-api/motis-api.h"
@@ -15,8 +21,12 @@
 #include "motis/endpoints/routing.h"
 #include "motis/import.h"
 
+#include "./util.h"
+
 namespace json = boost::json;
 using namespace std::string_view_literals;
+using namespace std::chrono_literals;
+using namespace date;
 using namespace motis;
 namespace n = nigiri;
 
@@ -267,4 +277,47 @@ TEST(motis, flex_without_booking_rules) {
   auto const res_json = json::serialize(json::value_from(res));
   EXPECT_EQ(std::string::npos, res_json.find("BookingRule"));
   EXPECT_EQ(std::string::npos, res_json.find("bookingType"));
+}
+
+TEST(motis, flex_alerts) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_flex_alerts", ec);
+
+  auto const c = flex_config(kFlexGTFS);
+  import(c, "test/data_flex_alerts");
+  auto d = data{"test/data_flex_alerts", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      test::to_feed_msg({test::alert{.header_ = "Booking required",
+                                     .description_ = "Book via the Rufbus app.",
+                                     .entities_ = {{.route_id_ = "FLEX_1"}}}},
+                        date::sys_days{2019_y / May / 1} + 6h));
+  EXPECT_EQ(1U, stats.alert_total_resolve_success_);
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(kFlexQuery);
+
+  auto n_flex_legs = 0U;
+  for (auto const& it : res.direct_) {
+    for (auto const& leg : it.legs_) {
+      if (leg.mode_ != api::ModeEnum::FLEX) {
+        continue;
+      }
+      ++n_flex_legs;
+      ASSERT_TRUE(leg.from_.pickupBookingRule_.has_value());
+      if (leg.from_.pickupBookingRule_->bookingType_ ==
+          api::BookingTypeEnum::UP_TO_PRIOR_DAYS) {  // flex_trip_1 (FLEX_1)
+        ASSERT_TRUE(leg.alerts_.has_value());
+        ASSERT_EQ(1U, leg.alerts_->size());
+        EXPECT_EQ("Booking required", leg.alerts_->front().headerText_);
+        EXPECT_EQ("Book via the Rufbus app.",
+                  leg.alerts_->front().descriptionText_);
+      } else {  // flex_trip_2 (FLEX_2)
+        EXPECT_FALSE(leg.alerts_.has_value());
+      }
+    }
+  }
+  EXPECT_EQ(2U, n_flex_legs);
 }

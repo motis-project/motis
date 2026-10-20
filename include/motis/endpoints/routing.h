@@ -118,7 +118,8 @@ struct routing {
       double max_matching_distance,
       double fastest_direct_factor,
       bool detailed_legs,
-      unsigned api_version) const;
+      unsigned api_version,
+      nigiri::rt_timetable const* = nullptr) const;
 
   config const& config_;
   osr::ways const* w_;

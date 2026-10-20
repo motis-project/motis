@@ -3,6 +3,7 @@
 #include "fmt/format.h"
 
 #include "nigiri/flex.h"
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
 
 #include "motis/flex/flex.h"
@@ -10,6 +11,7 @@
 #include "motis/flex/flex_routing_data.h"
 #include "motis/osr/street_routing.h"
 #include "motis/place.h"
+#include "motis/to_alert.h"
 
 namespace n = nigiri;
 
@@ -97,6 +99,7 @@ flex_output::flex_output(osr::ways const& w,
                          tz_map_t const* tz,
                          tag_lookup const& tags,
                          n::timetable const& tt,
+                         n::rt_timetable const* rtt,
                          flex_areas const& fa,
                          mode_payload const id,
                          flex_additional_nodes const& additional_nodes,
@@ -107,6 +110,7 @@ flex_output::flex_output(osr::ways const& w,
       ae_{ae},
       tz_{tz},
       tt_{tt},
+      rtt_{rtt},
       tags_{tags},
       fa_{fa},
       additional_nodes_{additional_nodes},
@@ -205,6 +209,22 @@ void flex_output::annotate_leg(n::lang_t const& lang,
       tt_, lang, tt_.flex_transport_pickup_booking_rule_[t][*from_stop]);
   leg.to_.dropOffBookingRule_ = get_booking_rule(
       tt_, lang, tt_.flex_transport_drop_off_booking_rule_[t][*to_stop]);
+
+  if (rtt_ != nullptr) {
+    auto const trip = tt_.flex_transport_trip_[t];
+    auto alerts = std::vector<api::Alert>{};
+    for (auto const& id : tt_.trip_ids_[trip]) {
+      for (auto const& a :
+           rtt_->alerts_.get_alerts(tt_, tt_.trip_id_src_[id], trip,
+                                    n::rt_transport_idx_t::invalid(),
+                                    n::location_idx_t::invalid(), false)) {
+        alerts.emplace_back(to_alert(rtt_->alerts_, a, lang));
+      }
+    }
+    if (!alerts.empty()) {
+      leg.alerts_ = std::move(alerts);
+    }
+  }
 }
 
 api::Place flex_output::get_place(n::lang_t const& lang,
