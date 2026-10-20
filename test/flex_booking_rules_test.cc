@@ -288,13 +288,19 @@ TEST(motis, flex_alerts) {
   auto d = data{"test/data_flex_alerts", c};
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto msg =
       test::to_feed_msg({test::alert{.header_ = "Booking required",
                                      .description_ = "Book via the Rufbus app.",
+                                     .entities_ = {{.route_id_ = "FLEX_1"}}},
+                         test::alert{.header_ = "No service today",
+                                     .description_ = "Snow.",
                                      .entities_ = {{.route_id_ = "FLEX_1"}}}},
-                        date::sys_days{2019_y / May / 1} + 6h));
-  EXPECT_EQ(1U, stats.alert_total_resolve_success_);
+                        date::sys_days{2019_y / May / 1} + 6h);
+  msg.mutable_entity(1)->mutable_alert()->set_severity_level(
+      transit_realtime::Alert_SeverityLevel_WARNING);
+  auto const stats = n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_,
+                                              n::source_idx_t{0}, "test", msg);
+  EXPECT_EQ(2U, stats.alert_total_resolve_success_);
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   auto const res = routing(kFlexQuery);
@@ -310,10 +316,16 @@ TEST(motis, flex_alerts) {
       if (leg.from_.pickupBookingRule_->bookingType_ ==
           api::BookingTypeEnum::UP_TO_PRIOR_DAYS) {  // flex_trip_1 (FLEX_1)
         ASSERT_TRUE(leg.alerts_.has_value());
-        ASSERT_EQ(1U, leg.alerts_->size());
-        EXPECT_EQ("Booking required", leg.alerts_->front().headerText_);
-        EXPECT_EQ("Book via the Rufbus app.",
-                  leg.alerts_->front().descriptionText_);
+        ASSERT_EQ(2U, leg.alerts_->size());
+        for (auto const& a : *leg.alerts_) {
+          if (a.headerText_ == "Booking required") {
+            EXPECT_EQ("Book via the Rufbus app.", a.descriptionText_);
+            EXPECT_FALSE(a.severityLevel_.has_value());  // unknown -> omitted
+          } else {
+            EXPECT_EQ("No service today", a.headerText_);
+            EXPECT_EQ(api::AlertSeverityLevelEnum::WARNING, a.severityLevel_);
+          }
+        }
       } else {  // flex_trip_2 (FLEX_2)
         EXPECT_FALSE(leg.alerts_.has_value());
       }
