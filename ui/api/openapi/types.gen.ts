@@ -2663,13 +2663,13 @@ export type PlanData = {
          * and the other is better on departure time (latest wins).
          * In combination with arriveBy this parameter cover the following use cases:
          *
-         * `timetable=false` = waiting for the first transit departure/arrival is considered travel time:
+         * `timetableView=false` = waiting for the first transit departure/arrival is considered travel time:
          * - `arriveBy=true`: event (e.g. a meeting) starts at 10:00 am,
          * compute the best journeys that arrive by that time (maximizes departure time)
          * - `arriveBy=false`: event (e.g. a meeting) ends at 11:00 am,
          * compute the best journeys that depart after that time
          *
-         * `timetable=true` = optimize "later departure" + "earlier arrival" and give all options over a time window:
+         * `timetableView=true` = optimize "later departure" + "earlier arrival" and give all options over a time window:
          * - `arriveBy=true`: the time window around `date` and `time` refers to the arrival time window
          * - `arriveBy=false`: the time window around `date` and `time` refers to the departure time window
          *
