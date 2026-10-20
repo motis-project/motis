@@ -523,9 +523,9 @@ api::plan_response meta_router::run() {
                 query_.detailedTransfers_.value_or(query_.detailedLegs_);
             auto response = journey_to_response(
                 r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_,
-                annotation_rtt_, r_.matches_, r_.elevations_, r_.shapes_,
-                gbfs_rd_, r_.ae_, r_.tz_, j, start_, dest_, cache,
-                ep::blocked.get(),
+                annotation_rtt_, r_.matches_, r_.r_, r_.ta_, r_.f_,
+                r_.elevations_, r_.shapes_, gbfs_rd_, r_.ae_, r_.tz_, j, start_,
+                dest_, cache, ep::blocked.get(),
                 query_.requireCarTransport_ && query_.useRoutedTransfers_,
                 params, query_.pedestrianProfile_, query_.elevationCosts_,
                 query_.joinInterlinedLegs_, detailed_transfers,
@@ -535,7 +535,7 @@ api::plan_response meta_router::run() {
                 max_matching_distance_, api_version_,
                 query_.ignorePreTransitRentalReturnConstraints_,
                 query_.ignorePostTransitRentalReturnConstraints_,
-                query_.language_);
+                query_.reverseGeocodeLocations_, query_.language_);
 
             if (response.legs_.front().mode_ == api::ModeEnum::RIDE_SHARING &&
                 response.legs_.size() == 1) {

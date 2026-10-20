@@ -69,6 +69,7 @@ api::Itinerary reconstruct_itinerary(
     bool const detailed_transfers = false,
     bool const detailed_legs = true,
     bool const with_scheduled_skipped_stops = false,
+    bool reverse_geocode_locations = false,
     nigiri::lang_t const& lang = nigiri::lang_t{},
     std::size_t num_leg_alternatives = 0U,
     nigiri::routing::clasz_mask_t allowed_claszes =

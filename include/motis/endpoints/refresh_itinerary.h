@@ -39,6 +39,8 @@ struct refresh_itinerary {
   odm::bounds const* odm_bounds_;
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
+  adr::reverse const* r_;
+  adr::formatter const* f_;
 };
 
 struct refresh_itinerary_post {
@@ -66,6 +68,8 @@ struct refresh_itinerary_post {
   odm::bounds const* odm_bounds_;
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
+  adr::reverse const* r_;
+  adr::formatter const* f_;
 };
 
 }  // namespace motis::ep

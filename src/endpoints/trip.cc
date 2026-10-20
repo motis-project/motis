@@ -46,7 +46,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
 
   return journey_to_response(
       w_, l_, pl_, tt_, tags_, nullptr, nullptr, rtt, matches_, nullptr,
-      shapes_, gbfs_rd, ae_, tz_,
+      nullptr, nullptr, nullptr, shapes_, gbfs_rd, ae_, tz_,
       {.legs_ = {n::routing::journey::leg{
            n::direction::kForward, from_l.get_location_idx(),
            to_l.get_location_idx(), start_time, dest_time,
@@ -65,7 +65,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
       api::ElevationCostsEnum::NONE, query.joinInterlinedLegs_, true,
       query.detailedLegs_, false, query.withScheduledSkippedStops_,
       config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
-      api_version, false, false, query.language_);
+      api_version, false, false, false, query.language_);
 }
 
 }  // namespace motis::ep

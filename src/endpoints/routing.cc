@@ -40,6 +40,10 @@
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
+
+#include "adr/guess_context.h"
+#include "adr/reverse.h"
+#include "motis/itinerary_start_end.h"
 #if defined(NIGIRI_CUDA)
 #include "nigiri/routing/gpu/raptor.h"
 #endif
@@ -610,6 +614,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     double const max_matching_distance,
     double const fastest_direct_factor,
     bool const detailed_legs,
+    bool const reverse_geocode_locations,
     unsigned const api_version) const {
   if (!w_ || !l_) {
     return {};
@@ -635,6 +640,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         std::chrono::seconds{itinerary.duration_});
     if (duration < fastest_direct) {
       fastest_direct = duration;
+    }
+    if (reverse_geocode_locations && r_ && ta_ && f_) {
+      resolve_itinerary_start_end(itinerary, *r_, *ta_, *f_, ae_, tt_, tags_,
+                                  w_, pl_, matches_);
     }
     itineraries.emplace_back(std::move(itinerary));
     return true;
@@ -925,7 +934,8 @@ api::plan_response routing::route(api::plan_params const& query,
                              config_.get_limits()
                                  .street_routing_max_direct_seconds_}),
                 max_matching_distance, query.fastestDirectFactor_,
-                query.detailedLegs_, api_version)
+                query.detailedLegs_, query.reverseGeocodeLocations_,
+                api_version)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
@@ -1257,9 +1267,9 @@ api::plan_response routing::route(api::plan_params const& query,
     auto itineraries = utl::to_vec(
         journeys, [&, cache = street_routing_cache_t{}](auto&& j) mutable {
           return journey_to_response(
-              w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
-              elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
-              blocked.get(),
+              w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_, r_,
+              ta_, f_, elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest,
+              cache, blocked.get(),
               query.requireCarTransport_ && query.useRoutedTransfers_,
               osr_params, query.pedestrianProfile_, query.elevationCosts_,
               query.joinInterlinedLegs_, detailed_transfers,
@@ -1268,8 +1278,8 @@ api::plan_response routing::route(api::plan_params const& query,
               config_.timetable_.value().max_matching_distance_,
               max_matching_distance, api_version,
               query.ignorePreTransitRentalReturnConstraints_,
-              query.ignorePostTransitRentalReturnConstraints_, query.language_,
-              true,
+              query.ignorePostTransitRentalReturnConstraints_,
+              query.reverseGeocodeLocations_, query.language_, true,
               query.numLegAlternatives_ > 0
                   ? alternatives_context{query_alternatives{
                         q_for_alts,
@@ -1324,7 +1334,10 @@ api::plan_response routing_post::operator()(
                          .tz_ = tz_,
                          .odm_bounds_ = odm_bounds_,
                          .ride_sharing_bounds_ = ride_sharing_bounds_,
-                         .metrics_ = metrics_
+                         .metrics_ = metrics_,
+                         .r_ = r_,
+                         .ta_ = ta_,
+                         .f_ = f_
 #if defined(NIGIRI_CUDA)
                          ,
                          .gpu_pool_ = gpu_pool_

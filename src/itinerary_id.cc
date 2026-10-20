@@ -667,6 +667,7 @@ api::Itinerary reconstruct_itinerary(
     bool const detailed_transfers,
     bool const detailed_legs,
     bool const with_scheduled_skipped_stops,
+    bool const reverse_geocode_location,
     n::lang_t const& lang,
     std::size_t const num_leg_alternatives,
     n::routing::clasz_mask_t const allowed_claszes,
@@ -773,8 +774,9 @@ api::Itinerary reconstruct_itinerary(
     return journey_to_response(
                stop_times_ep.w_, routing.l_, stop_times_ep.pl_,
                stop_times_ep.tt_, stop_times_ep.tags_, routing.fa_, rt.e_.get(),
-               rt.rtt_.get(), stop_times_ep.matches_, routing.elevations_,
-               routing.shapes_, gbfs_rd, stop_times_ep.ae_, stop_times_ep.tz_,
+               rt.rtt_.get(), stop_times_ep.matches_, routing.r_, routing.ta_,
+               routing.f_, routing.elevations_, routing.shapes_, gbfs_rd,
+               stop_times_ep.ae_, stop_times_ep.tz_,
                {.legs_ = {l},
                 .start_time_ = l.dep_time_,
                 .dest_time_ = l.arr_time_,
@@ -785,7 +787,8 @@ api::Itinerary reconstruct_itinerary(
                join_interlined_legs, detailed_transfers, detailed_legs,
                /*with_fares=*/false, with_scheduled_skipped_stops,
                stop_times_ep.config_.timetable_.value().max_matching_distance_,
-               flm.max_matching_distance_, 6U, false, false, lang,
+               flm.max_matching_distance_, 6U, false, false,
+               reverse_geocode_location, lang,
                /*set_itinerary_id_field=*/false, alternatives, nullptr,
                one_to_many_view{&otm_searches})
         .legs_;

@@ -958,6 +958,14 @@ paths:
             type: boolean
             default: false
 
+        - name: reverseGeocodeLocations
+          in: query
+          required: false
+          description: Optional. Reverse geocode the start location/destination of a journey if it is not a `STOP`.
+          schema:
+            type: boolean
+            default: false
+
         - name: realtimeMode
           in: query
           required: false
@@ -2723,6 +2731,13 @@ paths:
           in: query
           required: false
           description: Ignore rental return constraints on the last (egress) leg.
+          schema:
+            type: boolean
+            default: false
+        - name: reverseGeocodeLocations
+          in: query
+          required: false
+          description: Optional. Reverse geocode the start location/destination of a journey if it is not a `STOP`.
           schema:
             type: boolean
             default: false
