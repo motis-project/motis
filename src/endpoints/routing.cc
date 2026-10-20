@@ -631,7 +631,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     double const max_matching_distance,
     double const fastest_direct_factor,
     bool const detailed_legs,
-    unsigned const api_version) const {
+    unsigned const api_version,
+    n::rt_timetable const* rtt) const {
   if (!w_ || !l_) {
     return {};
   }
@@ -675,7 +676,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
             flex::prepare_sharing_data(*tt_, *w_, *l_, pl_, *fa_, matches_,
                                        ids.front(), ids.front().get_dir(), frd);
         route_with_profile(flex::flex_output{
-            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, *fa_, ids.front(),
+            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, rtt, *fa_, ids.front(),
             frd.additional_nodes_, std::move(sharing)});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
@@ -946,7 +947,7 @@ api::plan_response routing::route(api::plan_params const& query,
                              config_.get_limits()
                                  .street_routing_max_direct_seconds_}),
                 max_matching_distance, query.fastestDirectFactor_,
-                query.detailedLegs_, api_version)
+                query.detailedLegs_, api_version, annotation_rtt)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
