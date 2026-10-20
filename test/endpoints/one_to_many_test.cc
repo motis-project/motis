@@ -288,7 +288,7 @@ TEST(one_to_many, post_request_backward) {
               {{.duration_ = 1020.0, .transfers_ = 0}},
               {},
               {{.duration_ = 3360.0, .transfers_ = 1}},  // from DA_10: 3420.0
-              {{.duration_ = 3600.0, .transfers_ = 1}},
+              {{.duration_ = 3240.0, .transfers_ = 1}},
           }}}),
       durations);
 }
@@ -698,7 +698,7 @@ TEST(one_to_many, pareto_sets_with_multiple_entries) {
                 "49.871561,8.6320181"},  // DA_Tram_3
       .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
       .maxMatchingDistance_ = 25,
-      .maxPreTransitTime_ = 300});  // Prevent any pre transit to Tram_x
+      .maxPreTransitTime_ = 240});  // Prevent any pre transit to Tram_x
 
   // We only care about duration to DA_Tram_3, everything else is for debugging
   auto const& sd = durations.street_durations_.value();
