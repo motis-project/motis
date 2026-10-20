@@ -75,7 +75,10 @@ void add_trip_updates(n::timetable const& tt,
         fr.is_scheduled() ? subrange.from_ : static_cast<unsigned short>(0U);
     auto seq_it = begin(seq_numbers);
 
+    // Events without real-time data are omitted. Stops without any real-time
+    // data are exported as NO_DATA (which also applies to subsequent stops).
     auto last_delay = n::duration_t::max();
+    auto no_data = false;
     for (; seq_it != end(seq_numbers); ++stop_idx, ++seq_it) {
       auto const s = fr[stop_idx - fr.stop_range_.from_];
 
@@ -100,7 +103,26 @@ void add_trip_updates(n::timetable const& tt,
             std::chrono::duration_cast<std::chrono::seconds>(t).count());
       };
 
-      if (s.stop_idx_ != 0) {
+      auto const has_data = [&](n::event_type const ev_type) {
+        return !fr.is_scheduled() || s.has_rt_data(ev_type);
+      };
+      auto const arr_data = s.stop_idx_ != 0 && has_data(n::event_type::kArr);
+      auto const dep_data =
+          s.stop_idx_ != fr.size() - 1 && has_data(n::event_type::kDep);
+      auto const is_skipped =
+          s.is_cancelled() && !s.get_scheduled_stop().is_cancelled();
+      if (arr_data || dep_data) {
+        no_data = false;
+      } else if (!no_data && !is_skipped) {
+        set_stu();
+        stu->set_schedule_relationship(
+            transit_realtime::TripUpdate_StopTimeUpdate_ScheduleRelationship::
+                TripUpdate_StopTimeUpdate_ScheduleRelationship_NO_DATA);
+        no_data = true;
+        last_delay = n::duration_t::max();
+      }
+
+      if (arr_data) {
         auto const arr_delay = s.delay(nigiri::event_type::kArr);
         if (arr_delay != last_delay || !fr.is_scheduled()) {
           set_stu();
@@ -110,7 +132,7 @@ void add_trip_updates(n::timetable const& tt,
           last_delay = arr_delay;
         }
       }
-      if (s.stop_idx_ != fr.size() - 1) {
+      if (dep_data) {
         auto const dep_delay = s.delay(nigiri::event_type::kDep);
         if (dep_delay != last_delay || !fr.is_scheduled()) {
           set_stu();
@@ -120,7 +142,7 @@ void add_trip_updates(n::timetable const& tt,
           last_delay = dep_delay;
         }
       }
-      if (s.is_cancelled() && !s.get_scheduled_stop().is_cancelled()) {
+      if (is_skipped) {
         set_stu();
         stu->set_schedule_relationship(
             transit_realtime::TripUpdate_StopTimeUpdate_ScheduleRelationship::

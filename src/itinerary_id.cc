@@ -1070,7 +1070,7 @@ api::Itinerary reconstruct_itinerary(
     }
   }
 
-  // === Propagate cancelled + arrival time. ===
+  // === Propagate cancelled + real-time state + arrival time. ===
   for (auto i = std::size_t{1}; i < itinerary.legs_.size(); ++i) {
     if (itinerary.legs_[i].tripId_.has_value()) {
       continue;
@@ -1087,6 +1087,14 @@ api::Itinerary reconstruct_itinerary(
     }
     if (!curr_from.cancelled_.has_value() && prev_to.cancelled_.has_value()) {
       curr_from.cancelled_ = prev_to.cancelled_;
+    }
+    if (!curr_from.arrivalTimestampReason_.has_value() &&
+        prev_to.arrivalTimestampReason_.has_value()) {
+      curr_from.arrivalTimestampReason_ = prev_to.arrivalTimestampReason_;
+    }
+    if (!curr_from.departureTimestampReason_.has_value() &&
+        prev_to.departureTimestampReason_.has_value()) {
+      curr_from.departureTimestampReason_ = prev_to.departureTimestampReason_;
     }
   }
 

@@ -15,6 +15,7 @@
 		type Error as ApiError
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
+	import { isRealtime } from '$lib/utils';
 	import { LoaderCircle } from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
 	import DirectConnection from '$lib/DirectConnection.svelte';
@@ -123,7 +124,10 @@
 										<div class="overflow-hidden basis-1/4 h-full flex flex-col">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.departure}</div>
 											<Time
-												isRealtime={it.legs[0].realTime}
+												isRealtime={isRealtime(
+													it.legs[0].from.departureTimestampReason,
+													it.legs[0].realTime
+												)}
 												timestamp={it.startTime}
 												scheduledTimestamp={it.legs[0].scheduledStartTime}
 												variant="realtime-show-always"
@@ -135,7 +139,10 @@
 										<div class="overflow-hidden basis-1/4 h-full flex flex-col">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.arrival}</div>
 											<Time
-												isRealtime={it.legs[it.legs.length - 1].realTime}
+												isRealtime={isRealtime(
+													it.legs[it.legs.length - 1].to.arrivalTimestampReason,
+													it.legs[it.legs.length - 1].realTime
+												)}
 												timestamp={it.endTime}
 												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledEndTime}
 												variant="realtime-show-always"

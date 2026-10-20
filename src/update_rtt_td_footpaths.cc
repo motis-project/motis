@@ -77,9 +77,10 @@ std::optional<std::pair<nodes_t, states_t>> get_states_at(
   if (e_nodes.empty()) {
     return std::pair{nodes_t{}, states_t{}};
   }
-  auto const it = std::lower_bound(
+  // The last state change at or before `t`.
+  auto const it = std::upper_bound(
       begin(e_state_changes), end(e_state_changes), t,
-      [&](auto&& a, n::unixtime_t const b) { return a.first < b; });
+      [&](n::unixtime_t const a, auto&& b) { return a < b.first; });
   if (it == begin(e_state_changes)) {
     return std::nullopt;
   }
@@ -121,8 +122,7 @@ std::vector<n::td_footpath> get_td_footpaths(
         to_profile_parameters(profile, osr_params), w, l, profile, start,
         utl::to_vec(neighbors,
                     [&](auto&& x) { return get_loc(tt, w, pl, matches, x); }),
-        static_cast<osr::cost_t>(max.count()), dir, max_matching_distance,
-        &blocked_mem);
+        max, dir, max_matching_distance, &blocked_mem);
 
     for (auto const [to, p] : utl::zip(neighbors, results)) {
       // Travel time (not the search cost, which includes penalties), rounded
