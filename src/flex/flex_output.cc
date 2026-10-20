@@ -1,5 +1,7 @@
 #include "motis/flex/flex_output.h"
 
+#include "fmt/format.h"
+
 #include "nigiri/flex.h"
 #include "nigiri/timetable.h"
 
@@ -12,6 +14,59 @@
 namespace n = nigiri;
 
 namespace motis::flex {
+
+std::optional<api::BookingRule> get_booking_rule(
+    n::timetable const& tt,
+    n::lang_t const& lang,
+    n::booking_rule_idx_t const idx) {
+  if (idx == n::booking_rule_idx_t::invalid()) {
+    return std::nullopt;
+  }
+
+  auto const to_hhmmss = [](n::minutes_after_midnight_t const t) {
+    return fmt::format("{:02}:{:02}:00", t.count() / 60, t.count() % 60);
+  };
+  auto const translate =
+      [&](n::translation_idx_t const t) -> std::optional<std::string> {
+    if (t == n::translation_idx_t::invalid()) {
+      return std::nullopt;
+    }
+    auto const s = tt.translate(lang, t);
+    return s.empty() ? std::nullopt : std::optional{std::string{s}};
+  };
+
+  auto const& r = tt.booking_rules_[idx];
+  auto rule = api::BookingRule{};
+  r.type_.apply(utl::overloaded{
+      [&](n::booking_rule::real_time const&) {
+        rule.bookingType_ = api::BookingTypeEnum::REAL_TIME;
+      },
+      [&](n::booking_rule::prior_notice const& x) {
+        rule.bookingType_ = api::BookingTypeEnum::UP_TO_SAME_DAY;
+        rule.priorNoticeDurationMin_ = x.prior_notice_duration_min_.count();
+        if (x.prior_notice_duration_max_ !=
+            n::booking_rule::prior_notice{}.prior_notice_duration_max_) {
+          rule.priorNoticeDurationMax_ = x.prior_notice_duration_max_.count();
+        }
+      },
+      [&](n::booking_rule::prior_day const& x) {
+        rule.bookingType_ = api::BookingTypeEnum::UP_TO_PRIOR_DAYS;
+        rule.priorNoticeLastDay_ = x.prior_notice_last_day_;
+        rule.priorNoticeLastTime_ = to_hhmmss(x.prior_notice_last_time_);
+        if (x.prior_notice_start_day_ !=
+            n::booking_rule::prior_day{}.prior_notice_start_day_) {
+          rule.priorNoticeStartDay_ = x.prior_notice_start_day_;
+          rule.priorNoticeStartTime_ = to_hhmmss(x.prior_notice_start_time_);
+        }
+      }});
+  rule.message_ = translate(r.message_);
+  rule.pickupMessage_ = translate(r.pickup_message_);
+  rule.dropOffMessage_ = translate(r.drop_off_message_);
+  rule.phoneNumber_ = translate(r.phone_number_);
+  rule.infoUrl_ = translate(r.info_url_);
+  rule.bookingUrl_ = translate(r.booking_url_);
+  return rule;
+}
 
 std::string_view get_flex_stop_name(n::timetable const& tt,
                                     n::lang_t const& lang,
@@ -145,6 +200,11 @@ void flex_output::annotate_leg(n::lang_t const& lang,
   leg.to_.flexEndPickupDropOffWindow_ =
       std::chrono::time_point_cast<std::chrono::days>(leg.endTime_.time_) +
       time_windows[*to_stop].to_;
+
+  leg.from_.pickupBookingRule_ = get_booking_rule(
+      tt_, lang, tt_.flex_transport_pickup_booking_rule_[t][*from_stop]);
+  leg.to_.dropOffBookingRule_ = get_booking_rule(
+      tt_, lang, tt_.flex_transport_drop_off_booking_rule_[t][*to_stop]);
 }
 
 api::Place flex_output::get_place(n::lang_t const& lang,

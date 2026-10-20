@@ -570,6 +570,77 @@ export const ReservationSchema = {
     enum: ['NONE', 'COMPULSORY']
 } as const;
 
+export const BookingTypeSchema = {
+    description: `GTFS-Flex \`booking_type\`:
+  - \`REAL_TIME\`: real time booking
+  - \`UP_TO_SAME_DAY\`: up to same-day booking with advance notice
+  - \`UP_TO_PRIOR_DAYS\`: up to prior day(s) booking
+`,
+    type: 'string',
+    enum: ['REAL_TIME', 'UP_TO_SAME_DAY', 'UP_TO_PRIOR_DAYS']
+} as const;
+
+export const BookingRuleSchema = {
+    description: `GTFS-Flex booking rule (\`booking_rules.txt\`) describing how and until when an on-demand service has to be booked.
+Times are local times in the timezone of the place.
+`,
+    type: 'object',
+    required: ['bookingType'],
+    properties: {
+        bookingType: {
+            '$ref': '#/components/schemas/BookingType'
+        },
+        priorNoticeDurationMin: {
+            description: 'Minimum number of minutes before travel to make the request. Only for `UP_TO_SAME_DAY`.',
+            type: 'integer'
+        },
+        priorNoticeDurationMax: {
+            description: 'Maximum number of minutes before travel to make the request. Only for `UP_TO_SAME_DAY`, omitted if unbounded.',
+            type: 'integer'
+        },
+        priorNoticeLastDay: {
+            description: 'Last day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`.',
+            type: 'integer'
+        },
+        priorNoticeLastTime: {
+            description: 'Last time (`HH:MM:SS`) on the last day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`.',
+            type: 'string'
+        },
+        priorNoticeStartDay: {
+            description: 'Earliest day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`, omitted if not set.',
+            type: 'integer'
+        },
+        priorNoticeStartTime: {
+            description: 'Earliest time (`HH:MM:SS`) on the earliest day before travel to make the booking request. Only set together with `priorNoticeStartDay`.',
+            type: 'string'
+        },
+        message: {
+            description: 'Message to riders utilizing service at a stop when booking on-demand pickup and drop off.',
+            type: 'string'
+        },
+        pickupMessage: {
+            description: 'Message to riders utilizing service at a stop when booking on-demand pickup.',
+            type: 'string'
+        },
+        dropOffMessage: {
+            description: 'Message to riders utilizing service at a stop when booking on-demand drop off.',
+            type: 'string'
+        },
+        phoneNumber: {
+            description: 'Phone number to call to make the booking request.',
+            type: 'string'
+        },
+        infoUrl: {
+            description: 'URL providing information about the booking rule.',
+            type: 'string'
+        },
+        bookingUrl: {
+            description: 'URL to an online interface or app where the booking request can be made.',
+            type: 'string'
+        }
+    }
+} as const;
+
 export const PlaceSchema = {
     type: 'object',
     required: ['name', 'lat', 'lon'],
@@ -703,6 +774,18 @@ Only set for stops of transit trips with a departure.
             description: 'Time that on-demand service ends',
             type: 'string',
             format: 'date-time'
+        },
+        pickupBookingRule: {
+            description: `for \`FLEX\` transports, the GTFS-Flex booking rule for boarding at this place
+(\`pickup_booking_rule_id\` of the stop time). Only set for the \`from\` place of a \`FLEX\` leg.
+`,
+            '$ref': '#/components/schemas/BookingRule'
+        },
+        dropOffBookingRule: {
+            description: `for \`FLEX\` transports, the GTFS-Flex booking rule for alighting at this place
+(\`drop_off_booking_rule_id\` of the stop time). Only set for the \`to\` place of a \`FLEX\` leg.
+`,
+            '$ref': '#/components/schemas/BookingRule'
         },
         modes: {
             description: 'available transport modes for stops',
