@@ -481,6 +481,72 @@ export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
 
 export type Reservation = 'NONE' | 'COMPULSORY';
 
+/**
+ * GTFS-Flex `booking_type`:
+ * - `REAL_TIME`: real time booking
+ * - `UP_TO_SAME_DAY`: up to same-day booking with advance notice
+ * - `UP_TO_PRIOR_DAYS`: up to prior day(s) booking
+ *
+ */
+export type BookingType = 'REAL_TIME' | 'UP_TO_SAME_DAY' | 'UP_TO_PRIOR_DAYS';
+
+/**
+ * GTFS-Flex booking rule (`booking_rules.txt`) describing how and until when an on-demand service has to be booked.
+ * Times are local times in the timezone of the place.
+ *
+ */
+export type BookingRule = {
+    bookingType: BookingType;
+    /**
+     * Minimum number of minutes before travel to make the request. Only for `UP_TO_SAME_DAY`.
+     */
+    priorNoticeDurationMin?: number;
+    /**
+     * Maximum number of minutes before travel to make the request. Only for `UP_TO_SAME_DAY`, omitted if unbounded.
+     */
+    priorNoticeDurationMax?: number;
+    /**
+     * Last day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`.
+     */
+    priorNoticeLastDay?: number;
+    /**
+     * Last time (`HH:MM:SS`) on the last day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`.
+     */
+    priorNoticeLastTime?: string;
+    /**
+     * Earliest day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`, omitted if not set.
+     */
+    priorNoticeStartDay?: number;
+    /**
+     * Earliest time (`HH:MM:SS`) on the earliest day before travel to make the booking request. Only set together with `priorNoticeStartDay`.
+     */
+    priorNoticeStartTime?: string;
+    /**
+     * Message to riders utilizing service at a stop when booking on-demand pickup and drop off.
+     */
+    message?: string;
+    /**
+     * Message to riders utilizing service at a stop when booking on-demand pickup.
+     */
+    pickupMessage?: string;
+    /**
+     * Message to riders utilizing service at a stop when booking on-demand drop off.
+     */
+    dropOffMessage?: string;
+    /**
+     * Phone number to call to make the booking request.
+     */
+    phoneNumber?: string;
+    /**
+     * URL providing information about the booking rule.
+     */
+    infoUrl?: string;
+    /**
+     * URL to an online interface or app where the booking request can be made.
+     */
+    bookingUrl?: string;
+};
+
 export type Place = {
     /**
      * name of the transit stop / PoI / address
@@ -601,6 +667,18 @@ export type Place = {
      * Time that on-demand service ends
      */
     flexEndPickupDropOffWindow?: string;
+    /**
+     * for `FLEX` transports, the GTFS-Flex booking rule for boarding at this place
+     * (`pickup_booking_rule_id` of the stop time). Only set for the `from` place of a `FLEX` leg.
+     *
+     */
+    pickupBookingRule?: BookingRule;
+    /**
+     * for `FLEX` transports, the GTFS-Flex booking rule for alighting at this place
+     * (`drop_off_booking_rule_id` of the stop time). Only set for the `to` place of a `FLEX` leg.
+     *
+     */
+    dropOffBookingRule?: BookingRule;
     /**
      * available transport modes for stops
      */
