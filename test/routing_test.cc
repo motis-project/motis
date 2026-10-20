@@ -826,10 +826,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=02:34, end=02:56, duration=00:22, transfers=0, legs=[
+          R"(date=2019-05-01, start=02:34, end=02:57, duration=00:23, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 02:34, mode="WALK", trip="-", end=2019-05-01 02:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
-    (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:56)
+    (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:57)
 ])",
           to_str(res.itineraries_));
     }
@@ -872,10 +872,10 @@ TEST(motis, routing) {
           "&numLegAlternatives=3");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=02:34, end=02:56, duration=00:22, transfers=0, legs=[
+          R"(date=2019-05-01, start=02:34, end=02:57, duration=00:23, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 02:34, mode="WALK", trip="-", end=2019-05-01 02:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
-    (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:56)
+    (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:57)
 ])",
           to_str(res.itineraries_));
     }
