@@ -80,6 +80,29 @@ struct point_rtree {
     return ret;
   }
 
+  // stops at the first item within distance instead of collecting all
+  bool any_in_radius(geo::latlng const& x, double const distance) const {
+    struct state {
+      geo::latlng const& x_;
+      double distance_;
+      bool found_{false};
+    } s{x, distance};
+    auto const b = geo::box{x, distance};
+    auto const min = b.min_.lnglat();
+    auto const max = b.max_.lnglat();
+    rtree_search(
+        rtree_, min.data(), max.data(),
+        [](double const* pos, double const* /* max */, void const* /* item */,
+           void* udata) {
+          auto& st = *reinterpret_cast<state*>(udata);
+          st.found_ =
+              geo::distance(st.x_, geo::latlng{pos[1], pos[0]}) < st.distance_;
+          return !st.found_;
+        },
+        &s);
+    return s.found_;
+  }
+
   template <typename Fn>
   void in_radius(geo::latlng const& x, double distance, Fn&& fn) const {
     find(geo::box{x, distance}, [&](geo::latlng const& pos, T const item) {
