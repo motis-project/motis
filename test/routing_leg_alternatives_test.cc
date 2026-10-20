@@ -906,11 +906,11 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   ASSERT_FALSE(res_a.itineraries_.empty());
   EXPECT_EQ(R"(
 HIGHSPEED_RAIL ICE DA Hbf 00:35->FFM Hbf 00:45
-  alt [HIGHSPEED_RAIL ICE DA Hbf 23:35->FFM Hbf 23:45 | WALK FFM Hbf 23:45->FFM Hbf 23:52]
-  alt [HIGHSPEED_RAIL ICE DA Hbf 22:35->FFM Hbf 22:46 | WALK FFM Hbf 22:46->FFM Hbf 22:53]
+  alt [HIGHSPEED_RAIL ICE DA Hbf 23:35->FFM Hbf 23:45 | WALK FFM Hbf 23:45->FFM Hbf 23:53]
+  alt [HIGHSPEED_RAIL ICE DA Hbf 22:35->FFM Hbf 22:46 | WALK FFM Hbf 22:46->FFM Hbf 22:54]
 METRO S3 FFM Hbf 01:15->FFM Hauptwache 01:20
-  alt [WALK FFM Hbf 01:23->FFM Hbf 01:30 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
-  alt [WALK FFM Hbf 01:23->FFM Hbf 01:30 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
+  alt [WALK FFM Hbf 01:22->FFM Hbf 01:30 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
+  alt [WALK FFM Hbf 01:22->FFM Hbf 01:30 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
 )",
             to_str(res_a.itineraries_.front()));
 

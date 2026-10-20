@@ -319,8 +319,7 @@ void add_flex_td_offsets(osr::ways const& w,
     auto state = osr::route_one_to_many(
         params, w, lookup, osr::search_profile::kCarSharing, pos,
         near_stop_locations, pos_match[osr::match_idx_t{0U}], near_stop_matches,
-        static_cast<osr::cost_t>(max.count()), dir, nullptr, &sharing_data,
-        nullptr);
+        max, dir, nullptr, &sharing_data, nullptr);
     auto const& paths = state->results();
 
     // Store osr routing state for later path reconstruction.
@@ -371,7 +370,7 @@ void add_flex_td_offsets(osr::ways const& w,
                 dir == osr::direction::kForward
                     ? from_stop_idx + rel_to_stop_idx
                     : from_stop_idx - rel_to_stop_idx);
-            auto const duration = n::duration_t{p->cost_ / 60};
+            auto const duration = n::duration_t{p->duration_.count() / 60};
             auto const to_stop_time_window =
                 tt.flex_transport_stop_time_windows_[t][to_stop_idx];
             auto const abs_to_stop_iv = n::interval{
