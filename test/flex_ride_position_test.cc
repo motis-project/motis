@@ -37,7 +37,9 @@ namespace fs = std::filesystem;
 // test_case.osm.pbf has a short drivable stretch west of DA Hbf: from
 // Lise-Meitner-Straße (da_south) north to Dornheimer Weg (da_north). From
 // Traubenweg (kTraubenweg, outside both areas) it is a ~6 min walk to
-// da_south; from DA_10 ~12 min to da_north.
+// da_south; from DA_10 ~12 min to da_north. Direct trips run from the west
+// end of Lise-Meitner-Straße (kLiseMeitner, outside da_south) to Dornheimer
+// Weg (kDornheimerWeg): ~7 min on foot, ~3.5 min with the ride.
 //   FLEX_FM: pickup da_south -> drop-off da_north (first mile to DA_10)
 //   FLEX_LM: pickup da_north -> drop-off da_south (last mile from DA_10)
 // Both with pickup window {0} and drop-off window {1} (local time).
@@ -91,8 +93,9 @@ S_ALL,1,1,1,1,1,1,1,20190501,20190503
 )";
 
 constexpr auto kTraubenweg = "49.87331,8.62300";
-constexpr auto kDa10 = "49.87336,8.62926";
 constexpr auto kFfm10 = "50.10593,8.66118";
+constexpr auto kLiseMeitner = "49.87201,8.62635";
+constexpr auto kDornheimerWeg = "49.87531,8.62748";
 
 namespace {
 
@@ -186,7 +189,7 @@ std::string direct(std::string_view const time) {
   return fmt::format(
       "/api/v6/plan?fromPlace={}&toPlace={}&time={}"
       "&directModes=FLEX&maxDirectTime=3600",
-      kTraubenweg, kDa10, time);
+      kLiseMeitner, kDornheimerWeg, time);
 }
 
 }  // namespace
