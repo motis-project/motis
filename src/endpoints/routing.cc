@@ -610,6 +610,7 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
 }
 
 std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
+    n::rt_timetable const* rtt,
     elevators const* e,
     gbfs::gbfs_routing_data& gbfs_rd,
     n::lang_t const& lang,
@@ -631,8 +632,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     double const max_matching_distance,
     double const fastest_direct_factor,
     bool const detailed_legs,
-    unsigned const api_version,
-    n::rt_timetable const* rtt) const {
+    unsigned const api_version) const {
   if (!w_ || !l_) {
     return {};
   }
@@ -936,7 +936,7 @@ api::plan_response routing::route(api::plan_params const& query,
   auto [direct, fastest_direct] =
       t.has_value() && !direct_modes.empty() && w_ && l_
           ? route_direct(
-                e, gbfs_rd, lang, from_p, to_p, direct_modes,
+                annotation_rtt, e, gbfs_rd, lang, from_p, to_p, direct_modes,
                 query.directRentalFormFactors_,
                 query.directRentalPropulsionTypes_,
                 query.directRentalProviders_, query.directRentalProviderGroups_,
@@ -947,7 +947,7 @@ api::plan_response routing::route(api::plan_params const& query,
                              config_.get_limits()
                                  .street_routing_max_direct_seconds_}),
                 max_matching_distance, query.fastestDirectFactor_,
-                query.detailedLegs_, api_version, annotation_rtt)
+                query.detailedLegs_, api_version)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
