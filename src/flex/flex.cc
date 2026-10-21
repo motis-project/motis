@@ -332,20 +332,6 @@ void add_flex_td_offsets(osr::ways const& w,
         max, dir, nullptr, &sharing_data, nullptr);
     auto const& paths = state->results();
 
-    // Per destination: when the ride starts and ends, relative to the start
-    // of the whole path in travel direction. osr reports the tracked
-    // durations of the search chain from the search start (the travel start
-    // forward, the travel end backward): the same times the output timeline
-    // (street_routing over osr's reconstruct) lays out, with the matching
-    // piece at the stop as reconstruct shows it. A switch edge is shown with
-    // the mode of its target in search order: forward, the ride starts at
-    // the foot label before the first rental label and ends at the last one;
-    // backward, it starts at the last rental label and ends at the foot label
-    // after it (travel order). Shown times are truncated to minutes from a
-    // whole-minute departure, so flooring matches them exactly. Paths without
-    // a ride (car_sharing may walk all the way) are no flex offer: WALK
-    // covers them, and as FLEX offers they used to beat the WALK offset by
-    // the truncated minute.
     auto rides = std::vector<std::optional<flex_ride>>(paths.size());
     for (auto i = 0U; i != paths.size(); ++i) {
       if (!paths[i].has_value()) {
@@ -355,14 +341,11 @@ void add_flex_td_offsets(osr::ways const& w,
       if (!rental.has_value()) {
         continue;
       }
-      auto const& rd = *rental;
-      auto const fwd = dir == osr::direction::kForward;
-      auto const total = rd.dest_node_ + rd.dest_match_;
-      auto const pickup = fwd ? rd.before_min_ : total - rd.max_;
-      auto const drop_off = fwd ? rd.max_ : total - rd.before_min_;
       rides[i] = flex_ride{
-          .pickup_ = std::chrono::duration_cast<n::duration_t>(pickup),
-          .drop_off_ = std::chrono::duration_cast<n::duration_t>(drop_off)};
+          .pickup_ =
+              std::chrono::duration_cast<n::duration_t>(rental->ride_start_),
+          .drop_off_ =
+              std::chrono::duration_cast<n::duration_t>(rental->ride_end_)};
     }
 
     // Store osr routing state for later path reconstruction.
