@@ -833,6 +833,85 @@ TEST(motis, itinerary_id_reconstruct_flex_location_group_first_mile) {
   run_flex_first_mile_test("flex_group", "2019-05-02");
 }
 
+// A GTFS-RT alert on the flex route shows up on the FLEX first mile in the
+// plan response and again when the itinerary is refreshed via its id,
+// together with the booking rule.
+TEST(motis, refresh_itinerary_flex_first_mile_alerts_and_booking_rules) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id/flex_alerts"};
+  fs::remove_all(path, ec);
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 3,
+              .datasets_ = {{"test", {.path_ = std::string{kFlexGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const rt_base_day =
+      date::sys_days{date::year{2019} / date::May / date::day{1}};
+  d.init_rtt(rt_base_day);
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      test::to_feed_msg({test::alert{.header_ = "Booking required",
+                                     .description_ = "Book via the app.",
+                                     .entities_ = {{.route_id_ = "FLEXA"}}}},
+                        rt_base_day + std::chrono::hours{4}));
+  EXPECT_EQ(1U, stats.alert_total_resolve_success_);
+
+  auto const flex_leg = [](api::Itinerary const& it) {
+    auto const l = utl::find_if(it.legs_, [](api::Leg const& x) {
+      return x.mode_ == api::ModeEnum::FLEX;
+    });
+    return l == end(it.legs_) ? nullptr : &*l;
+  };
+  auto const expect_flex_annotations = [&](api::Itinerary const& it) {
+    auto const* l = flex_leg(it);
+    ASSERT_NE(nullptr, l);
+    ASSERT_TRUE(l->from_.pickupBookingRule_.has_value());
+    EXPECT_EQ(api::BookingTypeEnum::UP_TO_SAME_DAY,
+              l->from_.pickupBookingRule_->bookingType_);
+    ASSERT_TRUE(l->to_.dropOffBookingRule_.has_value());
+    ASSERT_TRUE(l->alerts_.has_value());
+    ASSERT_EQ(1U, l->alerts_->size());
+    EXPECT_EQ("Booking required", l->alerts_->front().headerText_);
+    EXPECT_EQ("Book via the app.", l->alerts_->front().descriptionText_);
+  };
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  // Start inside the flex area but away from the flex stops, so the access is
+  // an actual flex ride (not just a walk to the boarding stop).
+  auto const res = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87000,8.62500"
+      "&toPlace=50.10593,8.66118"
+      "&time=2019-05-01T05:00Z"
+      "&timetableView=true"
+      "&searchWindow=10800"
+      "&preTransitModes=FLEX"
+      "&postTransitModes=WALK"
+      "&detailedLegs=true");
+  ASSERT_FALSE(res.itineraries_.empty());
+  auto const& original = res.itineraries_.front();
+  expect_flex_annotations(original);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.preTransitModes_ = {api::ModeEnum::FLEX};
+
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  expect_flex_annotations(refreshed);
+  ASSERT_NE(nullptr, flex_leg(refreshed));
+  EXPECT_EQ(*flex_leg(original), *flex_leg(refreshed));
+}
+
 constexpr auto kMultiHopGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
