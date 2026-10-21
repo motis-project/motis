@@ -98,6 +98,7 @@ struct routing {
                  one_to_many_side* = nullptr) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
+      nigiri::rt_timetable const*,
       elevators const*,
       gbfs::gbfs_routing_data&,
       nigiri::lang_t const&,
@@ -118,8 +119,7 @@ struct routing {
       double max_matching_distance,
       double fastest_direct_factor,
       bool detailed_legs,
-      unsigned api_version,
-      nigiri::rt_timetable const* = nullptr) const;
+      unsigned api_version) const;
 
   config const& config_;
   osr::ways const* w_;
