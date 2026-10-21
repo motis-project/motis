@@ -23,7 +23,6 @@
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
 	import { Button } from '$lib/components/ui/button';
-	import Slider from '$lib/components/ui/slider/Slider.svelte';
 	import Route from '$lib/Route.svelte';
 	import Alerts from '$lib/Alerts.svelte';
 	import { getModeName } from '$lib/getModeName';
@@ -33,7 +32,6 @@
 	import { formatDate, formatTime } from './toDateTime';
 	import { getModeLabel } from './map/getModeLabel';
 	import { pushState } from '$app/navigation';
-	import { flexShiftRange } from '$lib/flexShiftRange';
 	import { page } from '$app/state';
 	const {
 		itinerary
@@ -44,15 +42,7 @@
 	const isTransitLeg = (l: Leg) => !!l.displayName;
 	const isRelevantLeg = (l: Leg) => l.duration !== 0 || isTransitLeg(l);
 
-	// A FLEX ride moved with the slider below is kept here, not in the page
-	// state: the map does not depend on the time, and a history entry per drag
-	// step would be noise. Raw state: a deep proxy would break the identity
-	// check below. Dropped as soon as another itinerary is shown.
-	let shifted = $state.raw<{ base: Itinerary; it: Itinerary } | undefined>();
-	const shown = $derived(
-		shifted !== undefined && shifted.base === itinerary ? shifted.it : itinerary
-	);
-	let legs = $derived<Leg[]>(shown.legs);
+	let legs = $derived<Leg[]>(itinerary.legs);
 
 	const lastLeg = $derived(legs.findLast(isRelevantLeg));
 
@@ -120,54 +110,8 @@
 		updated.splice(ingressStart, egressEnd - ingressStart, ...newLegs);
 		pushState('', {
 			...page.state,
-			selectedItinerary: { ...shown, legs: updated }
+			selectedItinerary: { ...itinerary, legs: updated }
 		});
-	};
-
-	const shiftFlexRide = (i: number, newStart: number) => {
-		const delta = newStart - new Date(legs[i].startTime).getTime();
-		if (delta === 0) {
-			return;
-		}
-		const shift = (t: string) =>
-			new Date(new Date(t).getTime() + delta).toISOString().replace(/\.\d{3}Z$/, 'Z');
-		const shiftPlace = (p: Place): Place => {
-			const q = { ...p };
-			if (q.arrival) q.arrival = shift(q.arrival);
-			if (q.departure) q.departure = shift(q.departure);
-			if (q.scheduledArrival) q.scheduledArrival = shift(q.scheduledArrival);
-			if (q.scheduledDeparture) q.scheduledDeparture = shift(q.scheduledDeparture);
-			return q;
-		};
-		const chainBegin = legs.slice(0, i).findLastIndex(isTransitLeg) + 1;
-		const nextTransitIdx = legs.findIndex((x, j) => j > i && isTransitLeg(x));
-		const chainEnd = nextTransitIdx < 0 ? legs.length : nextTransitIdx;
-		const updated = legs.map((l, j) =>
-			j < chainBegin || j >= chainEnd
-				? l
-				: {
-						...l,
-						startTime: shift(l.startTime),
-						endTime: shift(l.endTime),
-						scheduledStartTime: shift(l.scheduledStartTime),
-						scheduledEndTime: shift(l.scheduledEndTime),
-						from: shiftPlace(l.from),
-						to: shiftPlace(l.to),
-						intermediateStops: l.intermediateStops?.map(shiftPlace)
-					}
-		);
-		const startTime = updated[0].startTime;
-		const endTime = updated[updated.length - 1].endTime;
-		shifted = {
-			base: itinerary,
-			it: {
-				...shown,
-				legs: updated,
-				startTime,
-				endTime,
-				duration: (new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000
-			}
-		};
 	};
 </script>
 
@@ -280,28 +224,6 @@
 			<span class="ml-6">
 				{t.sharingProvider}:
 				<a href={l.rental.url} target="_blank" class="hover:underline">{l.rental.systemName}</a>
-			</span>
-		{/if}
-		{#if l.mode == 'FLEX' && l.agencyName}
-			<span class="ml-6">
-				{t.sharingProvider}:
-				{#if l.agencyUrl}
-					<a href={l.agencyUrl} target="_blank" class="hover:underline">{l.agencyName}</a>
-				{:else}
-					{l.agencyName}
-				{/if}
-			</span>
-		{/if}
-		{#if l.mode == 'FLEX' && (l.routeShortName || l.routeLongName)}
-			<!-- The service's route: the on-demand counterpart of a line name. -->
-			<span class="ml-6">
-				{#if l.routeUrl}
-					<a href={l.routeUrl} target="_blank" class="hover:underline">
-						{[l.routeShortName, l.routeLongName].filter(Boolean).join(' – ')}
-					</a>
-				{:else}
-					{[l.routeShortName, l.routeLongName].filter(Boolean).join(' – ')}
-				{/if}
 			</span>
 		{/if}
 		{#if l.rental?.returnConstraint == 'ROUNDTRIP_STATION'}
@@ -675,29 +597,12 @@
 			<div class="pt-2 pb-2 pl-4 sm:pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1, true)}
 				{#if l.mode == 'FLEX'}
-					{@const range = flexShiftRange(legs, i)}
-					{#if range && range.hi > range.lo}
-						<!-- Same look as the alternatives: header and a gray tile. -->
-						<div class="mt-3 mb-1 pl-2 text-xs text-muted-foreground">{t.onDemandDeparture}</div>
-						<div class="mb-3 flex gap-2 overflow-hidden">
-							<div
-								class="flex w-full max-w-72 items-center gap-2 rounded-lg border border-border bg-muted p-2 text-xs text-muted-foreground tabular-nums"
-							>
-								<span>{formatTime(new Date(range.lo), l.from.tz)}</span>
-								<Slider
-									min={0}
-									max={(range.hi - range.lo) / 60000}
-									step={1}
-									fill={false}
-									bind:value={
-										() => (new Date(l.startTime).getTime() - range.lo) / 60000,
-										(v) => shiftFlexRide(i, range.lo + v * 60000)
-									}
-								/>
-								<span>{formatTime(new Date(range.hi), l.from.tz)}</span>
-							</div>
-						</div>
-					{/if}
+					<div class="mt-2 flex items-center leading-none">
+						<span class="ml-1 text-sm">
+							{formatTime(new Date(l.from.flexStartPickupDropOffWindow!), l.from.tz)} -
+							{formatTime(new Date(l.from.flexEndPickupDropOffWindow!), l.from.tz)}
+						</span>
+					</div>
 				{/if}
 				{@render streetLeg(l)}
 				{#if !isLast}

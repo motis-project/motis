@@ -96,41 +96,19 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 	return ['train', '#000000', 'white'];
 };
 
-// Black or white, whichever reads better on the given hex background
-// (with or without '#'). White for anything that is not a hex color.
-const contrastTextColor = (hex: string): string => {
-	const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
-	if (!m) {
-		return 'white';
-	}
-	const h = m[1].length === 3 ? [...m[1]].map((c) => c + c).join('') : m[1];
-	const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
-	const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-	const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-	return luminance > 0.4 ? 'black' : 'white';
-};
-
-// Background and text color: the GTFS route colors, else the GBFS provider's
-// brand color (it comes without a text color), else the mode's default.
-export const getColor = (l: Colorable & RentalInfo): [string, string] => {
+export const getColor = (l: Colorable): [string, string] => {
 	const [_, defaultColor, defaultTextColor] = getModeStyle(l);
-	if (l.routeColor) {
-		return [
-			`#${l.routeColor}`,
-			l.routeTextColor ? `#${l.routeTextColor}` : contrastTextColor(l.routeColor)
-		];
+	if (!l.routeColor) {
+		return [defaultColor, defaultTextColor];
 	}
-	if (l.rental?.color) {
-		return [l.rental.color, contrastTextColor(l.rental.color)];
-	}
-	return [defaultColor, defaultTextColor];
+	return [`#${l.routeColor}`, `#${l.routeTextColor}`];
 };
 
-export const routeBorderColor = (l: Colorable & RentalInfo) => {
+export const routeBorderColor = (l: Colorable) => {
 	return `border-color: ${getColor(l)[0]}`;
 };
 
-export const routeColor = (l: Colorable & RentalInfo) => {
+export const routeColor = (l: Colorable) => {
 	const [color, textColor] = getColor(l);
 	return `background-color: ${color}; color: ${textColor}; fill: ${textColor}`;
 };

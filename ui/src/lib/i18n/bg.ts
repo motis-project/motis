@@ -178,7 +178,6 @@ const translations: Translations = {
 	earlierAlternatives: 'По-ранни алтернативи',
 	laterAlternatives: 'По-късни алтернативи',
 	differentStops: 'Различни спирки',
-	onDemandDeparture: 'Тръгване по заявка',
 	rent: 'Наем',
 	copyToClipboard: 'Копирай в клипборда',
 	rideThroughAllowed: 'Минаване е позволено',
