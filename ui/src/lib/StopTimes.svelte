@@ -11,7 +11,7 @@
 	import Route from '$lib/Route.svelte';
 	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
-	import { onClickTrip } from '$lib/utils';
+	import { isRealtime, onClickStop, onClickTrip } from '$lib/utils';
 	import { normalizedContains } from '$lib/normalizedContains';
 	import { getModeLabel } from './map/getModeLabel';
 	import { posToLocation } from './Location';
@@ -110,7 +110,12 @@
 					<Time
 						variant="schedule"
 						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
+						isRealtime={isRealtime(
+							arriveBy
+								? stopTime.place.arrivalTimestampReason
+								: stopTime.place.departureTimestampReason,
+							stopTime.realTime
+						)}
 						{timestamp}
 						{scheduledTimestamp}
 						queriedTime={queryTime.toISOString()}
@@ -119,7 +124,12 @@
 					<Time
 						variant="realtime"
 						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
+						isRealtime={isRealtime(
+							arriveBy
+								? stopTime.place.arrivalTimestampReason
+								: stopTime.place.departureTimestampReason,
+							stopTime.realTime
+						)}
 						{timestamp}
 						{scheduledTimestamp}
 						{arriveBy}
