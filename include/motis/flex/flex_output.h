@@ -8,11 +8,12 @@
 
 namespace motis::flex {
 
-// Converts a GTFS time (measured from "noon minus 12h" of `day`) in the
-// timezone `tz` to an absolute time.
-nigiri::unixtime_t gtfs_time_to_unixtime(date::time_zone const* tz,
-                                         date::local_days day,
-                                         nigiri::duration_t time);
+// Converts the local time `time` on `day` in the timezone `tz` to an absolute
+// time. Ambiguous local times (end of DST) resolve to the earlier one,
+// nonexistent local times (start of DST) to the DST transition.
+nigiri::unixtime_t local_time_to_unixtime(date::time_zone const* tz,
+                                          date::local_days day,
+                                          nigiri::duration_t time);
 
 std::string_view get_flex_stop_name(nigiri::timetable const&,
                                     nigiri::lang_t const&,

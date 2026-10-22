@@ -208,28 +208,33 @@ api::Leg const* find_flex_leg(api::plan_response const& res,
 
 }  // namespace
 
-TEST(motis, flex_gtfs_time_to_unixtime) {
+TEST(motis, flex_local_time_to_unixtime) {
   auto const tz = date::locate_zone("Europe/Berlin");
   auto const at = [&](date::local_days const day, n::duration_t const t) {
-    return flex::gtfs_time_to_unixtime(tz, day, t);
+    return flex::local_time_to_unixtime(tz, day, t);
   };
 
-  // Regular day (CEST): 17:00 local = 15:00 UTC.
+  // 17:00 local: 15:00 UTC in summer time, 16:00 UTC in winter time.
   EXPECT_EQ(sys_days{2019_y / April / 30} + 15h,
             at(local_days{2019_y / April / 30}, 17h));
+  EXPECT_EQ(sys_days{2019_y / October / 28} + 16h,
+            at(local_days{2019_y / October / 28}, 17h));
 
-  // DST starts on 2019-03-31: GTFS times are measured from "noon minus 12h"
-  // (= 23:00 CET of the previous day), not from midnight.
-  EXPECT_EQ(sys_days{2019_y / March / 31} + 15h,
-            at(local_days{2019_y / March / 31}, 17h));
-  EXPECT_EQ(sys_days{2019_y / March / 30} + 22h + 30min,
+  // DST starts on 2019-03-31 at 02:00 CET.
+  EXPECT_EQ(sys_days{2019_y / March / 30} + 23h + 30min,  // 00:30 CET
             at(local_days{2019_y / March / 31}, 30min));
+  EXPECT_EQ(sys_days{2019_y / March / 31} + 1h,  // 02:30 does not exist
+            at(local_days{2019_y / March / 31}, 2h + 30min));
+  EXPECT_EQ(sys_days{2019_y / March / 31} + 15h,  // 17:00 CEST
+            at(local_days{2019_y / March / 31}, 17h));
 
-  // DST ends on 2019-10-27: "noon minus 12h" = 01:00 CEST.
-  EXPECT_EQ(sys_days{2019_y / October / 27} + 16h,
+  // DST ends on 2019-10-27 at 03:00 CEST.
+  EXPECT_EQ(sys_days{2019_y / October / 26} + 22h + 30min,  // 00:30 CEST
+            at(local_days{2019_y / October / 27}, 30min));
+  EXPECT_EQ(sys_days{2019_y / October / 27} + 30min,  // 02:30 CEST (1st)
+            at(local_days{2019_y / October / 27}, 2h + 30min));
+  EXPECT_EQ(sys_days{2019_y / October / 27} + 16h,  // 17:00 CET
             at(local_days{2019_y / October / 27}, 17h));
-  EXPECT_EQ(sys_days{2019_y / October / 26} + 23h,
-            at(local_days{2019_y / October / 27}, 0h));
 }
 
 TEST(motis, flex_booking_rules) {
@@ -357,18 +362,19 @@ TEST(motis, flex_booking_rules_dst) {
   auto d = data{"test/data_flex_booking_rules_dst", c};
   auto const routing = utl::init_from<ep::routing>(d).value();
 
-  // Deadline: 17:00 local on the day before the service day.
+  // Deadline: 17:00 local time on the day before the service day.
+  // Expected values are UTC (CEST = UTC+2, CET = UTC+1).
   for (auto const& [travel, deadline] :
-       {// 17:00 CEST
+       {// deadline 2019-10-25 17:00 CEST
         std::pair{sys_days{2019_y / October / 26},
                   sys_days{2019_y / October / 25} + 15h},
-        // 17:00 CET on the day DST ends
+        // deadline 2019-10-27 17:00 CET (the day DST ends)
         std::pair{sys_days{2019_y / October / 28},
                   sys_days{2019_y / October / 27} + 16h},
-        // 17:00 CEST on the day before DST ends
+        // deadline 2019-10-26 17:00 CEST
         std::pair{sys_days{2019_y / October / 27},
                   sys_days{2019_y / October / 26} + 15h},
-        // 17:00 CET
+        // deadline 2019-10-28 17:00 CET
         std::pair{sys_days{2019_y / October / 29},
                   sys_days{2019_y / October / 28} + 16h}}) {
     auto const res =

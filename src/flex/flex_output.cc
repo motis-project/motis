@@ -19,15 +19,11 @@ namespace n = nigiri;
 
 namespace motis::flex {
 
-n::unixtime_t gtfs_time_to_unixtime(date::time_zone const* tz,
-                                    date::local_days const day,
-                                    n::duration_t const time) {
-  // GTFS times are measured from "noon minus 12h" of the day.
-  auto const noon =
-      tz->to_sys(day + std::chrono::hours{12}, date::choose::earliest);
+n::unixtime_t local_time_to_unixtime(date::time_zone const* tz,
+                                     date::local_days const day,
+                                     n::duration_t const time) {
   return std::chrono::time_point_cast<n::unixtime_t::duration>(
-             noon - std::chrono::hours{12}) +
-         time;
+      tz->to_sys(day + time, date::choose::earliest));
 }
 
 namespace {
@@ -161,14 +157,14 @@ std::optional<api::BookingRule> get_booking_rule(
                                                       x.prior_notice_bitfield_);
             last.has_value()) {
           rule.latestBookingTime_ =
-              gtfs_time_to_unixtime(sd->tz_, *last, x.prior_notice_last_time_);
+              local_time_to_unixtime(sd->tz_, *last, x.prior_notice_last_time_);
         }
         if (x.prior_notice_start_day_ !=
             n::booking_rule::prior_day{}.prior_notice_start_day_) {
           if (auto const start = days_before_service_day(
                   x.prior_notice_start_day_, x.prior_notice_bitfield_);
               start.has_value()) {
-            rule.earliestBookingTime_ = gtfs_time_to_unixtime(
+            rule.earliestBookingTime_ = local_time_to_unixtime(
                 sd->tz_, *start, x.prior_notice_start_time_);
           }
         }
