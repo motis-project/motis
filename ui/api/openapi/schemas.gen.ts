@@ -608,8 +608,8 @@ Only set for \`UP_TO_SAME_DAY\`, and only if the booking rule defines it.
   - \`UP_TO_SAME_DAY\`: \`startTime\` of the leg minus \`priorNoticeDurationMax\`.
   - \`UP_TO_PRIOR_DAYS\`: GTFS \`prior_notice_start_time\` on the day that is \`prior_notice_start_day\` days
     before the service day of the trip (only days of \`prior_notice_service_id\` are counted if it is set).
-    Like all GTFS times, \`prior_notice_start_time\` is interpreted in the timezone of the agency
-    (\`agency_timezone\`) and measured from "noon minus 12h" of that day.
+    \`prior_notice_start_time\` is interpreted as local time in the timezone of the agency
+    (\`agency_timezone\`), see https://github.com/google/transit/issues/670.
 
 Not set if the booking rule defines no earliest booking time (always for \`REAL_TIME\`)
 or if it cannot be determined (e.g. days counted with \`prior_notice_service_id\` outside of the loaded timetable).
@@ -622,8 +622,8 @@ or if it cannot be determined (e.g. days counted with \`prior_notice_service_id\
   - \`UP_TO_SAME_DAY\`: \`startTime\` of the leg minus \`priorNoticeDurationMin\`.
   - \`UP_TO_PRIOR_DAYS\`: GTFS \`prior_notice_last_time\` on the day that is \`prior_notice_last_day\` days
     before the service day of the trip (only days of \`prior_notice_service_id\` are counted if it is set).
-    Like all GTFS times, \`prior_notice_last_time\` is interpreted in the timezone of the agency
-    (\`agency_timezone\`) and measured from "noon minus 12h" of that day.
+    \`prior_notice_last_time\` is interpreted as local time in the timezone of the agency
+    (\`agency_timezone\`), see https://github.com/google/transit/issues/670.
 
 Not set for \`REAL_TIME\` or if it cannot be determined (e.g. days counted with \`prior_notice_service_id\`
 outside of the loaded timetable).
