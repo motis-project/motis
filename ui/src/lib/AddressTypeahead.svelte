@@ -32,28 +32,18 @@
 	let match = $state('');
 	let open = $state(false);
 
-	let inputWasNotEmpty = $state(false);
-	let favTimer: ReturnType<typeof setTimeout>;
-
 	const historyForType = () => {
 		const locations = getHistoryLocations();
 		return type ? locations.filter((l) => l.match?.type === type) : locations;
 	};
 
-	$effect(() => {
-		clearTimeout(favTimer);
-		if (inputValue) {
-			return;
-		}
-		if (inputWasNotEmpty) {
-			items = historyForType();
-		}
-		favTimer = setTimeout(() => {
-			items = historyForType();
-		}, 200);
-	});
-
 	const showHistoryHint = $derived(!inputValue && items.length > 0);
+
+	const restoreSelectedLabel = () => {
+		if (!inputValue && selected?.label) {
+			inputValue = selected.label;
+		}
+	};
 
 	const getDisplayArea = (match: Match | undefined) => {
 		if (match) {
@@ -88,9 +78,9 @@
 	};
 
 	const updateGuesses = async () => {
-		const coord = parseCoordinatesToLocation(inputValue);
+		const text = inputValue;
+		const coord = parseCoordinatesToLocation(text);
 		if (coord) {
-			clearTimeout(favTimer);
 			selected = coord;
 			items = [];
 			onChange(selected);
@@ -102,7 +92,7 @@
 		const { data: matches, error } = await geocode({
 			query: {
 				...biasPlace,
-				text: inputValue,
+				text,
 				language: [language],
 				mode: transitModes,
 				type: type ? [type] : undefined
@@ -111,6 +101,9 @@
 		if (error) {
 			console.error('TYPEAHEAD ERROR: ', error);
 			return;
+		}
+		if (text !== inputValue) {
+			return; // input changed while waiting for the response
 		}
 		items = matches!.map((match: Match): Location => {
 			return {
@@ -137,18 +130,18 @@
 
 	let ref = $state<HTMLElement | null>(null);
 	$effect(() => {
-		if (ref && inputValue) {
+		if (ref) {
 			(ref as HTMLInputElement).value = inputValue;
 		}
 	});
 
 	let timer: ReturnType<typeof setTimeout>;
 	$effect(() => {
+		clearTimeout(timer);
 		if (inputValue) {
-			clearTimeout(timer);
-			timer = setTimeout(() => {
-				updateGuesses();
-			}, 150);
+			timer = setTimeout(updateGuesses, 150);
+		} else {
+			items = historyForType();
 		}
 	});
 </script>
@@ -171,9 +164,13 @@
 	allowDeselect={false}
 	value={match}
 	bind:open
+	onOpenChange={(o: boolean) => {
+		if (!o) {
+			restoreSelectedLabel();
+		}
+	}}
 	onValueChange={(e: string) => {
 		if (e) {
-			clearTimeout(favTimer);
 			selected = deserialize(e);
 			inputValue = selected.label!;
 			recordHistoryLocation(selected);
@@ -190,10 +187,16 @@
 		oninput={(e: Event) => (inputValue = (e.currentTarget as HTMLInputElement).value)}
 		onfocus={() => {
 			if (!inputValue) {
-				items = historyForType();
 				open = true;
 			}
 		}}
+		onpointerdown={() => {
+			if (!open) {
+				inputValue = '';
+				open = true;
+			}
+		}}
+		onblur={restoreSelectedLabel}
 		aria-label={placeholder}
 		data-combobox-input={inputValue}
 	/>
