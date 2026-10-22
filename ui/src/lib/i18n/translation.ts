@@ -44,6 +44,7 @@ export type Translations = {
 	duration: string;
 	later: string;
 	earlier: string;
+	onDate: (date: string) => string;
 	arrivals: string;
 	arrivalsAt: (stop: string) => string;
 	departures: string;

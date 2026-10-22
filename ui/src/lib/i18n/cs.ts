@@ -40,6 +40,7 @@ const translations: Translations = {
 	arrivalsAt: (stop) => `Příjezdy do ${stop}`,
 	later: 'později',
 	earlier: 'dřive',
+	onDate: (date: string) => `dne ${date}`,
 	departures: 'Odjezdy',
 	departuresAt: (stop) => `Odjezdy ze ${stop}`,
 	connections: 'Spoje',

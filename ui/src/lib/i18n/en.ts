@@ -41,6 +41,7 @@ const translations: Translations = {
 	arrivalsAt: (stop) => `Arrivals at ${stop}`,
 	later: 'later',
 	earlier: 'earlier',
+	onDate: (date: string) => `on ${date}`,
 	departures: 'Departures',
 	departuresAt: (stop) => `Departures at ${stop}`,
 	switchToArrivals: 'Switch to arrivals',

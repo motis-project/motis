@@ -14,6 +14,8 @@
 		type Error as ApiError
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
+	import DaySeparator from '$lib/DaySeparator.svelte';
+	import { PagedEntries } from '$lib/PagedEntries.svelte';
 	import { isRealtime } from '$lib/utils';
 	import { LoaderCircle } from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
@@ -41,6 +43,11 @@
 			}
 			return res;
 		});
+
+	const pages = new PagedEntries(
+		() => routingResponses,
+		(r: PlanResponse) => r.itineraries
+	);
 </script>
 
 {#snippet legSummary(l: Leg)}
@@ -109,6 +116,13 @@
 							</div>
 						{/if}
 						{#each r.itineraries as it, i (i)}
+							<DaySeparator
+								previous={pages.previous(r, rI, i)?.startTime ??
+									baseQuery?.query.time ??
+									new Date()}
+								timestamp={it.startTime}
+								timeZone={it.legs[0].from.tz}
+							/>
 							<button
 								onclick={() => {
 									selectItinerary(it);
@@ -126,7 +140,6 @@
 												timestamp={it.startTime}
 												scheduledTimestamp={it.legs[0].scheduledStartTime}
 												variant="realtime-show-always"
-												queriedTime={baseQuery?.query.time}
 												timeZone={it.legs[0].from.tz}
 											/>
 										</div>
@@ -141,7 +154,6 @@
 												timestamp={it.endTime}
 												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledEndTime}
 												variant="realtime-show-always"
-												queriedTime={it.startTime}
 												timeZone={it.legs[it.legs.length - 1].to.tz}
 											/>
 										</div>
