@@ -204,7 +204,7 @@
 		<Combobox.Portal>
 			<Combobox.Content
 				align="start"
-				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-50 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
+				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-50 max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
 			>
 				{#if showHistoryHint}
 					<div class="flex items-center justify-between border-b px-4 py-2 text-sm text-foreground">
