@@ -2098,7 +2098,7 @@ data& get_elevator_test_case() {
   return d;
 }
 
-TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
+TEST(motis, itinerary_id_refresh_offset_waits_for_elevator) {
   auto& d = get_elevator_test_case();
   d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
   d.rt_->e_ = std::make_unique<elevators>(
@@ -2121,6 +2121,7 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
   ASSERT_FALSE(original.legs_.empty());
   ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_)
       << "expected first leg to be a wheelchair walk";
+  auto const original_access_dur = original.legs_.front().duration_;
 
   auto new_rtt = std::make_unique<nigiri::rt_timetable>(
       nigiri::rt_timetable{*d.rt_->rtt_});
@@ -2136,10 +2137,17 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
   auto const refreshed = refresh(query.to_url("?"));
 
-  ASSERT_EQ(api::ModeEnum::WALK, refreshed.legs_.front().mode_);
-  EXPECT_EQ(true, refreshed.legs_.front().cancelled_.value_or(false))
-      << "first-mile access should be cancelled when the DA-HBF Gleis 9/10 "
-         "elevator is out of service and the platform is unreachable";
+  auto const& access = refreshed.legs_.front();
+  // The DA-HBF Gleis 9/10 elevator is out of service from 2019-04-30T00:00Z:
+  // the access walks to the platform before that and waits there.
+  constexpr auto const kOutageStart = std::int64_t{1556582400};
+  EXPECT_EQ(api::ModeEnum::WALK, access.mode_);
+  EXPECT_NE(true, access.cancelled_.value_or(false));
+  EXPECT_EQ(original_access_dur, access.duration_);
+  EXPECT_LE(access.endTime_.get_unixtime_seconds(), kOutageStart);
+  ASSERT_GT(refreshed.legs_.size(), 1U);
+  EXPECT_LT(access.endTime_.get_unixtime_seconds(),
+            refreshed.legs_[1].startTime_.get_unixtime_seconds());
 }
 
 TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {

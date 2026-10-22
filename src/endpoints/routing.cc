@@ -742,7 +742,7 @@ void remove_slower_than_fastest_direct(n::routing::query& q) {
 
   auto const worse_than_fastest_direct = [&](n::duration_t const min) {
     return [&, min](auto const& o) {
-      return o.duration() < nigiri::footpath::kMaxDuration &&
+      return o.duration() < nigiri::kTdFootpathBan &&
              o.duration() + min >= q.fastest_direct_;
     };
   };

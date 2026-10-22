@@ -70,7 +70,7 @@ api::transfers_response transfers::operator()(
       if (r.has_value()) {
         auto& fp = footpaths[n];
         auto const duration = std::ceil(r->cost_ / 60U);
-        if (duration < n::footpath::kMaxDuration.count()) {
+        if (duration <= n::footpath::kMax.count()) {
           switch (mode) {
             case osr::search_profile::kFoot: fp.footRouted_ = duration; break;
             case osr::search_profile::kWheelchair:

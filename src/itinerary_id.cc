@@ -855,7 +855,7 @@ api::Itinerary reconstruct_itinerary(
         stop_times_ep.tt_, rt.rtt_.get(), q, offs,
         n::routing::location_match_mode::kExact,
         /*use_footpaths=*/true);
-    if (!fp_leg.has_value()) {
+    if (!fp_leg.has_value() || fp_leg->arr_time_ > next->dep_time_) {
       return {make_dummy_leg(h, "reconstruct_itinerary: no transfer footpath")};
     }
     auto change = n::routing::journey{};

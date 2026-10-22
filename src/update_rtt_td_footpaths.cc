@@ -125,10 +125,8 @@ std::vector<n::td_footpath> get_td_footpaths(
         &blocked_mem);
 
     for (auto const [to, p] : utl::zip(neighbors, results)) {
-      auto const duration = p.has_value() && (n::duration_t{p->cost_ / 60U} <
-                                              n::footpath::kMaxDuration)
-                                ? n::duration_t{p->cost_ / 60U}
-                                : n::footpath::kMaxDuration;
+      auto const duration =
+          p.has_value() ? n::duration_t{p->cost_ / 60U} : n::kTdFootpathBan;
       fps.push_back(n::td_footpath{
           to, t,
           n::duration_t{std::max(n::duration_t::rep{1}, duration.count())}});
@@ -142,8 +140,8 @@ std::vector<n::td_footpath> get_td_footpaths(
       [&](std::vector<n::td_footpath>::iterator& lb,
           std::vector<n::td_footpath>::iterator& ub) {
         for (auto it = lb; it != ub; ++it) {
-          if (it->duration_ == n::footpath::kMaxDuration && it != lb &&
-              (it - 1)->duration_ != n::footpath::kMaxDuration) {
+          if (it->duration_ == n::kTdFootpathBan && it != lb &&
+              (it - 1)->duration_ != n::kTdFootpathBan) {
             // TODO support feasible, but longer paths
             it->valid_from_ -= (it - 1)->duration_ - n::duration_t{1U};
           }

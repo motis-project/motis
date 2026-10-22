@@ -84,7 +84,7 @@ def routing_errors(output):
 def random_outages(fasta_in, date, seed, out):
     # Random maintenance windows for half of the working elevators: on the
     # query day mostly short, some for hours, a few for longer than
-    # footpath::kMaxDuration (8:31h). Many last for weeks and start up to 60
+    # footpath::kMax (4:14h). Many last for weeks and start up to 60
     # days before or after the query day: broken and working periods both
     # exceed routing::kMaxTravelTime and the 16 bit duration_t.
     rng = random.Random(seed)
