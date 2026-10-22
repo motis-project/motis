@@ -16,7 +16,7 @@ export class PagedEntries<Page, Entry> {
 							this.resolved[i] = r;
 						}
 					},
-					() => { }
+					() => {}
 				)
 			);
 		});
