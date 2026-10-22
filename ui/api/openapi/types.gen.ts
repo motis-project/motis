@@ -491,36 +491,51 @@ export type Reservation = 'NONE' | 'COMPULSORY';
 export type BookingType = 'REAL_TIME' | 'UP_TO_SAME_DAY' | 'UP_TO_PRIOR_DAYS';
 
 /**
- * GTFS-Flex booking rule (`booking_rules.txt`) describing how and until when an on-demand service has to be booked.
- * Times are local times in the timezone of the place.
+ * GTFS-Flex booking rule (`booking_rules.txt`) for boarding (`pickupBookingRule`) or alighting (`dropOffBookingRule`) at a place of a `FLEX` leg.
+ * The booking window of the rule is resolved for this leg into absolute timestamps (`earliestBookingTime`, `latestBookingTime`).
+ * GTFS times are used with minute precision (seconds are dropped).
  *
  */
 export type BookingRule = {
     bookingType: BookingType;
     /**
-     * Minimum number of minutes before travel to make the request. Only for `UP_TO_SAME_DAY`.
+     * GTFS `prior_notice_duration_min`: minimum number of minutes before travel to make the booking request.
+     * Only set for `UP_TO_SAME_DAY`.
+     *
      */
     priorNoticeDurationMin?: number;
     /**
-     * Maximum number of minutes before travel to make the request. Only for `UP_TO_SAME_DAY`, omitted if unbounded.
+     * GTFS `prior_notice_duration_max`: maximum number of minutes before travel to make the booking request.
+     * Only set for `UP_TO_SAME_DAY`, and only if the booking rule defines it.
+     *
      */
     priorNoticeDurationMax?: number;
     /**
-     * Last day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`.
+     * Earliest time at which the booking request can be made for this leg.
+     * - `UP_TO_SAME_DAY`: `startTime` of the leg minus `priorNoticeDurationMax`.
+     * - `UP_TO_PRIOR_DAYS`: GTFS `prior_notice_start_time` on the day that is `prior_notice_start_day` days
+     * before the service day of the trip (only days of `prior_notice_service_id` are counted if it is set).
+     * Like all GTFS times, `prior_notice_start_time` is interpreted in the timezone of the agency
+     * (`agency_timezone`) and measured from "noon minus 12h" of that day.
+     *
+     * Not set if the booking rule defines no earliest booking time (always for `REAL_TIME`)
+     * or if it cannot be determined (e.g. days counted with `prior_notice_service_id` outside of the loaded timetable).
+     *
      */
-    priorNoticeLastDay?: number;
+    earliestBookingTime?: string;
     /**
-     * Last time (`HH:MM:SS`) on the last day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`.
+     * Latest time at which the booking request can be made for this leg (booking deadline).
+     * - `UP_TO_SAME_DAY`: `startTime` of the leg minus `priorNoticeDurationMin`.
+     * - `UP_TO_PRIOR_DAYS`: GTFS `prior_notice_last_time` on the day that is `prior_notice_last_day` days
+     * before the service day of the trip (only days of `prior_notice_service_id` are counted if it is set).
+     * Like all GTFS times, `prior_notice_last_time` is interpreted in the timezone of the agency
+     * (`agency_timezone`) and measured from "noon minus 12h" of that day.
+     *
+     * Not set for `REAL_TIME` or if it cannot be determined (e.g. days counted with `prior_notice_service_id`
+     * outside of the loaded timetable).
+     *
      */
-    priorNoticeLastTime?: string;
-    /**
-     * Earliest day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`, omitted if not set.
-     */
-    priorNoticeStartDay?: number;
-    /**
-     * Earliest time (`HH:MM:SS`) on the earliest day before travel to make the booking request. Only set together with `priorNoticeStartDay`.
-     */
-    priorNoticeStartTime?: string;
+    latestBookingTime?: string;
     /**
      * Message to riders utilizing service at a stop when booking on-demand pickup and drop off.
      */

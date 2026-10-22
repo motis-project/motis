@@ -581,8 +581,9 @@ export const BookingTypeSchema = {
 } as const;
 
 export const BookingRuleSchema = {
-    description: `GTFS-Flex booking rule (\`booking_rules.txt\`) describing how and until when an on-demand service has to be booked.
-Times are local times in the timezone of the place.
+    description: `GTFS-Flex booking rule (\`booking_rules.txt\`) for boarding (\`pickupBookingRule\`) or alighting (\`dropOffBookingRule\`) at a place of a \`FLEX\` leg.
+The booking window of the rule is resolved for this leg into absolute timestamps (\`earliestBookingTime\`, \`latestBookingTime\`).
+GTFS times are used with minute precision (seconds are dropped).
 `,
     type: 'object',
     required: ['bookingType'],
@@ -591,28 +592,44 @@ Times are local times in the timezone of the place.
             '$ref': '#/components/schemas/BookingType'
         },
         priorNoticeDurationMin: {
-            description: 'Minimum number of minutes before travel to make the request. Only for `UP_TO_SAME_DAY`.',
+            description: `GTFS \`prior_notice_duration_min\`: minimum number of minutes before travel to make the booking request.
+Only set for \`UP_TO_SAME_DAY\`.
+`,
             type: 'integer'
         },
         priorNoticeDurationMax: {
-            description: 'Maximum number of minutes before travel to make the request. Only for `UP_TO_SAME_DAY`, omitted if unbounded.',
+            description: `GTFS \`prior_notice_duration_max\`: maximum number of minutes before travel to make the booking request.
+Only set for \`UP_TO_SAME_DAY\`, and only if the booking rule defines it.
+`,
             type: 'integer'
         },
-        priorNoticeLastDay: {
-            description: 'Last day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`.',
-            type: 'integer'
+        earliestBookingTime: {
+            description: `Earliest time at which the booking request can be made for this leg.
+  - \`UP_TO_SAME_DAY\`: \`startTime\` of the leg minus \`priorNoticeDurationMax\`.
+  - \`UP_TO_PRIOR_DAYS\`: GTFS \`prior_notice_start_time\` on the day that is \`prior_notice_start_day\` days
+    before the service day of the trip (only days of \`prior_notice_service_id\` are counted if it is set).
+    Like all GTFS times, \`prior_notice_start_time\` is interpreted in the timezone of the agency
+    (\`agency_timezone\`) and measured from "noon minus 12h" of that day.
+
+Not set if the booking rule defines no earliest booking time (always for \`REAL_TIME\`)
+or if it cannot be determined (e.g. days counted with \`prior_notice_service_id\` outside of the loaded timetable).
+`,
+            type: 'string',
+            format: 'date-time'
         },
-        priorNoticeLastTime: {
-            description: 'Last time (`HH:MM:SS`) on the last day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`.',
-            type: 'string'
-        },
-        priorNoticeStartDay: {
-            description: 'Earliest day before travel to make the booking request. Only for `UP_TO_PRIOR_DAYS`, omitted if not set.',
-            type: 'integer'
-        },
-        priorNoticeStartTime: {
-            description: 'Earliest time (`HH:MM:SS`) on the earliest day before travel to make the booking request. Only set together with `priorNoticeStartDay`.',
-            type: 'string'
+        latestBookingTime: {
+            description: `Latest time at which the booking request can be made for this leg (booking deadline).
+  - \`UP_TO_SAME_DAY\`: \`startTime\` of the leg minus \`priorNoticeDurationMin\`.
+  - \`UP_TO_PRIOR_DAYS\`: GTFS \`prior_notice_last_time\` on the day that is \`prior_notice_last_day\` days
+    before the service day of the trip (only days of \`prior_notice_service_id\` are counted if it is set).
+    Like all GTFS times, \`prior_notice_last_time\` is interpreted in the timezone of the agency
+    (\`agency_timezone\`) and measured from "noon minus 12h" of that day.
+
+Not set for \`REAL_TIME\` or if it cannot be determined (e.g. days counted with \`prior_notice_service_id\`
+outside of the loaded timetable).
+`,
+            type: 'string',
+            format: 'date-time'
         },
         message: {
             description: 'Message to riders utilizing service at a stop when booking on-demand pickup and drop off.',

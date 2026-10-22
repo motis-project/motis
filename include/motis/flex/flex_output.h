@@ -1,10 +1,18 @@
 #pragma once
 
+#include "date/tz.h"
+
 #include "motis/flex/flex_routing_data.h"
 #include "motis/flex/mode_payload.h"
 #include "motis/osr/street_routing.h"
 
 namespace motis::flex {
+
+// Converts a GTFS time (measured from "noon minus 12h" of `day`) in the
+// timezone `tz` to an absolute time.
+nigiri::unixtime_t gtfs_time_to_unixtime(date::time_zone const* tz,
+                                         date::local_days day,
+                                         nigiri::duration_t time);
 
 std::string_view get_flex_stop_name(nigiri::timetable const&,
                                     nigiri::lang_t const&,
