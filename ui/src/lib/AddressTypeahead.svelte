@@ -7,6 +7,7 @@
 	import * as maplibregl from 'maplibre-gl';
 	import { getModeStyle, type LegLike } from './modeStyle';
 	import { clearHistoryLocations, getHistoryLocations, recordHistoryLocation } from './history';
+	import { cn } from './utils';
 
 	let {
 		items = $bindable([]),
@@ -16,7 +17,8 @@
 		place,
 		type,
 		transitModes,
-		onChange = () => {}
+		onChange = () => {},
+		class: className
 	}: {
 		items?: Array<Location>;
 		selected: Location;
@@ -26,6 +28,7 @@
 		type?: undefined | LocationType;
 		transitModes?: Mode[];
 		onChange?: (location: Location) => void;
+		class?: string;
 	} = $props();
 
 	let inputValue = $state('');
@@ -182,7 +185,10 @@
 		{placeholder}
 		{name}
 		bind:ref
-		class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+		class={cn(
+			'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+			className
+		)}
 		autocomplete="off"
 		oninput={(e: Event) => (inputValue = (e.currentTarget as HTMLInputElement).value)}
 		onfocus={() => {
