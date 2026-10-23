@@ -11,7 +11,7 @@
 	import Route from '$lib/Route.svelte';
 	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
-	import { isRealtime, onClickStop, onClickTrip } from '$lib/utils';
+	import { isRealtime, onClickTrip } from '$lib/utils';
 	import { normalizedContains } from '$lib/normalizedContains';
 	import { getModeLabel } from './map/getModeLabel';
 	import { posToLocation } from './Location';
