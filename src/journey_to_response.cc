@@ -111,15 +111,13 @@ std::optional<std::vector<api::Alert>> get_alerts(
          auto const& [rs, ev_type] = rs_ev;
          return std::optional{rs.get_trip_idx(ev_type)};
        }).value_or(fr.trip_idx());
-  auto const l =
-      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs) {
-         return std::optional{rs.first.get_location_idx()};
-       }).value_or(n::location_idx_t::invalid());
+  auto const stop_idx = s ? std::optional{s->first.stop_idx_} : std::nullopt;
+
   auto alerts = std::vector<api::Alert>{};
   for (auto const& t : tt.trip_ids_[x]) {
     auto const src = tt.trip_id_src_[t];
     for (auto const& a :
-         rtt->alerts_.get_alerts(tt, src, x, fr.rt_, l, fuzzy_stop)) {
+         rtt->alerts_.get_alerts(tt, *rtt, src, x, fr, stop_idx, fuzzy_stop)) {
       alerts.emplace_back(call_to_alert(a));
     }
   }
