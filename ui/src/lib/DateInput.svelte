@@ -3,9 +3,11 @@
 
 	let {
 		value = $bindable(),
+		now = false,
 		class: className
 	}: {
 		value: Date;
+		now?: boolean;
 		class?: string;
 	} = $props();
 
@@ -14,7 +16,9 @@
 	$effect(() => {
 		if (el !== undefined) {
 			value.setSeconds(0, 0);
-			const dateTimeLocalValue = new Date(value.getTime() - value.getTimezoneOffset() * 60000)
+			// `now`: show the current minute instead of `value`, the input is disabled
+			const date = now ? new Date(Math.floor(Date.now() / 60000) * 60000) : value;
+			const dateTimeLocalValue = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
 				.toISOString()
 				.slice(0, -1);
 			el.value = dateTimeLocalValue;
@@ -26,9 +30,12 @@
 	type="datetime-local"
 	class={cn(
 		'flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+		// Chrome sizes the field for its widest value and keeps the hidden picker's space when disabled
+		'[&::-webkit-datetime-edit]:max-w-max [&::-webkit-calendar-picker-indicator]:ms-2 [&:disabled::-webkit-calendar-picker-indicator]:hidden',
 		className
 	)}
 	bind:this={el}
+	disabled={now}
 	onchange={(e) => {
 		// @ts-expect-error target exists, value exists
 		const dateTimeLocalValue = e.target!.value!;

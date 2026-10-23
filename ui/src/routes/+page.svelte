@@ -30,6 +30,7 @@
 		type PedestrianProfile,
 		type Place,
 		type PlanData,
+		type OneToAllData,
 		type ReachablePlace,
 		type RentalFormFactor,
 		type ServerConfig,
@@ -350,7 +351,8 @@
 					time,
 					urlParams.get('stopArriveBy') == 'true',
 					true,
-					urlParams.get('exactRadius') == 'true'
+					urlParams.get('exactRadius') == 'true',
+					urlParams.get('stopLeaveNow') == 'true'
 				);
 			}
 
@@ -433,7 +435,10 @@
 			? parseIntOr(urlParams.get('maxItineraries'), undefined)
 			: undefined
 	);
-	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
+	let leaveNow = $state<boolean>(urlParams?.get('leaveNow') == 'true');
+	let arriveBy = $state<boolean>(
+		urlParams?.get('arriveBy') == 'true' && urlParams?.get('leaveNow') != 'true'
+	);
 	let algorithm = $state<PlanData['query']['algorithm']>(
 		(urlParams?.get('algorithm') ?? 'PONG') as PlanData['query']['algorithm']
 	);
@@ -605,7 +610,7 @@
 		from.match && to.match && !advancedOptionsOpen
 			? ({
 					query: omitDefaults({
-						time: time.toISOString(),
+						...(leaveNow ? {} : { time: time.toISOString() }),
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
 						arriveBy,
@@ -715,7 +720,7 @@
 					query: {
 						one: toPlaceString(one),
 						maxTravelTime: Math.ceil(maxTravelTime / 60),
-						time: time.toISOString(),
+						...(leaveNow ? {} : { time: time.toISOString() }),
 						transitModes,
 						maxTransfers,
 						arriveBy,
@@ -759,6 +764,7 @@
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
+	let lastSearchQuery = $state.raw<PlanData>();
 	let stopNameFromResponse = $state<string>('');
 	let refreshingItinerary = $state(false);
 	let pageTitle = $derived(
@@ -821,6 +827,7 @@
 	const baseSearch = (baseQuery: PlanData) => {
 		const base = plan(baseQuery).then(preprocessItinerary(from, to));
 		const q = baseQuery.query;
+		lastSearchQuery = baseQuery;
 		baseResponse = base;
 		routingResponses = [base];
 		pushStateWithQueryString(
@@ -829,7 +836,8 @@
 				...(q.fromPlace == from.label ? {} : { fromName: from.label }),
 				...(q.toPlace == to.label ? {} : { toName: to.label }),
 				...definedOnly({ fromPos: toPosString(from), toPos: toPosString(to) }),
-				...viaLabels
+				...viaLabels,
+				...(leaveNow ? { leaveNow } : {})
 			},
 			{ activeTab: 'connections' },
 			true
@@ -852,40 +860,45 @@
 		}
 	});
 	let isochronesQueryTimeout: ReturnType<typeof setTimeout>;
+	let lastIsochronesSearchQuery = $state.raw<OneToAllData>();
+	const isochronesSearch = (query: OneToAllData, delay = 60) => {
+		lastIsochronesSearchQuery = query;
+		clearTimeout(isochronesQueryTimeout);
+		isochronesOptions.status = 'WORKING';
+		isochronesOptions.errorMessage = undefined;
+		isochronesQueryTimeout = setTimeout(async () => {
+			try {
+				const { data, error, response } = await oneToAll(query);
+				if (error) {
+					isochronesOptions.status = 'FAILED';
+					isochronesOptions.errorCode = response.status;
+					isochronesOptions.errorMessage = error.error;
+					return;
+				}
+				const all = data!.all!.map((p: ReachablePlace) => {
+					return {
+						lat: p.place?.lat,
+						lng: p.place?.lon,
+						seconds: maxTravelTime - 60 * (p.duration ?? 0),
+						name: p.place?.name
+					} as IsochronesPos;
+				});
+
+				isochronesData = [...all];
+				isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'DONE';
+			} catch (e) {
+				isochronesOptions.status = 'FAILED';
+				isochronesOptions.errorMessage = String(e);
+				isochronesOptions.errorCode = 404;
+			}
+		}, delay);
+	};
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
 			const isochronesOpacity = isochronesOptions.opacity;
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
-				clearTimeout(isochronesQueryTimeout);
-				isochronesOptions.status = 'WORKING';
-				isochronesOptions.errorMessage = undefined;
-				isochronesQueryTimeout = setTimeout(async () => {
-					try {
-						const { data, error, response } = await oneToAll(isochronesQuery);
-						if (error) {
-							isochronesOptions.status = 'FAILED';
-							isochronesOptions.errorCode = response.status;
-							isochronesOptions.errorMessage = error.error;
-							return;
-						}
-						const all = data!.all!.map((p: ReachablePlace) => {
-							return {
-								lat: p.place?.lat,
-								lng: p.place?.lon,
-								seconds: maxTravelTime - 60 * (p.duration ?? 0),
-								name: p.place?.name
-							} as IsochronesPos;
-						});
-
-						isochronesData = [...all];
-						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'DONE';
-					} catch (e) {
-						isochronesOptions.status = 'FAILED';
-						isochronesOptions.errorMessage = String(e);
-						isochronesOptions.errorCode = 404;
-					}
-				}, 60);
+				isochronesSearch(isochronesQuery);
 			}
 			untrack(() => {
 				const q = isochronesQuery.query;
@@ -895,7 +908,8 @@
 						...(q.one == one.label ? {} : { oneName: one.label }),
 						...definedOnly({ onePos: toPosString(one) }),
 						maxTravelTime: q.maxTravelTime * 60,
-						isochronesOpacity
+						isochronesOpacity,
+						...(leaveNow ? { leaveNow } : {})
 					},
 					{ activeTab: 'isochrones' },
 					true
@@ -1096,6 +1110,14 @@
 						bind:to
 						bind:time
 						bind:arriveBy
+						bind:leaveNow
+						onRefresh={lastSearchQuery
+							? () => {
+									// leave now: show the time the search is sent at
+									time = new Date();
+									baseSearch(lastSearchQuery!);
+								}
+							: undefined}
 						bind:useRoutedTransfers
 						bind:maxTransfers
 						bind:pedestrianProfile
@@ -1149,6 +1171,13 @@
 				<Card class="max-h-[calc(97dvh-2.5rem)] overflow-hidden bg-background rounded-lg">
 					<IsochronesMask
 						bind:advancedOptionsOpen={isochronesAdvancedOptionsOpen}
+						onRefresh={lastIsochronesSearchQuery
+							? () => {
+									// leave now: show the time the search is sent at
+									time = new Date();
+									isochronesSearch(lastIsochronesSearchQuery!, 0);
+								}
+							: undefined}
 						bind:one
 						{serverConfig}
 						bind:maxTravelTime
@@ -1170,6 +1199,7 @@
 						bind:maxPreTransitTime
 						bind:maxPostTransitTime
 						bind:arriveBy
+						bind:leaveNow
 						bind:elevationCosts
 						bind:ignorePreTransitRentalReturnConstraints
 						bind:ignorePostTransitRentalReturnConstraints

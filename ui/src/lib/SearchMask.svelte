@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import { ArrowUpDown, LocateFixed } from '@lucide/svelte';
+	import { ArrowUpDown, LocateFixed, RefreshCw } from '@lucide/svelte';
 	import type * as maplibregl from 'maplibre-gl';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import {
@@ -13,10 +13,10 @@
 	} from '@motis-project/motis-client';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
+	import SearchDirectionSelect from '$lib/SearchDirectionSelect.svelte';
 	import DateInput from '$lib/DateInput.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import type { PrePostDirectMode } from '$lib/Modes';
-	import DepartureArrivalSwitch from '$lib/DepartureArrivalSwitch.svelte';
 
 	let {
 		geocodingBiasPlace,
@@ -26,6 +26,7 @@
 		to = $bindable(),
 		time = $bindable(),
 		arriveBy = $bindable(),
+		leaveNow = $bindable(),
 		pedestrianProfile = $bindable(),
 		useRoutedTransfers = $bindable(),
 		maxTransfers = $bindable(),
@@ -64,7 +65,8 @@
 		pedestrianSpeed = $bindable(),
 		cyclingSpeed = $bindable(),
 		additionalTransferTime = $bindable(),
-		hasDebug = false
+		hasDebug = false,
+		onRefresh
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
@@ -73,6 +75,7 @@
 		to: Location;
 		time: Date;
 		arriveBy: boolean;
+		leaveNow: boolean;
 		pedestrianProfile: PedestrianProfile;
 		useRoutedTransfers: boolean;
 		maxTransfers: number;
@@ -112,6 +115,8 @@
 		cyclingSpeed: CyclingSpeed;
 		additionalTransferTime: number | undefined;
 		hasDebug: boolean;
+		// re-sends the last search, undefined until the first search
+		onRefresh?: () => void;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -175,8 +180,19 @@
 		<ArrowUpDown class="w-5 h-5" />
 	</Button>
 	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
-		<DateInput bind:value={time} />
-		<DepartureArrivalSwitch bind:arriveBy />
+		<SearchDirectionSelect bind:arriveBy bind:leaveNow />
+		<DateInput bind:value={time} now={leaveNow} />
+		{#if leaveNow}
+			<Button
+				variant="outline"
+				size="icon"
+				title={t.refresh}
+				disabled={!onRefresh}
+				onclick={() => onRefresh?.()}
+			>
+				<RefreshCw class="w-5 h-5" />
+			</Button>
+		{/if}
 		<AdvancedOptions
 			{serverConfig}
 			bind:advancedOptionsOpen

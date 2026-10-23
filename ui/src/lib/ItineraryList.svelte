@@ -126,7 +126,7 @@
 												timestamp={it.startTime}
 												scheduledTimestamp={it.legs[0].scheduledStartTime}
 												variant="realtime-show-always"
-												queriedTime={baseQuery?.query.time}
+												queriedTime={baseQuery?.query.time ?? new Date().toISOString()}
 												timeZone={it.legs[0].from.tz}
 											/>
 										</div>

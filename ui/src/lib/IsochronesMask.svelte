@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import { LocateFixed } from '@lucide/svelte';
+	import { LocateFixed, RefreshCw } from '@lucide/svelte';
 	import type * as maplibregl from 'maplibre-gl';
-	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
-	import { Label } from '$lib/components/ui/label';
 	import {
 		type PedestrianSpeed,
 		type CyclingSpeed,
@@ -16,6 +14,7 @@
 	import { PLASMA } from '$lib/map/IsochronesLayer';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
+	import SearchDirectionSelect from '$lib/SearchDirectionSelect.svelte';
 	import DateInput from '$lib/DateInput.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { formatDurationSec } from '$lib/formatDuration';
@@ -46,6 +45,7 @@
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		arriveBy = $bindable(),
+		leaveNow = $bindable(),
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
@@ -64,7 +64,8 @@
 		vehicleTrailer = $bindable(),
 		vehicleTopSpeed = $bindable(),
 		vehicleLezAccess = $bindable(),
-		hasDebug = false
+		hasDebug = false,
+		onRefresh
 	}: {
 		advancedOptionsOpen: boolean;
 		one: Location;
@@ -88,6 +89,7 @@
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
 		arriveBy: boolean;
+		leaveNow: boolean;
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
@@ -107,6 +109,8 @@
 		vehicleTopSpeed: number;
 		vehicleLezAccess: boolean;
 		hasDebug: boolean;
+		// re-sends the last search, undefined until the first search
+		onRefresh?: () => void;
 	} = $props();
 
 	const plasmaGradient = `linear-gradient(to right, ${PLASMA.join(', ')})`;
@@ -178,37 +182,19 @@
 		<LocateFixed class="w-5 h-5" />
 	</Button>
 	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
-		<DateInput bind:value={time} />
-		<RadioGroup.Root
-			class="flex"
-			bind:value={() => (arriveBy ? 'arrival' : 'departure'), (v) => (arriveBy = v === 'arrival')}
-			onValueChange={swapPrePostData}
-		>
-			<Label
-				for="isochrones-departure"
-				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+		<SearchDirectionSelect bind:arriveBy bind:leaveNow onDirectionChange={swapPrePostData} />
+		<DateInput bind:value={time} now={leaveNow} />
+		{#if leaveNow}
+			<Button
+				variant="outline"
+				size="icon"
+				title={t.refresh}
+				disabled={!onRefresh}
+				onclick={() => onRefresh?.()}
 			>
-				<RadioGroup.Item
-					value="departure"
-					id="isochrones-departure"
-					class="sr-only"
-					aria-label={t.departure}
-				/>
-				<span>{t.departure}</span>
-			</Label>
-			<Label
-				for="isochrones-arrival"
-				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
-			>
-				<RadioGroup.Item
-					value="arrival"
-					id="isochrones-arrival"
-					class="sr-only"
-					aria-label={t.arrival}
-				/>
-				<span>{t.arrival}</span>
-			</Label>
-		</RadioGroup.Root>
+				<RefreshCw class="w-5 h-5" />
+			</Button>
+		{/if}
 		<AdvancedOptions
 			bind:advancedOptionsOpen
 			bind:useRoutedTransfers
