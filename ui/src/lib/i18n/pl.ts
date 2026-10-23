@@ -39,9 +39,11 @@ const translations: Translations = {
 	leaveNow: 'Wyjedź teraz',
 	duration: 'Czas trwania',
 	arrivals: 'Przyjazdy',
+	arrivalsAt: (stop) => `Przyjazdy do ${stop}`,
 	later: 'później',
 	earlier: 'wcześniej',
 	departures: 'Odjazdy',
+	departuresAt: (stop) => `Odjazdy z ${stop}`,
 	connections: 'Połączenia',
 	switchToArrivals: 'Przełącz na przyjazdy',
 	switchToDepartures: 'Przełącz na odjazdy',
@@ -214,12 +216,12 @@ const translations: Translations = {
 	pageTitle: {
 		default: 'MOTIS',
 		fromTo: (from, to) => `${from} do ${to}`,
-		departuresAt: (stop) => `Odjazdy z ${stop}`,
-		arrivalsAt: (stop) => `Przyjazdy do ${stop}`,
 		isochronesFrom: (place) => `Izochrony z ${place}`
 	},
 	tickets: 'Bilety',
-	routeInformation: 'Więcej informacji'
+	routeInformation: 'Więcej informacji',
+	history: 'Historia',
+	clearHistory: 'Wyczyść historię'
 };
 
 export default translations;

@@ -39,10 +39,12 @@ const translations: Translations = {
 	leaveNow: 'Тръгване сега',
 	duration: 'Продължителност',
 	arrivals: 'Пристигания',
+	arrivalsAt: (stop) => `Пристигания в ${stop}`,
 	later: 'по-късно',
 	earlier: 'по-рано',
 	connections: 'Връзки',
 	departures: 'Заминавания',
+	departuresAt: (stop) => `Заминавания от ${stop}`,
 	switchToArrivals: 'Превключи към пристигания',
 	switchToDepartures: 'Превключи към заминавания',
 	track: 'Коловоз',
@@ -212,12 +214,12 @@ const translations: Translations = {
 	pageTitle: {
 		default: 'MOTIS',
 		fromTo: (from, to) => `${from} до ${to}`,
-		departuresAt: (stop) => `Заминавания от ${stop}`,
-		arrivalsAt: (stop) => `Пристигания в ${stop}`,
 		isochronesFrom: (place) => `Достъпен периметър от ${place}`
 	},
 	tickets: 'Билети',
-	routeInformation: 'Допълнителна информация'
+	routeInformation: 'Допълнителна информация',
+	history: 'История',
+	clearHistory: 'Изчистване на историята'
 };
 
 export default translations;

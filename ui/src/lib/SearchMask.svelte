@@ -142,6 +142,7 @@
 		place={geocodingBiasPlace}
 		name="from"
 		placeholder={t.from}
+		class="pr-8"
 		bind:selected={from}
 		bind:items={fromItems}
 	/>
