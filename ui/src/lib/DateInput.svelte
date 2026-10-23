@@ -5,7 +5,7 @@
 		value = $bindable(),
 		class: className
 	}: {
-		value: Date;
+		value: Date | undefined;
 		class?: string;
 	} = $props();
 
@@ -13,6 +13,10 @@
 
 	$effect(() => {
 		if (el !== undefined) {
+			if (value === undefined) {
+				el.value = '';
+				return;
+			}
 			value.setSeconds(0, 0);
 			const dateTimeLocalValue = new Date(value.getTime() - value.getTimezoneOffset() * 60000)
 				.toISOString()
@@ -32,6 +36,10 @@
 	onchange={(e) => {
 		// @ts-expect-error target exists, value exists
 		const dateTimeLocalValue = e.target!.value!;
+		if (!dateTimeLocalValue) {
+			value = undefined;
+			return;
+		}
 		const fakeUtcTime = new Date(`${dateTimeLocalValue}Z`);
 		if (!isNaN(fakeUtcTime.getTime())) {
 			/* eslint-disable-next-line svelte/prefer-svelte-reactivity */

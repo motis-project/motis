@@ -71,7 +71,7 @@
 		advancedOptionsOpen: boolean;
 		from: Location;
 		to: Location;
-		time: Date;
+		time: Date | undefined;
 		arriveBy: boolean;
 		pedestrianProfile: PedestrianProfile;
 		useRoutedTransfers: boolean;
