@@ -4,8 +4,10 @@
 	import { t } from '$lib/i18n/translation';
 	import { onClickStop } from '$lib/utils';
 	import { page } from '$app/state';
+	import { RefreshCw } from '@lucide/svelte';
+	import Button from '$lib/components/ui/button/button.svelte';
 	import DateInput from '$lib/DateInput.svelte';
-	import DepartureArrivalSwitch from '$lib/DepartureArrivalSwitch.svelte';
+	import SearchDirectionSelect from '$lib/SearchDirectionSelect.svelte';
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 	import type { Mode } from '@motis-project/motis-client';
 
@@ -17,6 +19,7 @@
 
 	let time = $derived(page.state.selectedStop?.time ?? new Date(Date.now()));
 	let arriveBy = $derived(page.state.stopArriveBy ?? false);
+	let leaveNow = $derived(page.state.stopLeaveNow ?? false);
 	let from = $state<Location>() as Location;
 	let fromItems = $state<Array<Location>>([]);
 	const refreshStops = (location?: Location) => {
@@ -25,7 +28,9 @@
 				? { label: location.label, id: location.match.id }
 				: page.state.selectedStop
 					? { label: page.state.selectedStop.name, id: page.state.selectedStop.stopId }
-					: null;
+					: from?.match
+						? { label: from.label, id: from.match.id }
+						: null;
 		if (selectedStop) {
 			onClickStop(
 				selectedStop.label,
@@ -34,7 +39,8 @@
 				arriveBy,
 				false,
 				// preserve exactRadius unless a search result was selected
-				location ? false : page.state.exactRadius
+				location ? false : page.state.exactRadius,
+				leaveNow
 			);
 		}
 	};
@@ -50,6 +56,12 @@
 		onChange={refreshStops}
 	/>
 	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
+		<!-- the select sets leaveNow and arriveBy, refresh once both are set -->
+		<SearchDirectionSelect
+			bind:arriveBy={() => arriveBy, (v) => (arriveBy = v)}
+			bind:leaveNow={() => leaveNow, (v) => (leaveNow = v)}
+			onDirectionChange={() => refreshStops()}
+		/>
 		<DateInput
 			bind:value={
 				() => time,
@@ -61,16 +73,19 @@
 					refreshStops();
 				}
 			}
+			now={leaveNow}
 		/>
-		<DepartureArrivalSwitch
-			bind:arriveBy={
-				() => arriveBy,
-				(v) => {
-					arriveBy = v;
-					refreshStops();
-				}
-			}
-		/>
+		{#if leaveNow}
+			<Button
+				variant="outline"
+				size="icon"
+				title={t.refresh}
+				disabled={!page.state.selectedStop}
+				onclick={() => refreshStops()}
+			>
+				<RefreshCw class="w-5 h-5" />
+			</Button>
+		{/if}
 	</div>
 	<TransitModeSelect bind:transitModes={modes} />
 </div>

@@ -97,9 +97,20 @@
 					? 'departures'
 					: 'connections')
 	);
+	// the departures board, restored when its tab is opened again
+	let departuresState: typeof page.state = {};
 	const setActiveTab = (tab: typeof activeTab) => {
+		if (activeTab == 'departures' || page.state.selectedStop) {
+			const { selectedStop, stopArriveBy, stopLeaveNow, exactRadius } = page.state;
+			departuresState = { selectedStop, stopArriveBy, stopLeaveNow, exactRadius };
+		}
 		activeTab = tab;
-		pushState('', { activeTab: tab });
+		let restored = tab == 'departures' ? departuresState : {};
+		if (restored.selectedStop && restored.stopLeaveNow) {
+			// leave now: show the events from now on, not from when the tab was left
+			restored = { ...restored, selectedStop: { ...restored.selectedStop, time: new Date() } };
+		}
+		pushState('', { ...restored, activeTab: tab });
 	};
 	let dataAttributionLink: string | undefined = $state(undefined);
 	type ColorMode = 'none' | 'stops' | 'rt' | 'route' | 'mode';
@@ -351,7 +362,8 @@
 					time,
 					urlParams.get('stopArriveBy') == 'true',
 					true,
-					urlParams.get('exactRadius') == 'true'
+					urlParams.get('exactRadius') == 'true',
+					urlParams.get('stopLeaveNow') == 'true'
 				);
 			}
 
@@ -434,10 +446,14 @@
 			? parseIntOr(urlParams.get('maxItineraries'), undefined)
 			: undefined
 	);
-	let leaveNow = $state<boolean>(urlParams?.get('leaveNow') == 'true');
-	let arriveBy = $state<boolean>(
-		urlParams?.get('arriveBy') == 'true' && urlParams?.get('leaveNow') != 'true'
-	);
+	const urlLeaveNow = urlParams?.get('leaveNow') == 'true';
+	const urlArriveBy = urlParams?.get('arriveBy') == 'true' && !urlLeaveNow;
+	let leaveNow = $state<boolean>(urlLeaveNow);
+	let arriveBy = $state<boolean>(urlArriveBy);
+	// isochrones keep their own time and direction, changing one tab doesn't change the other
+	let isochronesTime = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
+	let isochronesLeaveNow = $state<boolean>(urlLeaveNow);
+	let isochronesArriveBy = $state<boolean>(urlArriveBy);
 	let algorithm = $state<PlanData['query']['algorithm']>(
 		(urlParams?.get('algorithm') ?? 'PONG') as PlanData['query']['algorithm']
 	);
@@ -719,10 +735,10 @@
 					query: {
 						one: toPlaceString(one),
 						maxTravelTime: Math.ceil(maxTravelTime / 60),
-						...(leaveNow ? {} : { time: time.toISOString() }),
+						...(isochronesLeaveNow ? {} : { time: isochronesTime.toISOString() }),
 						transitModes,
 						maxTransfers,
-						arriveBy,
+						arriveBy: isochronesArriveBy,
 						cyclingSpeed,
 						pedestrianSpeed,
 						transferTimeFactor,
@@ -908,7 +924,7 @@
 						...definedOnly({ onePos: toPosString(one) }),
 						maxTravelTime: q.maxTravelTime * 60,
 						isochronesOpacity,
-						...(leaveNow ? { leaveNow } : {})
+						...(isochronesLeaveNow ? { leaveNow: true } : {})
 					},
 					{ activeTab: 'isochrones' },
 					true
@@ -1173,7 +1189,7 @@
 						onRefresh={lastIsochronesSearchQuery
 							? () => {
 									// leave now: show the time the search is sent at
-									time = new Date();
+									isochronesTime = new Date();
 									isochronesSearch(lastIsochronesSearchQuery!, 0);
 								}
 							: undefined}
@@ -1181,7 +1197,7 @@
 						{serverConfig}
 						bind:maxTravelTime
 						geocodingBiasPlace={center}
-						bind:time
+						bind:time={isochronesTime}
 						bind:useRoutedTransfers
 						bind:pedestrianProfile
 						bind:requireCarTransport
@@ -1197,8 +1213,8 @@
 						bind:pedestrianSpeed
 						bind:maxPreTransitTime
 						bind:maxPostTransitTime
-						bind:arriveBy
-						bind:leaveNow
+						bind:arriveBy={isochronesArriveBy}
+						bind:leaveNow={isochronesLeaveNow}
 						bind:elevationCosts
 						bind:ignorePreTransitRentalReturnConstraints
 						bind:ignorePostTransitRentalReturnConstraints
@@ -1486,9 +1502,9 @@
 			<Isochrones
 				{map}
 				{isochronesData}
-				streetModes={arriveBy ? preTransitModes : postTransitModes}
+				streetModes={isochronesArriveBy ? preTransitModes : postTransitModes}
 				wheelchair={pedestrianProfile === 'WHEELCHAIR'}
-				maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
+				maxAllTime={isochronesArriveBy ? maxPreTransitTime : maxPostTransitTime}
 				{maxTravelTime}
 				active={activeTab == 'isochrones'}
 				options={isochronesOptions}

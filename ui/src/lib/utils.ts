@@ -86,14 +86,22 @@ export const onClickStop = (
 	arriveBy: boolean = false,
 	replace: boolean = false,
 	// only show the events of this exact stop (no parent / child / equivalent stops)
-	exactRadius: boolean = false
+	exactRadius: boolean = false,
+	// show the events from the current time on, `time` is ignored and not put into the URL
+	leaveNow: boolean = false
 ) => {
 	pushStateWithQueryString(
-		{ stopArriveBy: arriveBy, stopId, time: time.toISOString(), exactRadius },
 		{
 			stopArriveBy: arriveBy,
+			stopId,
+			...(leaveNow ? { stopLeaveNow: true } : { time: time.toISOString() }),
+			exactRadius
+		},
+		{
+			stopArriveBy: arriveBy,
+			stopLeaveNow: leaveNow,
 			exactRadius,
-			selectedStop: { name, stopId, time },
+			selectedStop: { name, stopId, time: leaveNow ? new Date() : time },
 			selectedItinerary: replace ? undefined : page.state.selectedItinerary,
 			tripId: replace ? undefined : page.state.tripId,
 			activeTab: 'departures'
