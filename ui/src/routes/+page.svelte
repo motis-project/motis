@@ -30,6 +30,7 @@
 		type PedestrianProfile,
 		type Place,
 		type PlanData,
+		type OneToAllData,
 		type ReachablePlace,
 		type RentalFormFactor,
 		type ServerConfig,
@@ -760,6 +761,7 @@
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
+	let lastSearchQuery = $state.raw<PlanData>();
 	let stopNameFromResponse = $state<string>('');
 	let refreshingItinerary = $state(false);
 	let pageTitle = $derived(
@@ -822,6 +824,7 @@
 	const baseSearch = (baseQuery: PlanData) => {
 		const base = plan(baseQuery).then(preprocessItinerary(from, to));
 		const q = baseQuery.query;
+		lastSearchQuery = baseQuery;
 		baseResponse = base;
 		routingResponses = [base];
 		pushStateWithQueryString(
@@ -854,40 +857,45 @@
 		}
 	});
 	let isochronesQueryTimeout: ReturnType<typeof setTimeout>;
+	let lastIsochronesSearchQuery = $state.raw<OneToAllData>();
+	const isochronesSearch = (query: OneToAllData, delay = 60) => {
+		lastIsochronesSearchQuery = query;
+		clearTimeout(isochronesQueryTimeout);
+		isochronesOptions.status = 'WORKING';
+		isochronesOptions.errorMessage = undefined;
+		isochronesQueryTimeout = setTimeout(async () => {
+			try {
+				const { data, error, response } = await oneToAll(query);
+				if (error) {
+					isochronesOptions.status = 'FAILED';
+					isochronesOptions.errorCode = response.status;
+					isochronesOptions.errorMessage = error.error;
+					return;
+				}
+				const all = data!.all!.map((p: ReachablePlace) => {
+					return {
+						lat: p.place?.lat,
+						lng: p.place?.lon,
+						seconds: maxTravelTime - 60 * (p.duration ?? 0),
+						name: p.place?.name
+					} as IsochronesPos;
+				});
+
+				isochronesData = [...all];
+				isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'DONE';
+			} catch (e) {
+				isochronesOptions.status = 'FAILED';
+				isochronesOptions.errorMessage = String(e);
+				isochronesOptions.errorCode = 404;
+			}
+		}, delay);
+	};
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
 			const isochronesOpacity = isochronesOptions.opacity;
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
-				clearTimeout(isochronesQueryTimeout);
-				isochronesOptions.status = 'WORKING';
-				isochronesOptions.errorMessage = undefined;
-				isochronesQueryTimeout = setTimeout(async () => {
-					try {
-						const { data, error, response } = await oneToAll(isochronesQuery);
-						if (error) {
-							isochronesOptions.status = 'FAILED';
-							isochronesOptions.errorCode = response.status;
-							isochronesOptions.errorMessage = error.error;
-							return;
-						}
-						const all = data!.all!.map((p: ReachablePlace) => {
-							return {
-								lat: p.place?.lat,
-								lng: p.place?.lon,
-								seconds: maxTravelTime - 60 * (p.duration ?? 0),
-								name: p.place?.name
-							} as IsochronesPos;
-						});
-
-						isochronesData = [...all];
-						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'DONE';
-					} catch (e) {
-						isochronesOptions.status = 'FAILED';
-						isochronesOptions.errorMessage = String(e);
-						isochronesOptions.errorCode = 404;
-					}
-				}, 60);
+				isochronesSearch(isochronesQuery);
 			}
 			untrack(() => {
 				const q = isochronesQuery.query;
@@ -1098,6 +1106,13 @@
 						bind:time
 						bind:arriveBy
 						bind:leaveNow
+						onRefresh={lastSearchQuery
+							? () => {
+									// leave now: show the time the search is sent at
+									time = new Date();
+									baseSearch(lastSearchQuery!);
+								}
+							: undefined}
 						bind:useRoutedTransfers
 						bind:maxTransfers
 						bind:pedestrianProfile
@@ -1151,6 +1166,13 @@
 				<Card class="max-h-[calc(97dvh-2.5rem)] overflow-hidden bg-background rounded-lg">
 					<IsochronesMask
 						bind:advancedOptionsOpen={isochronesAdvancedOptionsOpen}
+						onRefresh={lastIsochronesSearchQuery
+							? () => {
+									// leave now: show the time the search is sent at
+									time = new Date();
+									isochronesSearch(lastIsochronesSearchQuery!, 0);
+								}
+							: undefined}
 						bind:one
 						{serverConfig}
 						bind:maxTravelTime

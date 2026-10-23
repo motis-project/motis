@@ -13,7 +13,7 @@
 	} from '@motis-project/motis-client';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
-	import ArriveBySelect from '$lib/ArriveBySelect.svelte';
+	import SearchDirectionSelect from '$lib/SearchDirectionSelect.svelte';
 	import DateInput from '$lib/DateInput.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import type { PrePostDirectMode } from '$lib/Modes';
@@ -179,7 +179,7 @@
 		<ArrowUpDown class="w-5 h-5" />
 	</Button>
 	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
-		<ArriveBySelect bind:arriveBy bind:leaveNow />
+		<SearchDirectionSelect bind:arriveBy bind:leaveNow />
 		<DateInput bind:value={time} now={leaveNow} />
 		{#if leaveNow}
 			<Button
