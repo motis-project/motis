@@ -2175,6 +2175,22 @@ paths:
             default: 900
             minimum: 0
 
+        - name: realtimeMode
+          in: query
+          required: false
+          description: |
+            Optional. Default is `REALTIME`.
+
+            Controls whether realtime data is used for routing.
+            - `REALTIME`: Use the realtime timetable (delays, cancellations,
+              added/changed trips).
+            - `REALTIME_ANNOTATION_ONLY`: behaves like `OFF` since this
+              endpoint does not annotate its response with realtime data.
+            - `OFF`: only the scheduled timetable is used.
+          schema:
+            $ref: '#/components/schemas/RealtimeMode'
+            default: REALTIME
+
       responses:
         '422':
           description: Unprocessable Entity
