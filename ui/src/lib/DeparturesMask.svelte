@@ -28,9 +28,7 @@
 				? { label: location.label, id: location.match.id }
 				: page.state.selectedStop
 					? { label: page.state.selectedStop.name, id: page.state.selectedStop.stopId }
-					: from?.match
-						? { label: from.label, id: from.match.id }
-						: null;
+					: null;
 		if (selectedStop) {
 			onClickStop(
 				selectedStop.label,
