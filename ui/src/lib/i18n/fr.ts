@@ -6,6 +6,7 @@ const translations: Translations = {
 	includedInTicket: 'Inclus dans le billet',
 	journeyDetails: 'Détails du voyage',
 	refreshItinerary: 'Actualiser le voyage',
+	refresh: 'Actualiser',
 	walk: 'À pied',
 	bike: 'Vélo',
 	cargoBike: 'Vélo Cargo',

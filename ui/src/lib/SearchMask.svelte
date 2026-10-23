@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import { ArrowUpDown, LocateFixed } from '@lucide/svelte';
+	import { ArrowUpDown, LocateFixed, RefreshCw } from '@lucide/svelte';
 	import type * as maplibregl from 'maplibre-gl';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import {
@@ -65,7 +65,8 @@
 		pedestrianSpeed = $bindable(),
 		cyclingSpeed = $bindable(),
 		additionalTransferTime = $bindable(),
-		hasDebug = false
+		hasDebug = false,
+		onRefresh
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
@@ -114,6 +115,8 @@
 		cyclingSpeed: CyclingSpeed;
 		additionalTransferTime: number | undefined;
 		hasDebug: boolean;
+		// re-sends the last search, undefined until the first search
+		onRefresh?: () => void;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -178,6 +181,17 @@
 	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
 		<ArriveBySelect bind:arriveBy bind:leaveNow />
 		<DateInput bind:value={time} now={leaveNow} />
+		{#if leaveNow}
+			<Button
+				variant="outline"
+				size="icon"
+				title={t.refresh}
+				disabled={!onRefresh}
+				onclick={() => onRefresh?.()}
+			>
+				<RefreshCw class="w-5 h-5" />
+			</Button>
+		{/if}
 		<AdvancedOptions
 			{serverConfig}
 			bind:advancedOptionsOpen

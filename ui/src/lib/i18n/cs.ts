@@ -6,6 +6,7 @@ const translations: Translations = {
 	includedInTicket: 'Zahrnuté v jízdence',
 	journeyDetails: 'Detail cesty',
 	refreshItinerary: 'Obnovit cestu',
+	refresh: 'Obnovit',
 	transfers: 'přestupy',
 	walk: 'Pěšky',
 	bike: 'Kolo',

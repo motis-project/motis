@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import { LocateFixed } from '@lucide/svelte';
+	import { LocateFixed, RefreshCw } from '@lucide/svelte';
 	import type * as maplibregl from 'maplibre-gl';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import {
@@ -64,7 +64,8 @@
 		vehicleTrailer = $bindable(),
 		vehicleTopSpeed = $bindable(),
 		vehicleLezAccess = $bindable(),
-		hasDebug = false
+		hasDebug = false,
+		onRefresh
 	}: {
 		advancedOptionsOpen: boolean;
 		one: Location;
@@ -108,6 +109,8 @@
 		vehicleTopSpeed: number;
 		vehicleLezAccess: boolean;
 		hasDebug: boolean;
+		// re-sends the last search, undefined until the first search
+		onRefresh?: () => void;
 	} = $props();
 
 	const plasmaGradient = `linear-gradient(to right, ${PLASMA.join(', ')})`;
@@ -181,6 +184,17 @@
 	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
 		<ArriveBySelect bind:arriveBy bind:leaveNow onDirectionChange={swapPrePostData} />
 		<DateInput bind:value={time} now={leaveNow} />
+		{#if leaveNow}
+			<Button
+				variant="outline"
+				size="icon"
+				title={t.refresh}
+				disabled={!onRefresh}
+				onclick={() => onRefresh?.()}
+			>
+				<RefreshCw class="w-5 h-5" />
+			</Button>
+		{/if}
 		<AdvancedOptions
 			bind:advancedOptionsOpen
 			bind:useRoutedTransfers

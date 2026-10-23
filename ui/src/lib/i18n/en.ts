@@ -6,6 +6,7 @@ const translations: Translations = {
 	includedInTicket: 'Included in ticket',
 	journeyDetails: 'Journey Details',
 	refreshItinerary: 'Refresh journey',
+	refresh: 'Refresh',
 	transfers: 'transfers',
 	walk: 'Walk',
 	bike: 'Bike',
