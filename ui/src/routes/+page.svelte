@@ -433,7 +433,10 @@
 			? parseIntOr(urlParams.get('maxItineraries'), undefined)
 			: undefined
 	);
-	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
+	let leaveNow = $state<boolean>(urlParams?.get('leaveNow') == 'true');
+	let arriveBy = $state<boolean>(
+		urlParams?.get('arriveBy') == 'true' && urlParams?.get('leaveNow') != 'true'
+	);
 	let algorithm = $state<PlanData['query']['algorithm']>(
 		(urlParams?.get('algorithm') ?? 'PONG') as PlanData['query']['algorithm']
 	);
@@ -603,7 +606,7 @@
 		from.match && to.match && !advancedOptionsOpen
 			? ({
 					query: omitDefaults({
-						time: time.toISOString(),
+						...(leaveNow ? {} : { time: time.toISOString() }),
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
 						arriveBy,
@@ -713,7 +716,7 @@
 					query: {
 						one: toPlaceString(one),
 						maxTravelTime: Math.ceil(maxTravelTime / 60),
-						time: time.toISOString(),
+						...(leaveNow ? {} : { time: time.toISOString() }),
 						transitModes,
 						maxTransfers,
 						arriveBy,
@@ -827,7 +830,8 @@
 				...(q.fromPlace == from.label ? {} : { fromName: from.label }),
 				...(q.toPlace == to.label ? {} : { toName: to.label }),
 				...definedOnly({ fromPos: toPosString(from), toPos: toPosString(to) }),
-				...viaLabels
+				...viaLabels,
+				...(leaveNow ? { leaveNow } : {})
 			},
 			{ activeTab: 'connections' },
 			true
@@ -893,7 +897,8 @@
 						...(q.one == one.label ? {} : { oneName: one.label }),
 						...definedOnly({ onePos: toPosString(one) }),
 						maxTravelTime: q.maxTravelTime * 60,
-						isochronesOpacity
+						isochronesOpacity,
+						...(leaveNow ? { leaveNow } : {})
 					},
 					{ activeTab: 'isochrones' },
 					true
@@ -1092,6 +1097,7 @@
 						bind:to
 						bind:time
 						bind:arriveBy
+						bind:leaveNow
 						bind:useRoutedTransfers
 						bind:maxTransfers
 						bind:pedestrianProfile
@@ -1166,6 +1172,7 @@
 						bind:maxPreTransitTime
 						bind:maxPostTransitTime
 						bind:arriveBy
+						bind:leaveNow
 						bind:elevationCosts
 						bind:ignorePreTransitRentalReturnConstraints
 						bind:ignorePostTransitRentalReturnConstraints

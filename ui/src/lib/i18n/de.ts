@@ -35,6 +35,7 @@ const translations: Translations = {
 	position: 'Position',
 	arrival: 'Ankunft',
 	departure: 'Abfahrt',
+	leaveNow: 'Jetzt losfahren',
 	duration: 'Dauer',
 	arrivals: 'Ankünfte',
 	connections: 'Verbindungen',

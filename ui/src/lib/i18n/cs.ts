@@ -35,6 +35,7 @@ const translations: Translations = {
 	position: 'Pozice',
 	arrival: 'Příjezd',
 	departure: 'Odjezd',
+	leaveNow: 'Vyrazit nyní',
 	duration: 'Čas cesty',
 	arrivals: 'Příjezdy',
 	later: 'později',

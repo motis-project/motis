@@ -39,6 +39,7 @@ export type Translations = {
 	position: string;
 	arrival: string;
 	departure: string;
+	leaveNow: string;
 	myLocation: string;
 	reverseDirections: string;
 	duration: string;

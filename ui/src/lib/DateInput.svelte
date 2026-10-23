@@ -3,9 +3,11 @@
 
 	let {
 		value = $bindable(),
+		now = false,
 		class: className
 	}: {
 		value: Date;
+		now?: boolean;
 		class?: string;
 	} = $props();
 
@@ -14,7 +16,9 @@
 	$effect(() => {
 		if (el !== undefined) {
 			value.setSeconds(0, 0);
-			const dateTimeLocalValue = new Date(value.getTime() - value.getTimezoneOffset() * 60000)
+			// `now`: show the current minute instead of `value`, the input is disabled
+			const date = now ? new Date(Math.floor(Date.now() / 60000) * 60000) : value;
+			const dateTimeLocalValue = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
 				.toISOString()
 				.slice(0, -1);
 			el.value = dateTimeLocalValue;
@@ -29,6 +33,7 @@
 		className
 	)}
 	bind:this={el}
+	disabled={now}
 	onchange={(e) => {
 		// @ts-expect-error target exists, value exists
 		const dateTimeLocalValue = e.target!.value!;

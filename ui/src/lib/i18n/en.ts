@@ -35,6 +35,7 @@ const translations: Translations = {
 	position: 'Position',
 	arrival: 'Arrival',
 	departure: 'Departure',
+	leaveNow: 'Leave now',
 	connections: 'Connections',
 	duration: 'Duration',
 	arrivals: 'Arrivals',

@@ -35,6 +35,7 @@ const translations: Translations = {
 	position: 'местоположение',
 	arrival: 'Пристигане',
 	departure: 'Заминаване',
+	leaveNow: 'Тръгване сега',
 	duration: 'Продължителност',
 	arrivals: 'Пристигания',
 	later: 'по-късно',
