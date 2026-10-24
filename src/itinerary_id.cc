@@ -874,11 +874,12 @@ api::Itinerary reconstruct_itinerary(
 
     auto const add_equivalents = [&](std::vector<n::routing::offset>& offsets,
                                      n::location_idx_t const l) {
-      n::routing::for_each_meta(
-          stop_times_ep.tt_, n::routing::location_match_mode::kEquivalent, l,
-          [&](n::location_idx_t const c) {
-            offsets.emplace_back(c, n::duration_t{0U}, 0U);
-          });
+      n::routing::for_each_meta(stop_times_ep.tt_, nullptr,
+                                n::routing::location_match_mode::kEquivalent, l,
+                                [&](n::location_idx_t const c) {
+                                  offsets.emplace_back(c, n::duration_t{0U},
+                                                       0U);
+                                });
     };
 
     auto q = n::routing::make_alternative_query(

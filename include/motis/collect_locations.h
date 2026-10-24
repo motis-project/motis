@@ -16,7 +16,7 @@ inline void add_with_children(nigiri::timetable const& tt,
                               std::vector<nigiri::location_idx_t>& locations,
                               nigiri::location_idx_t const x) {
   nigiri::routing::for_each_meta(
-      tt, nigiri::routing::location_match_mode::kOnlyChildren, x,
+      tt, nullptr, nigiri::routing::location_match_mode::kOnlyChildren, x,
       [&](nigiri::location_idx_t const c) { locations.push_back(c); });
 }
 
@@ -28,7 +28,7 @@ inline void add_location(nigiri::timetable const& tt,
                          bool const exact = false) {
   if (exact) {
     nigiri::routing::for_each_meta(
-        tt, nigiri::routing::location_match_mode::kExact, l,
+        tt, nullptr, nigiri::routing::location_match_mode::kExact, l,
         [&](nigiri::location_idx_t const c) { locations.push_back(c); });
     return;
   }

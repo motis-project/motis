@@ -126,7 +126,7 @@ std::vector<n::routing::offset> client_offsets(
     // parent stations have no departures - expand them to their child stops
     // (a child stop expands to just itself)
     n::routing::for_each_meta(
-        tt, n::routing::location_match_mode::kOnlyChildren,
+        tt, nullptr, n::routing::location_match_mode::kOnlyChildren,
         tags.get_location(tt, x.stopId_), [&](n::location_idx_t const l) {
           ret.emplace_back(l, duration, mode);
         });
@@ -549,7 +549,7 @@ std::vector<n::routing::offset> routing::get_offsets(
               return station_start(l.l_);
             }
             auto offsets = do_get_offsets(stop_to_osr_location(*this, l.l_));
-            for_each_meta(*tt_,
+            for_each_meta(*tt_, nullptr,
                           nigiri::routing::location_match_mode::kEquivalent,
                           l.l_, [&](n::location_idx_t const c) {
                             offsets.emplace_back(c, n::duration_t{0U}, 0U);

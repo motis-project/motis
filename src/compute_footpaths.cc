@@ -66,6 +66,9 @@ void compute_footpaths(osr::ways const& w,
   auto transfers = n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
       tt.n_locations());
   for (auto const& mode : settings) {
+    // A footpath holds at most kMax minutes, kMax + 1 would be a ban.
+    auto const max_duration =
+        std::min(mode.max_duration_, std::chrono::seconds{n::footpath::kMax});
     for (auto& fps : transfers) {
       fps.clear();
     }
@@ -132,14 +135,14 @@ void compute_footpaths(osr::ways const& w,
             return;
           }
 
-          loc_rtree.in_radius(tt.locations_.coordinates_[l],
-                              get_max_distance(mode.profile_, osr_parameters{},
-                                               mode.max_duration_),
-                              [&](n::location_idx_t const x) {
-                                if (x != l && is_candidate(x)) {
-                                  s.neighbors_.emplace_back(x);
-                                }
-                              });
+          loc_rtree.in_radius(
+              tt.locations_.coordinates_[l],
+              get_max_distance(mode.profile_, osr_parameters{}, max_duration),
+              [&](n::location_idx_t const x) {
+                if (x != l && is_candidate(x)) {
+                  s.neighbors_.emplace_back(x);
+                }
+              });
 
           auto const results =
               osr::route_one_to_many(
@@ -158,7 +161,7 @@ void compute_footpaths(osr::ways const& w,
                     }
                     return s.neighbor_candidates_;
                   }(),
-                  static_cast<osr::cost_t>(mode.max_duration_.count()),
+                  static_cast<osr::cost_t>(max_duration.count()),
                   osr::direction::kForward, nullptr, nullptr, elevations,
                   [](osr::path const& p) { return p.uses_elevator_; })
                   ->results();
@@ -183,7 +186,7 @@ void compute_footpaths(osr::ways const& w,
               auto const estimate = n::footpath{
                   n, n::duration_t{
                          static_cast<int>(std::ceil((dist / 0.7) / 60.0))}};
-              if (estimate.duration() > mode.max_duration_) {
+              if (estimate.duration() > max_duration) {
                 continue;
               }
               auto const is_close = dist < kMaxMissingFootpathDistance;
@@ -198,7 +201,7 @@ void compute_footpaths(osr::ways const& w,
           }
 
           utl::erase_if(transfers[l], [&](n::footpath fp) {
-            return fp.duration() > mode.max_duration_;
+            return fp.duration() > max_duration;
           });
           utl::sort(transfers[l]);
 

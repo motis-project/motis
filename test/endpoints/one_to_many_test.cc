@@ -237,22 +237,22 @@ TEST(one_to_many, get_request_forward) {
                                        {}}},
                 .transit_durations_ = {{
                     {},
-                    {{.duration_ = 1080.0, .transfers_ = 0}},
+                    {{.duration_ = 960.0, .transfers_ = 0}},
                     {// Not routed transfer => faster than realistic
                      {.duration_ = 1140.0, .transfers_ = 0}},
                     {// Not routed transfer
                      {.duration_ = 1140.0, .transfers_ = 0}},
-                    {{.duration_ = 2580.0, .transfers_ = 1}},
-                    {{.duration_ = 2580.0, .transfers_ = 1}},
+                    {{.duration_ = 2460.0, .transfers_ = 1}},
+                    {{.duration_ = 2520.0, .transfers_ = 1}},
                     {},
                     {},
                     {},
                     {},
-                    {{.duration_ = 1260.0, .transfers_ = 0}},
+                    {{.duration_ = 1140.0, .transfers_ = 0}},
                     {{.duration_ = 1620.0, .transfers_ = 0}},
                     {},
-                    {{.duration_ = 2700.0, .transfers_ = 1}},
-                    {{.duration_ = 2640.0, .transfers_ = 1}},
+                    {{.duration_ = 2580.0, .transfers_ = 1}},
+                    {{.duration_ = 2580.0, .transfers_ = 1}},
                     {{.duration_ = 2940.0, .transfers_ = 1}},
                     {},
                 }}}),
@@ -316,12 +316,12 @@ TEST(one_to_many, post_request_backward) {
               {},
           }},
           .transit_durations_ = {{
-              {{.duration_ = 3180.0, .transfers_ = 1}},
+              {{.duration_ = 3060.0, .transfers_ = 1}},
               {{.duration_ = 840.0, .transfers_ = 0}},  // Not routed transfer
-              {{.duration_ = 720.0, .transfers_ = 0}},  // Not routed transfer
+              {{.duration_ = 600.0, .transfers_ = 0}},  // Not routed transfer
               {{.duration_ = 780.0, .transfers_ = 0}},
-              {{.duration_ = 780.0, .transfers_ = 0}},
-              {{.duration_ = 720.0, .transfers_ = 0}},
+              {{.duration_ = 660.0, .transfers_ = 0}},
+              {{.duration_ = 600.0, .transfers_ = 0}},
               {},
               {},
               {},
@@ -329,10 +329,10 @@ TEST(one_to_many, post_request_backward) {
               {},
               {},
               {},
-              {{.duration_ = 900.0, .transfers_ = 0}},
+              {{.duration_ = 840.0, .transfers_ = 0}},
               {{.duration_ = 1020.0, .transfers_ = 0}},
               {},
-              {{.duration_ = 3360.0, .transfers_ = 1}},  // from DA_10: 3420.0
+              {{.duration_ = 3300.0, .transfers_ = 1}},  // from DA_10: 3420.0
               {},
           }}}),
       durations);
@@ -384,13 +384,13 @@ TEST(one_to_many,
                     {},
                     {},
                     {},
-                    {{.duration_ = 1560.0, .transfers_ = 0}},  // Must take S3
-                    {{.duration_ = 1680.0, .transfers_ = 0}},  // Must take S3
+                    {{.duration_ = 1500.0, .transfers_ = 0}},  // Must take S3
+                    {{.duration_ = 1620.0, .transfers_ = 0}},  // Must take S3
                     {},
-                    {{.duration_ = 1800.0, .transfers_ = 0}},
-                    {{.duration_ = 1740.0, .transfers_ = 0}},
-                    {{.duration_ = 1740.0, .transfers_ = 0}},
                     {{.duration_ = 1680.0, .transfers_ = 0}},
+                    {{.duration_ = 1680.0, .transfers_ = 0}},
+                    {{.duration_ = 1620.0, .transfers_ = 0}},
+                    {{.duration_ = 1620.0, .transfers_ = 0}},
 
                 }}}),
             durations);
@@ -434,7 +434,7 @@ TEST(one_to_many, get_request_backward_with_wheelchair_and_short_post_transit) {
 
   ASSERT_EQ(5U, td.size());
   ASSERT_EQ(1U, td.at(0).size());
-  EXPECT_DOUBLE_EQ(1680.0, td.at(0).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1560.0, td.at(0).at(0).duration_);
   EXPECT_EQ(0, td.at(0).at(0).transfers_);
   // Unreachable, as FFM_HAUPT_S -> FFM_HAUPT_U not usable postTransit
   EXPECT_TRUE(td.at(1).empty());
@@ -472,7 +472,7 @@ TEST(one_to_many, oneway_get_forward_for_pre_transit_and_direct_modes) {
                     {},
                     {},
                     {// Must use later trip
-                     {.duration_ = 1980.0, .transfers_ = 0}},
+                     {.duration_ = 1860.0, .transfers_ = 0}},
                 }}}),
             durations);
 }
@@ -509,7 +509,7 @@ TEST(one_to_many, oneway_post_backward_for_post_transit_and_direct_modes) {
   EXPECT_TRUE(td.at(1).empty());
   EXPECT_TRUE(td.at(2).empty());
   ASSERT_EQ(1U, td.at(3).size());
-  EXPECT_DOUBLE_EQ(1920.0, td.at(3).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1800.0, td.at(3).at(0).duration_);
   EXPECT_EQ(0, td.at(3).at(0).transfers_);
 }
 
@@ -529,8 +529,8 @@ TEST(one_to_many, oneway_post_forward_for_post_transit_modes) {
   EXPECT_EQ((api::OneToManyIntermodalResponse{
                 .street_durations_ = std::vector<api::Duration>(2),
                 .transit_durations_ = {{
-                    {{.duration_ = 720.0, .transfers_ = 0}},
-                    {{.duration_ = 840.0, .transfers_ = 0}},
+                    {{.duration_ = 600.0, .transfers_ = 0}},
+                    {{.duration_ = 780.0, .transfers_ = 0}},
                 }}}),
             durations);
 }
@@ -556,8 +556,8 @@ TEST(one_to_many, oneway_get_backward_for_pre_transit_modes) {
   EXPECT_EQ((api::OneToManyIntermodalResponse{
                 .street_durations_ = std::vector<api::Duration>(3),
                 .transit_durations_ = {{
-                    {{.duration_ = 1080.0, .transfers_ = 0}},
-                    {{.duration_ = 1080.0, .transfers_ = 0}},
+                    {{.duration_ = 1020.0, .transfers_ = 0}},
+                    {{.duration_ = 960.0, .transfers_ = 0}},
                     {{.duration_ = 1260.0, .transfers_ = 0}},
                 }}}),
             durations);
@@ -574,11 +574,10 @@ TEST(one_to_many, transfer_time_settings_min_transfer_time) {
       "&useRoutedTransfers=true"
       "&minTransferTime=21");
 
-  // FIXME Times are also added for final footpath
   EXPECT_EQ((api::OneToManyIntermodalResponse{
                 .street_durations_ = {{api::Duration{}}},
                 .transit_durations_ = {{
-                    {{.duration_ = 4320.0, .transfers_ = 1}},
+                    {{.duration_ = 3120.0, .transfers_ = 1}},
                 }}}),
             durations);
 }
@@ -593,11 +592,10 @@ TEST(one_to_many, transfer_time_settings_additional_transfer_time) {
       .additionalTransferTime_ = 17,
       .useRoutedTransfers_ = true});
 
-  // FIXME Times are also added for final footpath
   EXPECT_EQ((api::OneToManyIntermodalResponse{
                 .street_durations_ = {{api::Duration{}}},
                 .transit_durations_ = {{
-                    {{.duration_ = 4200.0, .transfers_ = 1}},
+                    {{.duration_ = 3120.0, .transfers_ = 1}},
                 }}}),
             durations);
 }
@@ -627,10 +625,10 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
     EXPECT_EQ((api::OneToManyIntermodalResponse{
                   .street_durations_ = std::vector<api::Duration>(5),
                   .transit_durations_ = {{
-                      {{.duration_ = 720.0, .transfers_ = 0}},
-                      {{.duration_ = 780.0, .transfers_ = 0}},
-                      {{.duration_ = 720.0, .transfers_ = 0}},
-                      {{.duration_ = 1020.0, .transfers_ = 0}},
+                      {{.duration_ = 600.0, .transfers_ = 0}},
+                      {{.duration_ = 660.0, .transfers_ = 0}},
+                      {{.duration_ = 600.0, .transfers_ = 0}},
+                      {{.duration_ = 900.0, .transfers_ = 0}},
                       {// FIXME Test location should be unreachable
                        {.duration_ = 1380.0, .transfers_ = 0}},
                   }}}),
@@ -652,11 +650,11 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
     EXPECT_EQ((api::OneToManyIntermodalResponse{
                   .street_durations_ = std::vector<api::Duration>(5),
                   .transit_durations_ = {{
-                      {{.duration_ = 1260.0, .transfers_ = 0}},
+                      {{.duration_ = 1200.0, .transfers_ = 0}},
                       {{.duration_ = 1560.0, .transfers_ = 0}},
+                      {{.duration_ = 1200.0, .transfers_ = 0}},
                       {{.duration_ = 1260.0, .transfers_ = 0}},
-                      {{.duration_ = 1380.0, .transfers_ = 0}},
-                      {{.duration_ = 1740.0, .transfers_ = 0}},
+                      {{.duration_ = 1620.0, .transfers_ = 0}},
                   }}}),
               test_durations);
   }
@@ -678,10 +676,10 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
     EXPECT_EQ((api::OneToManyIntermodalResponse{
                   .street_durations_ = std::vector<api::Duration>(5),
                   .transit_durations_ = {{
+                      {{.duration_ = 600.0, .transfers_ = 0}},
+                      {{.duration_ = 660.0, .transfers_ = 0}},
+                      {{.duration_ = 600.0, .transfers_ = 0}},
                       {{.duration_ = 720.0, .transfers_ = 0}},
-                      {{.duration_ = 780.0, .transfers_ = 0}},
-                      {{.duration_ = 720.0, .transfers_ = 0}},
-                      {{.duration_ = 780.0, .transfers_ = 0}},
                       {// FIXME Should start FFM_HAUPT_S => time > 1200
                        {.duration_ = 960.0, .transfers_ = 0}},
                   }}}),
@@ -725,10 +723,10 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
   EXPECT_DOUBLE_EQ(1860.0, td.at(1).at(0).duration_);
   EXPECT_EQ(0, td.at(1).at(0).transfers_);
   ASSERT_EQ(1U, td.at(2).size());
-  EXPECT_DOUBLE_EQ(1800.0, td.at(2).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1740.0, td.at(2).at(0).duration_);
   EXPECT_EQ(0, td.at(2).at(0).transfers_);
   ASSERT_EQ(1U, td.at(3).size());
-  EXPECT_DOUBLE_EQ(4440.0, td.at(3).at(0).duration_);
+  EXPECT_DOUBLE_EQ(4320.0, td.at(3).at(0).duration_);
   EXPECT_EQ(2, td.at(3).at(0).transfers_);
 
   // The default profile applies the transfers.txt rows (4 to 5 min at FFM, 6
@@ -755,16 +753,18 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
     ASSERT_EQ(1U, dd.at(0).size());
     EXPECT_DOUBLE_EQ(1140.0, dd.at(0).at(0).duration_);
     EXPECT_EQ(0, dd.at(0).at(0).transfers_);
-    ASSERT_EQ(1U, dd.at(1).size());
+    ASSERT_EQ(2U, dd.at(1).size());
     EXPECT_DOUBLE_EQ(1320.0, dd.at(1).at(0).duration_);
     EXPECT_EQ(0, dd.at(1).at(0).transfers_);
+    EXPECT_DOUBLE_EQ(1260.0, dd.at(1).at(1).duration_);
+    EXPECT_EQ(1, dd.at(1).at(1).transfers_);
     ASSERT_EQ(2U, dd.at(2).size());
     EXPECT_DOUBLE_EQ(1500.0, dd.at(2).at(0).duration_);
     EXPECT_EQ(0, dd.at(2).at(0).transfers_);
-    EXPECT_DOUBLE_EQ(1440.0, dd.at(2).at(1).duration_);
+    EXPECT_DOUBLE_EQ(1320.0, dd.at(2).at(1).duration_);
     EXPECT_EQ(1, dd.at(2).at(1).transfers_);
     ASSERT_EQ(1U, dd.at(3).size());
-    EXPECT_DOUBLE_EQ(4440.0, dd.at(3).at(0).duration_);
+    EXPECT_DOUBLE_EQ(4320.0, dd.at(3).at(0).duration_);
     EXPECT_EQ(2, dd.at(3).at(0).transfers_);
   }
 
@@ -784,7 +784,7 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
     EXPECT_DOUBLE_EQ(1500.0, dd.at(2).at(0).duration_);
     EXPECT_EQ(0, dd.at(2).at(0).transfers_);
     ASSERT_EQ(1U, dd.at(3).size());
-    EXPECT_DOUBLE_EQ(4440.0, dd.at(3).at(0).duration_);
+    EXPECT_DOUBLE_EQ(4320.0, dd.at(3).at(0).duration_);
     EXPECT_EQ(2, dd.at(3).at(0).transfers_);
   }
 }
@@ -812,10 +812,10 @@ TEST(one_to_many, pareto_sets_with_multiple_entries) {
   ASSERT_EQ(3U, sd.size());
   EXPECT_DOUBLE_EQ(966.0, sd.at(2).duration_.value());
   EXPECT_EQ((std::optional<std::vector<std::vector<api::ParetoSetEntry>>>{{
-                {{.duration_ = 1080.0, .transfers_ = 0}},
+                {{.duration_ = 960.0, .transfers_ = 0}},
                 {{.duration_ = 1140.0, .transfers_ = 0}},
                 {{.duration_ = 1500.0, .transfers_ = 0},
-                 {.duration_ = 1440.0, .transfers_ = 1}},
+                 {.duration_ = 1320.0, .transfers_ = 1}},
             }}),
             durations.transit_durations_);
 }

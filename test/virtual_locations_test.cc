@@ -431,7 +431,7 @@ TEST(virtual_locations, one_to_all_arrive_by_keeps_the_fastest_location) {
     return p.place_->stopId_ == "test_U";
   });
   ASSERT_NE(end(*res.all_), it);
-  EXPECT_EQ(29, it->duration_.value());
+  EXPECT_EQ(27, it->duration_.value());
 }
 
 TEST(virtual_locations, map_stops_lists_each_stop_once) {
