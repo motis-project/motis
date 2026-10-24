@@ -825,12 +825,8 @@ api::Itinerary reconstruct_itinerary(
   // Transfer rules make the change depend on the virtual locations.
   auto const change_location = [&](n::routing::journey::leg const& jl,
                                    bool const is_exit) {
-    auto const& ree = std::get<n::routing::journey::run_enter_exit>(jl.uses_);
-    auto const fr = n::rt::frun{stop_times_ep.tt_, rt.rtt_.get(), ree.r_};
-    return n::routing::search_location(
-        safe_prf_idx,
-        fr[is_exit ? static_cast<n::stop_idx_t>(ree.stop_range_.to_ - 1U)
-                   : ree.stop_range_.from_]);
+    return n::routing::search_location(stop_times_ep.tt_, rt.rtt_.get(),
+                                       safe_prf_idx, jl, is_exit);
   };
 
   auto const reconstruct_transfer =
@@ -932,13 +928,12 @@ api::Itinerary reconstruct_itinerary(
 
     auto const& original =
         std::get<n::routing::journey::run_enter_exit>(jl.uses_);
-    auto const run_of = [](leg const& l) {
-      return std::get<n::routing::journey::run_enter_exit>(l.transit_->uses_);
-    };
-    auto const prev =
-        has_prev_transit ? std::optional{run_of(legs[i - 2U])} : std::nullopt;
-    auto const next =
-        has_next_transit ? std::optional{run_of(legs[i + 2U])} : std::nullopt;
+    auto const prev = has_prev_transit
+                          ? n::routing::run_of(*legs[i - 2U].transit_)
+                          : std::nullopt;
+    auto const next = has_next_transit
+                          ? n::routing::run_of(*legs[i + 2U].transit_)
+                          : std::nullopt;
     auto const next_dep =
         has_next_transit ? legs[i + 2U].transit_->dep_time_ : jl.arr_time_;
 

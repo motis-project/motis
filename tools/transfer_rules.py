@@ -9,7 +9,12 @@ build shares. It follows nigiri's GTFS loader:
 - a rule may name a stop or its station,
 - type 1 (timed) holds the departing vehicle: 0 min,
 - type 3 forbids the transfer,
-- types 4 and 5 (in-seat) and rows without a time are no constraint.
+- types 4 and 5 (in-seat) and rows without a time are no constraint,
+- min_transfer_time is rounded up to minutes and capped at 254 min
+  (footpath::kMax); negative times drop the row,
+- with adjust_footpaths (the motis default), a time is raised to the beeline
+  walk between the row's two stops at 1.5 m/s, and a row whose stops are more
+  than 254 min of walking apart is dropped.
 
 Only transfers a rule governs are judged: without one, the stop's default
 applies, which the feed does not state.
@@ -18,6 +23,7 @@ applies, which the feed does not state.
 import csv
 import io
 import json
+import math
 import os
 import zipfile
 from collections import defaultdict
@@ -30,6 +36,20 @@ STREET_MODES = {"WALK", "BIKE", "RENTAL", "CAR", "HGV", "CAR_PARKING",
                 "DEBUG_BUS_ROUTE", "DEBUG_RAILWAY_ROUTE", "DEBUG_FERRY_ROUTE"}
 
 FORBIDDEN, TOO_SHORT = "FORBIDDEN", "TOO SHORT"
+
+# nigiri: footpath::kMax, kWalkSpeed (m/s), geo::kEarthRadiusMeters
+MAX_MINUTES = 254
+WALK_SPEED = 1.5
+EARTH_RADIUS = 6371000.0
+
+
+def distance(a, b):
+    """Great-circle distance in meters, as nigiri's geo::distance."""
+    lat_a, lng_a = map(math.radians, a)
+    lat_b, lng_b = map(math.radians, b)
+    h = math.sin((lat_b - lat_a) / 2) ** 2 + \
+        math.cos(lat_a) * math.cos(lat_b) * math.sin((lng_b - lng_a) / 2) ** 2
+    return 2 * math.asin(math.sqrt(h)) * EARTH_RADIUS
 
 
 class Feed:
@@ -78,7 +98,8 @@ class GtfsRules:
     `wanted_trips` are read: a national feed has millions of trips, a response
     dump touches a few thousand."""
 
-    def __init__(self, feed, wanted_stops=None, wanted_trips=None):
+    def __init__(self, feed, wanted_stops=None, wanted_trips=None,
+                 adjust_footpaths=True):
         self.by_pair = defaultdict(list)
         self.parent = {}
         self.trip_route = {}
@@ -99,10 +120,15 @@ class GtfsRules:
                 continue  # a trip does not transfer to itself
             from_route = (r.get("from_route_id") or "").strip()
             to_route = (r.get("to_route_id") or "").strip()
-            try:
-                minutes = 0 if ty in (1, 3) else int(mtt) // 60
-            except ValueError:
-                continue
+            minutes = 0
+            if ty in (0, 2):
+                try:
+                    seconds = int(mtt)
+                except ValueError:
+                    continue
+                if seconds < 0:
+                    continue
+                minutes = min((seconds + 59) // 60, MAX_MINUTES)
             key = ((r.get("from_stop_id") or "").strip(),
                    (r.get("to_stop_id") or "").strip())
             self.by_pair[key].append((
@@ -112,13 +138,41 @@ class GtfsRules:
         if not self.by_pair:
             return
 
+        rule_stops = {s for key in self.by_pair for s in key}
+        pos = {}
         for r in feed.rows("stops.txt"):
             if wanted_stops is None or r["stop_id"] in wanted_stops:
                 self.parent[r["stop_id"]] = \
                     (r.get("parent_station") or "").strip() or None
+            if adjust_footpaths and r["stop_id"] in rule_stops:
+                try:
+                    pos[r["stop_id"]] = (float(r["stop_lat"]),
+                                         float(r["stop_lon"]))
+                except (KeyError, TypeError, ValueError):
+                    pass
+
+        if adjust_footpaths:
+            self.adjust_to_walk_speed(pos)
         for r in feed.rows("trips.txt"):
             if wanted_trips is None or r["trip_id"] in wanted_trips:
                 self.trip_route[r["trip_id"]] = r["route_id"]
+
+    def adjust_to_walk_speed(self, pos):
+        """nigiri's adjust_to_walk_speed: a time is at least the beeline walk
+        between the row's stops; rows of stops too far apart to walk are
+        dropped."""
+        for key in list(self.by_pair):
+            if key[0] not in pos or key[1] not in pos:
+                continue
+            d = distance(pos[key[0]], pos[key[1]])
+            if d > MAX_MINUTES * 60 * WALK_SPEED:
+                del self.by_pair[key]
+                continue
+            walk = int(d / WALK_SPEED / 60)
+            self.by_pair[key] = [
+                (level, ty, max(minutes, walk) if ty in (0, 2) else minutes,
+                 fr, tr, ft, tt)
+                for (level, ty, minutes, fr, tr, ft, tt) in self.by_pair[key]]
 
     def any_rule(self):
         return bool(self.by_pair)
@@ -199,20 +253,36 @@ def read_dataset_tags(config):
     return tags
 
 
+def read_adjust_footpaths(config):
+    """`timetable: adjust_footpaths:` of a motis config (default: true)."""
+    in_timetable = False
+    with open(config) as f:
+        for line in f:
+            indent = len(line) - len(line.lstrip())
+            if indent == 0 and line.strip():
+                in_timetable = line.strip() == "timetable:"
+            elif in_timetable and indent == 2 and \
+                    line.strip().startswith("adjust_footpaths:"):
+                return line.split(":", 1)[1].strip().lower() != "false"
+    return True
+
+
 class Checker:
     """Judges response dumps. `feeds` maps the id prefix motis gives a
     dataset's stops and trips ("<tag>_", or "" for a single untagged feed) to
-    the feed's path."""
+    the feed's path. `adjust_footpaths` is the import's setting."""
 
-    def __init__(self, feeds):
+    def __init__(self, feeds, adjust_footpaths=True):
         self.feeds = feeds
+        self.adjust_footpaths = adjust_footpaths
 
     @staticmethod
     def from_config(config, feed_dir):
         """The feeds of a motis config, their paths rooted at `feed_dir` (where
         the import ran)."""
         return Checker({tag + "_": os.path.join(feed_dir, path)
-                        for tag, path in read_dataset_tags(config).items()})
+                        for tag, path in read_dataset_tags(config).items()},
+                       read_adjust_footpaths(config))
 
     def split(self, sid):
         """(prefix, feed stop id), or (None, sid) for an unknown dataset. A tag
@@ -252,7 +322,8 @@ class Checker:
             try:
                 rules = GtfsRules(Feed(path),
                                   {x[1] for x in work} | {x[2] for x in work},
-                                  {x[3] for x in work} | {x[4] for x in work})
+                                  {x[3] for x in work} | {x[4] for x in work},
+                                  self.adjust_footpaths)
             except (zipfile.BadZipFile, OSError):
                 continue
             checked += len(work)

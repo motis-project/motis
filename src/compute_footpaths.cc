@@ -1,6 +1,5 @@
 #include "motis/compute_footpaths.h"
 
-#include "nigiri/loader/build_footpaths.h"
 #include "nigiri/loader/build_lb_graph.h"
 
 #include "cista/mmap.h"
@@ -33,14 +32,16 @@ namespace motis {
 
 constexpr auto const kMaxMissingFootpathDistance = 100.0;
 
-void compute_footpaths(osr::ways const& w,
-                       osr::lookup const& lookup,
-                       osr::platforms const& pl,
-                       nigiri::timetable& tt,
-                       platform_matches_t const& matches,
-                       way_matches_storage const* way_matches,
-                       osr::elevation_storage const* elevations,
-                       std::vector<routed_transfers_settings> const& settings) {
+void compute_footpaths(
+    osr::ways const& w,
+    osr::lookup const& lookup,
+    osr::platforms const& pl,
+    nigiri::timetable& tt,
+    n::mutable_fws_multimap<n::location_idx_t, n::footpath>& walks,
+    platform_matches_t const& matches,
+    way_matches_storage const* way_matches,
+    osr::elevation_storage const* elevations,
+    std::vector<routed_transfers_settings> const& settings) {
   fmt::println(std::clog, "creating r-tree");
   auto const loc_rtree = [&]() {
     auto t = point_rtree<n::location_idx_t>{};
@@ -75,7 +76,7 @@ void compute_footpaths(osr::ways const& w,
 
     auto default_estimates =
         n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
-            mode.writes_default_profile_ ? tt.n_locations() : 0U);
+            mode.is_default_profile_ ? tt.n_locations() : 0U);
 
     auto const is_candidate = [&](n::location_idx_t const l) {
       return !mode.is_candidate_ || mode.is_candidate_(l);
@@ -176,7 +177,7 @@ void compute_footpaths(osr::ways const& w,
             transfers[l].emplace_back(n::footpath{n, duration});
           }
 
-          if (mode.extend_missing_ || mode.writes_default_profile_) {
+          if (mode.extend_missing_ || mode.is_default_profile_) {
             for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
               if (r.has_value()) {
                 continue;
@@ -192,7 +193,7 @@ void compute_footpaths(osr::ways const& w,
               auto const is_close = dist < kMaxMissingFootpathDistance;
               if (mode.extend_missing_ && is_close) {
                 transfers[l].push_back(estimate);
-              } else if (mode.writes_default_profile_ &&
+              } else if (mode.is_default_profile_ &&
                          (is_close || tt.locations_.get_root_idx(l) ==
                                           tt.locations_.get_root_idx(n))) {
                 default_estimates[l].push_back(estimate);
@@ -228,17 +229,14 @@ void compute_footpaths(osr::ways const& w,
     n::loader::build_lb_graph<n::direction::kForward>(tt, mode.profile_idx_);
     n::loader::build_lb_graph<n::direction::kBackward>(tt, mode.profile_idx_);
 
-    if (mode.writes_default_profile_) {
-      auto& fps = tt.locations_.preprocessing_footpaths_out_;
-      fps.clear();
-      for (auto const [i, walks] : utl::enumerate(transfers)) {
+    if (mode.is_default_profile_) {
+      walks.clear();
+      for (auto const [i, routed] : utl::enumerate(transfers)) {
         auto const l = n::location_idx_t{i};
-        utl::concat(walks, default_estimates[l]);
-        auto bucket = fps.emplace_back();
-        for (auto const fp : walks) {
-          bucket.push_back(
-              n::footpath{fp.target(), n::loader::max_with_transfer_times(
-                                           tt, l, fp.target(), fp.duration())});
+        utl::concat(routed, default_estimates[l]);
+        auto bucket = walks.emplace_back();
+        for (auto const fp : routed) {
+          bucket.push_back(fp);
         }
       }
     }

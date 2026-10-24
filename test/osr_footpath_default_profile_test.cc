@@ -84,17 +84,11 @@ std::optional<int> minutes(n::timetable const& tt,
                            char const* from,
                            char const* to) {
   auto const src = n::source_idx_t{0U};
-  auto const a = tt.locations_.location_id_to_idx_.at({from, src});
-  auto const b = tt.locations_.location_id_to_idx_.at({to, src});
-  auto best = std::optional<int>{};
-  for (auto const fp :
-       n::routing::get_transfers<n::direction::kForward>(tt, nullptr, prf, a)) {
-    if (fp.target() == b &&
-        (!best.has_value() || fp.duration().count() < *best)) {
-      best = fp.duration().count();
-    }
-  }
-  return best;
+  return n::routing::shortest_transfer(
+             tt, nullptr, prf,
+             tt.locations_.location_id_to_idx_.at({from, src}),
+             tt.locations_.location_id_to_idx_.at({to, src}))
+      .transform([](n::duration_t const d) { return d.count(); });
 }
 
 // Without osr_footpath, the default profile keeps the loader's footpath layer.

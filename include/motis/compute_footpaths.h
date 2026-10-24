@@ -19,13 +19,15 @@ struct routed_transfers_settings {
   std::chrono::seconds max_duration_;
   std::function<bool(nigiri::location_idx_t)> is_candidate_{};
 
-  bool writes_default_profile_{false};
+  bool is_default_profile_{false};
 };
 
 void compute_footpaths(osr::ways const&,
                        osr::lookup const&,
                        osr::platforms const&,
                        nigiri::timetable&,
+                       nigiri::mutable_fws_multimap<nigiri::location_idx_t,
+                                                    nigiri::footpath>& walks,
                        platform_matches_t const&,
                        way_matches_storage const*,
                        osr::elevation_storage const*,

@@ -10,7 +10,7 @@
 #include "osr/routing/parameters.h"
 #include "osr/routing/route.h"
 
-#include "nigiri/loader/build_footpaths.h"
+#include "nigiri/td_footpath.h"
 
 #include "motis/constants.h"
 #include "motis/get_loc.h"
@@ -186,7 +186,7 @@ void update_rtt_td_footpaths(osr::ways const& w,
       });
 
   // Routed between stops: virtual locations walk like their stop.
-  n::loader::expand_td_footpaths_to_virts(tt, out);
+  n::expand_td_footpaths_to_virts(tt, out);
 
   // The td footpaths of a source replace all its static footpaths:
   // has_td_footpaths_in_ marks the targets of both.

@@ -41,6 +41,9 @@ def main():
     ap.add_argument("--tag", default="",
                     help="with --gtfs: the id prefix motis gave the dataset, "
                          "e.g. 'ch_'")
+    ap.add_argument("--no-adjust-footpaths", action="store_true",
+                    help="with --gtfs: the import ran with "
+                         "adjust_footpaths: false (--config reads it)")
     ap.add_argument("--max-shown", type=int, default=10, metavar="N",
                     help="violations to list per file (default 10)")
     ap.add_argument("responses", nargs="+",
@@ -48,7 +51,8 @@ def main():
     args = ap.parse_args()
 
     if args.gtfs:
-        checker = Checker({args.tag: args.gtfs})
+        checker = Checker({args.tag: args.gtfs},
+                          not args.no_adjust_footpaths)
     else:
         checker = Checker.from_config(
             args.config,
