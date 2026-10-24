@@ -855,6 +855,10 @@ export const getStyle = (
 					]
 				}
 			},
+			// only roads with a ref get the full-width opaque body in the next layers; everything else
+			// is carried by the faint back layers (thin at overview zooms) and the minor-way layers.
+			// minzoom 6: rail comes first, motorway/trunk one zoom later (only
+			// those two kinds exist below z6 in the tiles).
 			{
 				id: 'road-motorway',
 				type: 'line',
@@ -863,11 +867,6 @@ export const getStyle = (
 				layout: {
 					'line-cap': 'round'
 				},
-				// like the old release: only roads with a ref get the full-width
-				// opaque body here; everything else is carried by the faint back
-				// layers (thin at overview zooms) and the minor-way layers.
-				// minzoom 6: rail comes first, motorway/trunk one zoom later (only
-				// those two kinds exist below z6 in the tiles).
 				minzoom: 6,
 				filter: [
 					'all',
@@ -898,11 +897,6 @@ export const getStyle = (
 				layout: {
 					'line-cap': 'round'
 				},
-				// like the old release: only roads with a ref get the full-width
-				// opaque body here; everything else is carried by the faint back
-				// layers (thin at overview zooms) and the minor-way layers.
-				// minzoom 6: rail comes first, motorway/trunk one zoom later (only
-				// those two kinds exist below z6 in the tiles).
 				minzoom: 6,
 				filter: [
 					'all',
@@ -933,11 +927,6 @@ export const getStyle = (
 				layout: {
 					'line-cap': 'round'
 				},
-				// like the old release: only roads with a ref get the full-width
-				// opaque body here; everything else is carried by the faint back
-				// layers (thin at overview zooms) and the minor-way layers.
-				// minzoom 6: rail comes first, motorway/trunk one zoom later (only
-				// those two kinds exist below z6 in the tiles).
 				minzoom: 6,
 				filter: [
 					'all',
@@ -974,11 +963,6 @@ export const getStyle = (
 				layout: {
 					'line-cap': 'round'
 				},
-				// like the old release: only roads with a ref get the full-width
-				// opaque body here; everything else is carried by the faint back
-				// layers (thin at overview zooms) and the minor-way layers.
-				// minzoom 6: rail comes first, motorway/trunk one zoom later (only
-				// those two kinds exist below z6 in the tiles).
 				minzoom: 6,
 				filter: [
 					'all',
