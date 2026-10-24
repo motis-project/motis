@@ -273,8 +273,8 @@
 				'ignorePostTransitRentalReturnConstraints'
 			),
 			elevationCosts: (urlParams?.get('elevationCosts') ?? undefined) as ElevationCosts | undefined,
-			cyclingSpeed: parseIntOr(urlParams?.get('cyclingSpeed'), undefined),
-			pedestrianSpeed: parseIntOr(urlParams?.get('pedestrianSpeed'), undefined),
+			cyclingSpeed: parseFloatOr(urlParams?.get('cyclingSpeed'), undefined),
+			pedestrianSpeed: parseFloatOr(urlParams?.get('pedestrianSpeed'), undefined),
 			maxMatchingDistance: parseIntOr(urlParams?.get('maxMatchingDistance'), undefined),
 			maxPreTransitTime: parseIntOr(urlParams?.get('maxPreTransitTime'), undefined),
 			maxPostTransitTime: parseIntOr(urlParams?.get('maxPostTransitTime'), undefined),
@@ -310,7 +310,7 @@
 			});
 			from = placeToLocation(legs[0].from);
 			to = placeToLocation(legs[legs.length - 1].to);
-			time = new Date(arriveBy ? itinerary!.endTime : itinerary!.startTime);
+			time = wholeMinute(new Date(arriveBy ? itinerary!.endTime : itinerary!.startTime));
 
 			// Suppress the initial auto-search.
 			lastPlanQuery = baseQuery;
@@ -379,6 +379,8 @@
 		}
 	}
 
+	const wholeMinute = (d: Date) => new Date(Math.floor(d.getTime() / 60000) * 60000);
+
 	let advancedOptionsOpen = $state<boolean>(false);
 	let isochronesAdvancedOptionsOpen = $state<boolean>(false);
 	let fromMarker = $state<maplibregl.Marker>();
@@ -416,7 +418,7 @@
 	let viaMinimumStay = $state(
 		urlParams?.has('via') ? getUrlArray('viaMinimumStay').map((s) => parseIntOr(s, 0)) : undefined
 	);
-	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
+	let time = $state<Date>(wholeMinute(new Date(urlParams?.get('time') || Date.now())));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
 		urlParams?.get('searchWindow')
@@ -446,10 +448,10 @@
 			: defaultQuery.pedestrianProfile) as PedestrianProfile
 	);
 	let pedestrianSpeed = $state(
-		parseIntOr(urlParams?.get('pedestrianSpeed'), defaultQuery.pedestrianSpeed)
+		parseFloatOr(urlParams?.get('pedestrianSpeed'), defaultQuery.pedestrianSpeed)
 	) as PedestrianSpeed;
 	let cyclingSpeed = $state(
-		parseIntOr(urlParams?.get('cyclingSpeed'), defaultQuery.cyclingSpeed)
+		parseFloatOr(urlParams?.get('cyclingSpeed'), defaultQuery.cyclingSpeed)
 	) as CyclingSpeed;
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
@@ -515,7 +517,7 @@
 		)
 	);
 	let transferTimeFactor = $state(
-		parseIntOr(urlParams?.get('transferTimeFactor'), defaultQuery.transferTimeFactor)
+		parseFloatOr(urlParams?.get('transferTimeFactor'), defaultQuery.transferTimeFactor)
 	);
 	let additionalTransferTime = $state(
 		parseIntOr(urlParams?.get('additionalTransferTime'), defaultQuery.additionalTransferTime)
@@ -601,6 +603,12 @@
 	const includeHgvOptions = (...modeGroups: Array<PrePostDirectMode[] | undefined>) =>
 		modeGroups.some((modes) => modes?.includes('HGV'));
 
+	let queryTransitModes = $derived(
+		(transitModes.length == possibleTransitModes.length
+			? defaultQuery.transitModes
+			: transitModes) as Mode[]
+	);
+
 	let baseQuery = $derived(
 		from.match && to.match && !advancedOptionsOpen
 			? ({
@@ -619,10 +627,7 @@
 						fastestDirectFactor: 10,
 						pedestrianProfile,
 						joinInterlinedLegs: false,
-						transitModes:
-							transitModes.length == possibleTransitModes.length
-								? defaultQuery.transitModes
-								: transitModes,
+						transitModes: queryTransitModes,
 						preTransitModes: prePostModesToModes(preTransitModes),
 						postTransitModes: prePostModesToModes(postTransitModes),
 						directModes: prePostModesToModes(directModes),
@@ -679,9 +684,7 @@
 	);
 
 	let refreshLegAlternativeParams = $derived({
-		transitModes: (transitModes.length == possibleTransitModes.length
-			? defaultQuery.transitModes
-			: transitModes) as Mode[],
+		transitModes: queryTransitModes,
 		pedestrianProfile,
 		useRoutedTransfers,
 		requireBikeTransport,
@@ -716,7 +719,7 @@
 						one: toPlaceString(one),
 						maxTravelTime: Math.ceil(maxTravelTime / 60),
 						time: time.toISOString(),
-						transitModes,
+						transitModes: queryTransitModes,
 						maxTransfers,
 						arriveBy,
 						cyclingSpeed,
@@ -757,6 +760,7 @@
 	);
 
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	const searchDebounceMs = 400;
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
@@ -836,16 +840,17 @@
 		);
 	};
 
+	const sameQuery = (a: { query: unknown } | undefined, b: { query: unknown } | undefined) =>
+		JSON.stringify(a?.query) === JSON.stringify(b?.query);
+
 	$effect(() => {
-		const eq = (a: PlanData | undefined, b: PlanData | undefined) =>
-			JSON.stringify(a?.query) === JSON.stringify(b?.query);
-		if (baseQuery && !eq(baseQuery, lastPlanQuery) && activeTab == 'connections') {
+		if (baseQuery && !sameQuery(baseQuery, lastPlanQuery) && activeTab == 'connections') {
 			const q = baseQuery;
 			const timeChanged = lastPlanQuery != undefined && lastPlanQuery.query.time != q.query.time;
 			lastPlanQuery = q;
 			clearTimeout(searchDebounceTimer);
 			if (timeChanged) {
-				searchDebounceTimer = setTimeout(() => baseSearch(q), 400);
+				searchDebounceTimer = setTimeout(() => baseSearch(q), searchDebounceMs);
 			} else {
 				baseSearch(q);
 			}
@@ -855,7 +860,7 @@
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
 			const isochronesOpacity = isochronesOptions.opacity;
-			if (lastOneToAllQuery != isochronesQuery) {
+			if (!sameQuery(isochronesQuery, lastOneToAllQuery)) {
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
 				isochronesOptions.status = 'WORKING';
@@ -885,7 +890,7 @@
 						isochronesOptions.errorMessage = String(e);
 						isochronesOptions.errorCode = 404;
 					}
-				}, 60);
+				}, searchDebounceMs);
 			}
 			untrack(() => {
 				const q = isochronesQuery.query;
