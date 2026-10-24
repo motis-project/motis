@@ -250,6 +250,11 @@ bool station_relevant_for_product(station const& st,
         utl::any_of(st.status_.vehicle_docks_available_, [&](auto const& vt) {
           return vt.second != 0 && prod.includes_vehicle_type(vt.first);
         });
+  } else if (is_returning && st.status_.num_docks_available_ &&
+             st.info_.capacity_.value_or(0U) > 0U) {
+    // no counts per vehicle type: fall back to the published total, but
+    // only for stations that declare physical docks
+    is_returning = *st.status_.num_docks_available_ != 0;
   }
   return is_renting || is_returning;
 }
