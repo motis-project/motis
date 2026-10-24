@@ -491,48 +491,33 @@ export type Reservation = 'NONE' | 'COMPULSORY';
 export type BookingType = 'REAL_TIME' | 'UP_TO_SAME_DAY' | 'UP_TO_PRIOR_DAYS';
 
 /**
- * GTFS-Flex booking rule (`booking_rules.txt`) for boarding (`pickupBookingRule`) or alighting (`dropOffBookingRule`) at a place of a `FLEX` leg.
- * The booking window of the rule is resolved for this leg into absolute timestamps (`earliestBookingTime`, `latestBookingTime`).
- * GTFS times are used with minute precision (seconds are dropped).
+ * GTFS-Flex booking rule (`booking_rules.txt`).
+ * Days before the day of travel are counted in the agency timezone (only days of `prior_notice_service_id` if set).
+ * `prior_notice_start_time` and `prior_notice_last_time` are local times in the agency timezone
+ * (see https://github.com/google/transit/issues/670).
  *
  */
 export type BookingRule = {
     bookingType: BookingType;
     /**
-     * GTFS `prior_notice_duration_min`: minimum number of minutes before travel to make the booking request.
-     * Only set for `UP_TO_SAME_DAY`.
-     *
+     * Minimum number of minutes before travel to make the booking request (`UP_TO_SAME_DAY`).
      */
     priorNoticeDurationMin?: number;
     /**
-     * GTFS `prior_notice_duration_max`: maximum number of minutes before travel to make the booking request.
-     * Only set for `UP_TO_SAME_DAY`, and only if the booking rule defines it.
-     *
+     * Maximum number of minutes before travel to make the booking request (`UP_TO_SAME_DAY`).
      */
     priorNoticeDurationMax?: number;
     /**
-     * Earliest time at which the booking request can be made for this leg.
-     * - `UP_TO_SAME_DAY`: `startTime` of the leg minus `priorNoticeDurationMax`.
-     * - `UP_TO_PRIOR_DAYS`: GTFS `prior_notice_start_time` on the day that is `prior_notice_start_day` days
-     * before the service day of the trip (only days of `prior_notice_service_id` are counted if it is set).
-     * `prior_notice_start_time` is interpreted as local time in the timezone of the agency
-     * (`agency_timezone`), see https://github.com/google/transit/issues/670.
-     *
-     * Not set if the booking rule defines no earliest booking time (always for `REAL_TIME`)
-     * or if it cannot be determined (e.g. days counted with `prior_notice_service_id` outside of the loaded timetable).
+     * Earliest time to make the booking request for this leg.
+     * - `UP_TO_SAME_DAY`: `startTime` of the leg minus `priorNoticeDurationMax`
+     * - `UP_TO_PRIOR_DAYS`: `prior_notice_start_time` on the day `prior_notice_start_day` days before the day of travel
      *
      */
     earliestBookingTime?: string;
     /**
-     * Latest time at which the booking request can be made for this leg (booking deadline).
-     * - `UP_TO_SAME_DAY`: `startTime` of the leg minus `priorNoticeDurationMin`.
-     * - `UP_TO_PRIOR_DAYS`: GTFS `prior_notice_last_time` on the day that is `prior_notice_last_day` days
-     * before the service day of the trip (only days of `prior_notice_service_id` are counted if it is set).
-     * `prior_notice_last_time` is interpreted as local time in the timezone of the agency
-     * (`agency_timezone`), see https://github.com/google/transit/issues/670.
-     *
-     * Not set for `REAL_TIME` or if it cannot be determined (e.g. days counted with `prior_notice_service_id`
-     * outside of the loaded timetable).
+     * Latest time to make the booking request for this leg.
+     * - `UP_TO_SAME_DAY`: `startTime` of the leg minus `priorNoticeDurationMin`
+     * - `UP_TO_PRIOR_DAYS`: `prior_notice_last_time` on the day `prior_notice_last_day` days before the day of travel
      *
      */
     latestBookingTime?: string;
@@ -683,15 +668,11 @@ export type Place = {
      */
     flexEndPickupDropOffWindow?: string;
     /**
-     * for `FLEX` transports, the GTFS-Flex booking rule for boarding at this place
-     * (`pickup_booking_rule_id` of the stop time). Only set for the `from` place of a `FLEX` leg.
-     *
+     * for `FLEX` transports, the booking rule for boarding at this place (`from` of the leg)
      */
     pickupBookingRule?: BookingRule;
     /**
-     * for `FLEX` transports, the GTFS-Flex booking rule for alighting at this place
-     * (`drop_off_booking_rule_id` of the stop time). Only set for the `to` place of a `FLEX` leg.
-     *
+     * for `FLEX` transports, the booking rule for alighting at this place (`to` of the leg)
      */
     dropOffBookingRule?: BookingRule;
     /**

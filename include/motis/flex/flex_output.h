@@ -1,19 +1,10 @@
 #pragma once
 
-#include "date/tz.h"
-
 #include "motis/flex/flex_routing_data.h"
 #include "motis/flex/mode_payload.h"
 #include "motis/osr/street_routing.h"
 
 namespace motis::flex {
-
-// Converts the local time `time` on `day` in the timezone `tz` to an absolute
-// time. Ambiguous local times (end of DST) resolve to the earlier one,
-// nonexistent local times (start of DST) to the DST transition.
-nigiri::unixtime_t local_time_to_unixtime(date::time_zone const* tz,
-                                          date::local_days day,
-                                          nigiri::duration_t time);
 
 std::string_view get_flex_stop_name(nigiri::timetable const&,
                                     nigiri::lang_t const&,

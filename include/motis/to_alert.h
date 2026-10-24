@@ -66,10 +66,7 @@ inline api::Alert to_alert(
       .ttsHeaderText_ = get_translation(al.tts_header_text_[x]),
       .ttsDescriptionText_ = get_translation(al.tts_description_text_[x]),
       .severityLevel_ =
-          al.severity_level_[x] == nigiri::alert_severity::kUnknownSeverity
-              ? std::nullopt
-              : std::optional{api::AlertSeverityLevelEnum{
-                    static_cast<int>(al.severity_level_[x])}},
+          api::AlertSeverityLevelEnum{static_cast<int>(al.severity_level_[x])},
       .imageUrl_ = al.image_[x].empty()
                        ? std::nullopt
                        : al.strings_.try_get(al.image_[x].front().url_)
