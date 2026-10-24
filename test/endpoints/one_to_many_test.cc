@@ -351,7 +351,9 @@ TEST(one_to_many,
           {
               "test_DA_10",
               "50.107577,8.6638173",  // de:6412:10:6:1
-              "test_de:6412:10:6:1", "test_FFM_101", "test_FFM_HAUPT_S",
+              "test_de:6412:10:6:1",
+              "test_FFM_101",
+              "test_FFM_HAUPT_S",
               "50.11385,8.67912",  // FFM_HAUPT_U
               "50.10590,8.66452",  // Near FFM
               "50.113291,8.678321,0",  // Near FFM_HAUPT
@@ -740,9 +742,9 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
         .many_ = {"49.875292,8.6277460", "49.874995,8.6313925",
                   "49.871561,8.6320181", "50.111900,8.675208"},
         .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
-        .maxPreTransitTime_ = 240,  // Bus1 only: no walk to Tram_1 / Tram_2
         .maxMatchingDistance_ = 25,
         .useRoutedTransfers_ = false,
+        .maxPreTransitTime_ = 240,  // Bus1 only: no walk to Tram_1 / Tram_2
         .withDistance_ = true});
   };
 

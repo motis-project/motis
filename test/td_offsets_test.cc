@@ -216,8 +216,8 @@ TEST(motis, td_offsets_merge_inactive_after_cut) {
 
   // The slow offer is cut at 250 + 10 - 100 = 160; the envelope already has an
   // inactive gap at 200 (slow closes, fast not yet open). The cut's inactive
-  // entry and that gap are adjacent kTdFootpathBan entries -> they must collapse
-  // into a single one.
+  // entry and that gap are adjacent kTdFootpathBan entries -> they must
+  // collapse into a single one.
   auto offsets = raw({
       {100, 200, n::duration_t{100}, slow},
       {250, 400, n::duration_t{10}, fast},
