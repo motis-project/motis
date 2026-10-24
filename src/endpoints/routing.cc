@@ -129,7 +129,7 @@ std::vector<n::routing::offset> client_offsets(
     // parent stations have no departures - expand them to their child stops
     // (a child stop expands to just itself)
     n::routing::for_each_meta(
-        tt, n::routing::location_match_mode::kOnlyChildren,
+        tt, nullptr, n::routing::location_match_mode::kOnlyChildren,
         tags.get_location(tt, x.stopId_), [&](n::location_idx_t const l) {
           ret.emplace_back(l, duration, mode);
         });
@@ -570,7 +570,7 @@ std::vector<n::routing::offset> routing::get_offsets(
               return station_start(l.l_);
             }
             auto offsets = do_get_offsets(stop_to_osr_location(*this, l.l_));
-            for_each_meta(*tt_,
+            for_each_meta(*tt_, nullptr,
                           nigiri::routing::location_match_mode::kEquivalent,
                           l.l_, [&](n::location_idx_t const c) {
                             offsets.emplace_back(c, n::duration_t{0U}, 0U);
@@ -763,7 +763,7 @@ void remove_slower_than_fastest_direct(n::routing::query& q) {
 
   auto const worse_than_fastest_direct = [&](n::duration_t const min) {
     return [&, min](auto const& o) {
-      return o.duration() < nigiri::footpath::kMaxDuration &&
+      return o.duration() < nigiri::kTdFootpathBan &&
              o.duration() + min >= q.fastest_direct_;
     };
   };
@@ -1164,7 +1164,7 @@ api::plan_response routing::route(api::plan_params const& query,
     auto search_state = n::routing::search_state{};
 #if defined(NIGIRI_CUDA)
     auto gpu_used = false;
-    auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
+    auto const gpu_supported = n::routing::gpu::is_gpu_supported(q, rtt);
     auto const run_on_gpu = [&](bool const use_pong) -> bool {
       try {
         auto const lease = gpu_pool_->acquire();

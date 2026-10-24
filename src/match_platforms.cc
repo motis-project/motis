@@ -228,7 +228,9 @@ vector_map<n::location_idx_t, osr::platform_idx_t> get_matches(
   m.resize(tt.n_locations());
   utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
     auto const l = n::location_idx_t{i};
-    m[l] = get_match(tt, pl, w, lookup, l, max_matching_distance);
+    m[l] = tt.locations_.is_virt(l)
+               ? osr::platform_idx_t::invalid()
+               : get_match(tt, pl, w, lookup, l, max_matching_distance);
   });
   return m;
 }

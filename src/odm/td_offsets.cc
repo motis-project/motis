@@ -36,7 +36,7 @@ std::pair<nr::td_offsets_t, nr::td_offsets_t> get_td_offsets_split(
         td_offsets[o.target_].push_back(
             nr::td_offset::make(i.from_, o.duration_, mode));
         td_offsets[o.target_].push_back(nr::td_offset::make(
-            i.to_ - o.duration_ + 1min, n::footpath::kMaxDuration, mode));
+            i.to_ - o.duration_ + 1min, n::kTdFootpathBan, mode));
       }
     }
     return td_offsets;

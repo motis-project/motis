@@ -145,10 +145,11 @@ data::data(std::filesystem::path p, config const& c)
   verify_version(c.timetable_.has_value(), "tt", n_version());
   verify_version(c.geocoding_ || c.reverse_geocoding_, "adr", adr_version());
   verify_version(c.use_street_routing(), "osr", osr_version());
-  verify_version(c.use_street_routing() && c.timetable_, "matches",
-                 matches_version());
+  // osr_footpath: the timetable import routes the walks (from the matches)
+  verify_version(c.use_street_routing() && c.timetable_,
+                 c.osr_footpath_ ? "tt" : "matches", matches_version());
   verify_version(c.tiles_.has_value(), "tiles", tiles_version());
-  verify_version(c.osr_footpath_, "osr_footpath", osr_footpath_version());
+  verify_version(c.osr_footpath_, "tt", osr_footpath_version());
 
   rt_ = std::make_shared<rt>();
 
@@ -174,7 +175,7 @@ data::data(std::filesystem::path p, config const& c)
 
   auto tt = std::async(std::launch::async, [&]() {
     if (c.timetable_) {
-      load_tt(config_.osr_footpath_ ? "tt_ext.bin" : "tt.bin");
+      load_tt("tt.bin");
       if (c.timetable_->with_shapes_) {
         load_shapes();
       }
@@ -297,8 +298,13 @@ data::data(std::filesystem::path p, config const& c)
       "mismatch: n_routes={}, n_route_bboxes={}, n_route_segment_bboxes={}",
       tt_->n_routes(), shapes_->route_bboxes_.size(),
       shapes_->route_segment_bboxes_.size());
+  // osr_footpath adds virtual locations after matching: never looked up, nigiri
+  // hands out their base locations
   utl_verify(matches_ == nullptr || tt_ == nullptr ||
-                 matches_->size() == tt_->n_locations(),
+                 matches_->size() == tt_->n_locations() ||
+                 (matches_->size() < tt_->n_locations() &&
+                  tt_->locations_.is_virt(n::location_idx_t{
+                      static_cast<std::uint32_t>(matches_->size())})),
              "mismatch: n_matches={}, n_locations={}", matches_->size(),
              tt_->n_locations());
 

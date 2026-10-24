@@ -173,9 +173,8 @@ std::optional<api::TicketUrls> get_ticketing_urls(
   }
 
   if (tt.locations_.ticketing_unavailable_.test(
-          enter_stop.get_stop().location_idx()) ||
-      tt.locations_.ticketing_unavailable_.test(
-          exit_stop.get_stop().location_idx())) {
+          enter_stop.get_location_idx()) ||
+      tt.locations_.ticketing_unavailable_.test(exit_stop.get_location_idx())) {
     return std::nullopt;
   }
 
@@ -205,7 +204,7 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     auto const location_ticketing_id =
         [&](n::rt::run_stop stop) -> std::optional<std::string_view> {
       auto const provider_ids =
-          tt.location_ticketing_identifier_[stop.get_stop().location_idx()];
+          tt.location_ticketing_identifier_[stop.get_location_idx()];
       auto const provider_idx = exit_stop.get_provider_idx(n::event_type::kArr);
 
       auto const it = std::lower_bound(
