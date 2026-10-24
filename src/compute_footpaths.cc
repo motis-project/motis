@@ -161,8 +161,8 @@ void compute_footpaths(osr::ways const& w,
                     }
                     return s.neighbor_candidates_;
                   }(),
-                  static_cast<osr::cost_t>(max_duration.count()),
-                  osr::direction::kForward, nullptr, nullptr, elevations,
+                  max_duration, osr::direction::kForward, nullptr, nullptr,
+                  elevations,
                   [](osr::path const& p) { return p.uses_elevator_; })
                   ->results();
 
@@ -172,7 +172,7 @@ void compute_footpaths(osr::ways const& w,
             }
 
             auto const duration = n::duration_t{
-                static_cast<unsigned>(std::ceil(r->cost_ / 60.0))};
+                static_cast<unsigned>(std::ceil(r->duration_.count() / 60.0))};
             transfers[l].emplace_back(n::footpath{n, duration});
           }
 

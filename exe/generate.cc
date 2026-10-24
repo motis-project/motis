@@ -461,13 +461,13 @@ int generate(int ac, char** av) {
       if (max_direct == 0U || d.w_ == nullptr || d.l_ == nullptr) {
         return false;
       }
-      auto const max_cost = static_cast<osr::cost_t>(max_direct * 60U);
+      auto const max = std::chrono::seconds{max_direct * 60U};
       auto const p = osr::route(
           to_profile_parameters(osr::search_profile::kFoot, {}), *d.w_, *d.l_,
           osr::search_profile::kFoot, osr::location{from, osr::level_t{}},
-          osr::location{to, osr::level_t{}}, max_cost, osr::direction::kForward,
+          osr::location{to, osr::level_t{}}, max, osr::direction::kForward,
           kMaxMatchingDistance);
-      return p.has_value() && p->cost_ <= max_cost;
+      return p.has_value() && p->duration_ <= max;
     };
 
     auto const random_from_to = [&] {

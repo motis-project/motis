@@ -438,7 +438,8 @@ api::trips_response get_trains(tag_lookup const& tags,
           .arrival_ = to.time(n::event_type::kArr),
           .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
           .scheduledArrival_ = to.scheduled_time(n::event_type::kArr),
-          .realTime_ = fr.is_rt(),
+          .realTime_ = from.has_rt_data(n::event_type::kDep) ||
+                       to.has_rt_data(n::event_type::kArr),
           .polyline_ = std::move(enc.buf_)};
     });
   });

@@ -345,7 +345,8 @@ void import(config const& c,
 
     auto const progress_tracker = utl::get_active_progress_tracker();
     progress_tracker->status("Prepare Platform Matches");
-    auto const matches = get_matches(tt, *d.pl_, *d.w_);
+    auto const matches = get_matches(tt, *d.pl_, *d.w_, *d.l_,
+                                     c.timetable_->max_matching_distance_);
     cista::write(data_path / "matches.bin", matches);
 
     auto way_matches = std::optional<way_matches_storage>{};
@@ -533,7 +534,8 @@ void import(config const& c,
         auto const progress_tracker = utl::get_active_progress_tracker();
         progress_tracker->status("Prepare Platform Matches").out_bounds(0, 30);
         cista::write(data_path / "matches.bin",
-                     get_matches(*d.tt_, *d.pl_, *d.w_));
+                     get_matches(*d.tt_, *d.pl_, *d.w_, *d.l_,
+                                 c.timetable_->max_matching_distance_));
 
         d.load_matches();
         if (c.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
@@ -549,7 +551,10 @@ void import(config const& c,
       {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
        std::pair{"way_matches",
                  cista::build_hash(c.timetable_.value_or(config::timetable{})
-                                       .preprocess_max_matching_distance_)}}};
+                                       .preprocess_max_matching_distance_)},
+       std::pair{"max_matching_distance",
+                 cista::build_hash(c.timetable_.value_or(config::timetable{})
+                                       .max_matching_distance_)}}};
 
   auto tbd = task{"tbd",
                   {&tt},
@@ -644,12 +649,11 @@ void import(config const& c,
                             c.tiles_->profile_.generic_string(),
                             dir.generic_string(), c.tiles_->flush_threshold_);
 
-          progress_tracker->status("Merge Shards").out_bounds(70, 80);
+          // merge_shards writes every tile optimally packed (quad tree
+          // index), so no separate pack_features pass is needed.
+          progress_tracker->status("Merge Shards").out_bounds(70, 90);
           ::tiles::merge_shards(pool, db_handle, pack_handle);
         }
-
-        progress_tracker->status("Pack Features").out_bounds(80, 90);
-        ::tiles::pack_features(db_handle, pack_handle);
 
         progress_tracker->status("Prepare Tiles").out_bounds(90, 100);
         ::tiles::prepare_tiles(db_handle, pack_handle, 10);
