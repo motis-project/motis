@@ -21,25 +21,25 @@ namespace motis::flex {
 
 namespace {
 
-// `days` days before `day`. If `service` is set, only its days are counted
+// `n` days before `day`. If `service` is set, only its days are counted
 // (GTFS `prior_notice_service_id`).
 std::optional<date::local_days> days_before(n::timetable const& tt,
                                             date::local_days day,
-                                            unsigned days,
+                                            unsigned n,
                                             n::bitfield_idx_t const service) {
   if (service == n::bitfield_idx_t::invalid()) {
-    return day - date::days{days};
+    return day - date::days{n};
   }
   auto const first =
       date::local_days{tt.internal_interval_days().from_.time_since_epoch()};
-  while (days != 0U) {
+  while (n != 0U) {
     day -= date::days{1};
     if (day < first) {
       return std::nullopt;
     }
     if (tt.bitfields_[service].test(
             static_cast<std::size_t>((day - first).count()))) {
-      --days;
+      --n;
     }
   }
   return day;
@@ -61,12 +61,12 @@ std::optional<api::BookingRule> get_booking_rule(
     return s.empty() ? std::nullopt : std::optional{std::string{s}};
   };
 
-  // Local time on the day `days` days before the day of travel.
+  // Local time on the day `n` days before the day of travel.
   auto const day_of_travel = date::floor<date::days>(tz->to_local(start));
   auto const local_time =
-      [&](unsigned const days, n::duration_t const time,
+      [&](unsigned const n, n::duration_t const time,
           n::bitfield_idx_t const service) -> std::optional<n::unixtime_t> {
-    auto const day = days_before(tt, day_of_travel, days, service);
+    auto const day = days_before(tt, day_of_travel, n, service);
     if (!day.has_value()) {
       return std::nullopt;
     }

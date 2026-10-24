@@ -8,6 +8,8 @@
 #endif
 #include "gtfsrt/gtfs-realtime.pb.h"
 
+#include "fmt/format.h"
+
 #include "utl/init_from.h"
 
 #include "nigiri/rt/gtfsrt_update.h"
@@ -28,12 +30,12 @@ namespace n = nigiri;
 
 namespace {
 
-// Three flex trips from A to B on 2019-05-01 (Europe/Berlin = UTC+2).
+// Three flex trips from A to B on 2019-05-01, agency timezone as parameter.
 // Booking days of `br_service_day` only count S_BOOK days.
-constexpr auto const kFlexGtfs = R"(
+constexpr auto const kFlexGtfsTemplate = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
-RUF,Rufbus Musterland,https://example.org,Europe/Berlin
+RUF,Rufbus Musterland,https://example.org,{}
 
 # stops.txt
 stop_id,stop_name,stop_lat,stop_lon
@@ -89,7 +91,7 @@ flex_trip_2,1,lg_2,08:30:00,18:00:00,2,1,br_real_time,
 flex_trip_2,2,lg_2,08:30:00,18:00:00,1,2,,br_same_day_unbounded
 flex_trip_3,1,lg_3,08:30:00,18:00:00,2,1,br_service_day,
 flex_trip_3,2,lg_3,08:30:00,18:00:00,1,2,,
-)"sv;
+)";
 
 // Daily flex trip from A to B across the end of DST (2019-10-27).
 constexpr auto const kFlexDstGtfs = R"(
@@ -146,13 +148,12 @@ config flex_config(std::string_view const gtfs,
 }
 
 api::plan_response route_a_to_b(ep::routing const& routing,
-                                sys_days const day) {
+                                sys_seconds const time) {
   return routing(
       "?fromPlace=50.1062497,8.6582223"
       "&toPlace=50.1079161,8.6605383"
       "&time=" +
-      format("%F", day) +
-      "T07:00Z"
+      format("%FT%H:%MZ", time) +
       "&timetableView=false"
       "&transitModes="
       "&directModes=FLEX");
@@ -179,12 +180,13 @@ TEST(motis, flex_booking_rules) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data_flex_booking_rules", ec);
 
-  auto const c = flex_config(kFlexGtfs, "2019-04-25", 8U);
+  auto const c = flex_config(fmt::format(kFlexGtfsTemplate, "Europe/Berlin"),
+                             "2019-04-25", 8U);
   import(c, "test/data_flex_booking_rules");
   auto d = data{"test/data_flex_booking_rules", c};
 
   auto const routing = utl::init_from<ep::routing>(d).value();
-  auto const res = route_a_to_b(routing, sys_days{2019_y / May / 1});
+  auto const res = route_a_to_b(routing, sys_days{2019_y / May / 1} + 7h);
 
   // UP_TO_PRIOR_DAYS: from 7 days before at 08:00 until 1 day before at 17:00.
   auto const* trip_1 = get_flex_leg(res, "lg_1");
@@ -260,7 +262,7 @@ TEST(motis, flex_booking_rules_dst) {
                   sys_days{2019_y / October / 27} + 16h},
         std::pair{sys_days{2019_y / October / 29},
                   sys_days{2019_y / October / 28} + 16h}}) {
-    auto const res = route_a_to_b(routing, travel);
+    auto const res = route_a_to_b(routing, travel + 7h);
     auto const* leg = get_flex_leg(res, "lg_1");
     ASSERT_NE(nullptr, leg) << travel;
     ASSERT_TRUE(leg->from_.pickupBookingRule_.has_value()) << travel;
@@ -270,11 +272,70 @@ TEST(motis, flex_booking_rules_dst) {
   }
 }
 
+TEST(motis, flex_booking_rules_local_day) {
+  // The day of travel 2019-05-01 is a different UTC day:
+  // 09:00 NZST (UTC+12) = 04-30 21:00 UTC, 17:00 HST (UTC-10) = 05-02 03:00
+  // UTC.
+  struct expected {
+    char const* tz_;
+    sys_seconds travel_;
+    sys_seconds prior_day_earliest_, prior_day_latest_;
+    sys_seconds service_day_earliest_, service_day_latest_;
+  };
+  for (auto const& x :
+       {expected{.tz_ = "Pacific/Auckland",
+                 .travel_ = sys_days{2019_y / April / 30} + 21h,
+                 .prior_day_earliest_ = sys_days{2019_y / April / 23} + 20h,
+                 .prior_day_latest_ = sys_days{2019_y / April / 30} + 5h,
+                 .service_day_earliest_ = sys_days{2019_y / April / 25} + 21h,
+                 .service_day_latest_ = sys_days{2019_y / April / 29}},
+        expected{.tz_ = "Pacific/Honolulu",
+                 .travel_ = sys_days{2019_y / May / 2} + 3h,
+                 .prior_day_earliest_ = sys_days{2019_y / April / 24} + 18h,
+                 .prior_day_latest_ = sys_days{2019_y / May / 1} + 3h,
+                 .service_day_earliest_ = sys_days{2019_y / April / 26} + 19h,
+                 .service_day_latest_ = sys_days{2019_y / April / 29} + 22h}}) {
+    auto const path = fmt::format("test/data_flex_booking_rules_{}",
+                                  std::string_view{x.tz_}.substr(8));
+    auto ec = std::error_code{};
+    std::filesystem::remove_all(path, ec);
+
+    auto const c =
+        flex_config(fmt::format(kFlexGtfsTemplate, x.tz_), "2019-04-25", 8U);
+    import(c, path);
+    auto d = data{path, c};
+    auto const routing = utl::init_from<ep::routing>(d).value();
+    auto const res = route_a_to_b(routing, x.travel_);
+
+    auto const* trip_1 = get_flex_leg(res, "lg_1");
+    ASSERT_NE(nullptr, trip_1) << x.tz_;
+    ASSERT_TRUE(trip_1->from_.pickupBookingRule_.has_value()) << x.tz_;
+    auto const& prior_day = *trip_1->from_.pickupBookingRule_;
+    EXPECT_EQ(x.prior_day_earliest_,
+              prior_day.earliestBookingTime_.value().time_)
+        << x.tz_;
+    EXPECT_EQ(x.prior_day_latest_, prior_day.latestBookingTime_.value().time_)
+        << x.tz_;
+
+    auto const* trip_3 = get_flex_leg(res, "lg_3");
+    ASSERT_NE(nullptr, trip_3) << x.tz_;
+    ASSERT_TRUE(trip_3->from_.pickupBookingRule_.has_value()) << x.tz_;
+    auto const& service_day = *trip_3->from_.pickupBookingRule_;
+    EXPECT_EQ(x.service_day_earliest_,
+              service_day.earliestBookingTime_.value().time_)
+        << x.tz_;
+    EXPECT_EQ(x.service_day_latest_,
+              service_day.latestBookingTime_.value().time_)
+        << x.tz_;
+  }
+}
+
 TEST(motis, flex_alerts) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data_flex_alerts", ec);
 
-  auto const c = flex_config(kFlexGtfs, "2019-04-25", 8U);
+  auto const c = flex_config(fmt::format(kFlexGtfsTemplate, "Europe/Berlin"),
+                             "2019-04-25", 8U);
   import(c, "test/data_flex_alerts");
   auto d = data{"test/data_flex_alerts", c};
   d.init_rtt(sys_days{2019_y / May / 1});
@@ -293,7 +354,7 @@ TEST(motis, flex_alerts) {
                            msg);
 
   auto const routing = utl::init_from<ep::routing>(d).value();
-  auto const res = route_a_to_b(routing, sys_days{2019_y / May / 1});
+  auto const res = route_a_to_b(routing, sys_days{2019_y / May / 1} + 7h);
 
   // Route alert on the leg, stop alert on the place.
   for (auto const flex_id : {"lg_1"sv, "lg_2"sv}) {
