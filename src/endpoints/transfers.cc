@@ -71,6 +71,7 @@ api::transfers_response transfers::operator()(
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
         auto& fp = footpaths[n];
+        // travel time, not the search cost (which includes penalties)
         auto const duration = std::ceil(r->duration_.count() / 60.0);
         if (duration < n::footpath::kMaxDuration.count()) {
           switch (mode) {

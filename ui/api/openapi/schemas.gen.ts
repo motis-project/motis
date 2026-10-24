@@ -700,7 +700,7 @@ Only set for stops of transit trips with a departure.
             format: 'date-time'
         },
         flexEndPickupDropOffWindow: {
-            description: 'Time that on-demand service ends',
+            description: 'Time that on-demand service ends (exclusive; a one minute window is a fixed departure)',
             type: 'string',
             format: 'date-time'
         },
