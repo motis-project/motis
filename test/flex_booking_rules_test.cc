@@ -274,23 +274,29 @@ TEST(motis, flex_booking_rules_dst) {
 
 TEST(motis, flex_booking_rules_local_day) {
   // The day of travel 2019-05-01 is a different UTC day:
-  // 09:00 NZST (UTC+12) = 04-30 21:00 UTC, 17:00 HST (UTC-10) = 05-02 03:00
-  // UTC.
+  // 09:00 NZST (UTC+12) = 04-30 21:00Z, 17:00 HST (UTC-10) = 05-02 03:00Z.
+  // The time window 08:30-18:00 local starts on the UTC day before (NZST) or
+  // ends on the UTC day after (HST).
   struct expected {
     char const* tz_;
     sys_seconds travel_;
+    sys_seconds window_from_, window_to_;
     sys_seconds prior_day_earliest_, prior_day_latest_;
     sys_seconds service_day_earliest_, service_day_latest_;
   };
   for (auto const& x :
        {expected{.tz_ = "Pacific/Auckland",
                  .travel_ = sys_days{2019_y / April / 30} + 21h,
+                 .window_from_ = sys_days{2019_y / April / 30} + 20h + 30min,
+                 .window_to_ = sys_days{2019_y / May / 1} + 6h,
                  .prior_day_earliest_ = sys_days{2019_y / April / 23} + 20h,
                  .prior_day_latest_ = sys_days{2019_y / April / 30} + 5h,
                  .service_day_earliest_ = sys_days{2019_y / April / 25} + 21h,
                  .service_day_latest_ = sys_days{2019_y / April / 29}},
         expected{.tz_ = "Pacific/Honolulu",
                  .travel_ = sys_days{2019_y / May / 2} + 3h,
+                 .window_from_ = sys_days{2019_y / May / 1} + 18h + 30min,
+                 .window_to_ = sys_days{2019_y / May / 2} + 4h,
                  .prior_day_earliest_ = sys_days{2019_y / April / 24} + 18h,
                  .prior_day_latest_ = sys_days{2019_y / May / 1} + 3h,
                  .service_day_earliest_ = sys_days{2019_y / April / 26} + 19h,
@@ -309,6 +315,13 @@ TEST(motis, flex_booking_rules_local_day) {
 
     auto const* trip_1 = get_flex_leg(res, "lg_1");
     ASSERT_NE(nullptr, trip_1) << x.tz_;
+    for (auto const* p : {&trip_1->from_, &trip_1->to_}) {
+      EXPECT_EQ(x.window_from_, p->flexStartPickupDropOffWindow_.value().time_)
+          << x.tz_;
+      EXPECT_EQ(x.window_to_, p->flexEndPickupDropOffWindow_.value().time_)
+          << x.tz_;
+    }
+
     ASSERT_TRUE(trip_1->from_.pickupBookingRule_.has_value()) << x.tz_;
     auto const& prior_day = *trip_1->from_.pickupBookingRule_;
     EXPECT_EQ(x.prior_day_earliest_,
