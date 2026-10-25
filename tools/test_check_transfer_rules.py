@@ -187,6 +187,19 @@ class TransferRulesTest(unittest.TestCase):
         self.assertTrue(  # the motis default
             Checker.from_config(config, self.dir.name).adjust_footpaths)
 
+    def test_stay_seated_is_not_a_change_of_vehicles(self):
+        # T3 continues as T1 at S (interlineWithPreviousLeg): no change, so
+        # the 10 min S,S rule does not apply to the 0 min between them
+        it = {"legs": [
+            leg("REGIONAL_RAIL", "t_S9", "t_S",
+                "2019-05-01T08:00:00Z", "2019-05-01T08:30:00Z",
+                trip="20190501_10:00_t_T3"),
+            leg("REGIONAL_RAIL", "t_S", "t_S9",
+                "2019-05-01T08:30:00Z", "2019-05-01T09:00:00Z",
+                trip="20190501_10:30_t_T1")]}
+        it["legs"][1]["interlineWithPreviousLeg"] = True
+        self.assertEqual([], self.check(it))
+
     def test_bike_access_is_not_a_change_of_vehicles(self):
         # Bike from the door to S, then the train T1 two minutes later. There
         # is no change between two vehicles at S, so the S,S rule does not

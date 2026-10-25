@@ -264,7 +264,8 @@ def compare(motis, qlines, responses, work, label):
 
 
 def suffix(case):
-    s = "&algorithm=" + case["algorithm"]
+    s = ("&joinInterlinedLegs=false&maxDirectTime=0&algorithm="
+         + case["algorithm"])
     if case["arrive_by"]:
         s += "&arriveBy=true"
     if case["clasz"]:

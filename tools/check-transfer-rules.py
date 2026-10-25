@@ -5,7 +5,8 @@
 Reads the rules straight out of the feeds and judges every transfer in a
 response dump (`motis batch -r`) against them (see transfer_rules.py). Unlike
 a comparison of two motis builds, this also finds mistakes both builds share.
-validate.py runs the same check in CI.
+validate.py runs the same check in CI. Query with joinInterlinedLegs=false:
+a joined leg names only its first trip, not the one arriving at the transfer.
 
 A build without transfer rule support is a positive control: it must report
 violations. If it comes out clean, the checker is broken, not the timetable.

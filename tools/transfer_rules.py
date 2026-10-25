@@ -216,7 +216,11 @@ def transfers(lines):
     """Yield (query index, arrival leg, departure leg) for every transfer
     between two transit legs of the responses (one JSON object per line).
     Street legs in between (walking, cycling, a car, flex, ...) are part of
-    the transfer, so the gap is measured from vehicle to vehicle."""
+    the transfer, so the gap is measured from vehicle to vehicle. A leg that
+    continues the previous one (interlineWithPreviousLeg, stay seated) is no
+    transfer. Joined legs (joinInterlinedLegs=true, the default) name only
+    their first trip, so the rules of the trip that arrives at a transfer can
+    only be found in responses to queries with joinInterlinedLegs=false."""
     for query, line in enumerate(lines):
         if not line.strip():
             continue
@@ -228,7 +232,8 @@ def transfers(lines):
             legs = [l for l in itinerary.get("legs") or []
                     if l.get("mode") not in STREET_MODES]
             for arrive, depart in zip(legs, legs[1:]):
-                yield query, arrive, depart
+                if not depart.get("interlineWithPreviousLeg"):
+                    yield query, arrive, depart
 
 
 def read_dataset_tags(config):
