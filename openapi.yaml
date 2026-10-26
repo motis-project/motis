@@ -4804,9 +4804,11 @@ components:
         fromOsmNode:
           description: OpenStreetMap node ID where this segment starts
           type: integer
+          format: int64
         toOsmNode:
           description: OpenStreetMap node ID where this segment ends
           type: integer
+          format: int64
         polyline:
           $ref: '#/components/schemas/EncodedPolyline'
         streetName:

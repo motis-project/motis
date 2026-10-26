@@ -1025,11 +1025,13 @@ export const StepInstructionSchema = {
         },
         fromOsmNode: {
             description: 'OpenStreetMap node ID where this segment starts',
-            type: 'integer'
+            type: 'integer',
+            format: 'int64'
         },
         toOsmNode: {
             description: 'OpenStreetMap node ID where this segment ends',
-            type: 'integer'
+            type: 'integer',
+            format: 'int64'
         },
         polyline: {
             '$ref': '#/components/schemas/EncodedPolyline'
