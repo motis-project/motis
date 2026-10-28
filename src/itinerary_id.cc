@@ -153,30 +153,31 @@ struct leg_hint {
   bool scheduled_;
 };
 
-api::Leg make_dummy_leg(leg_hint const& lh, std::string error) {
+api::Leg make_leg_from_hint(leg_hint const& lh) {
   auto const to_dt = [](std::int64_t const s) {
     return openapi::date_time_t{
         std::chrono::sys_seconds{std::chrono::seconds{s}}};
   };
   auto const start = to_dt(lh.sched_start_);
   auto const end = to_dt(lh.sched_end_);
+  auto const stop_id = [](std::string const& id) {
+    return id.empty() ? std::nullopt : std::optional{id};
+  };
 
   return api::Leg{
       .mode_ = lh.mode_,
-      .from_ = {.stopId_ = lh.from_stop_id_,
+      .from_ = {.stopId_ = stop_id(lh.from_stop_id_),
                 .lat_ = lh.from_loc_.pos_.lat_,
                 .lon_ = lh.from_loc_.pos_.lng_,
                 .level_ = level_to_api(lh.from_loc_.lvl_),
                 .departure_ = start,
-                .scheduledDeparture_ = start,
-                .cancelled_ = true},
-      .to_ = {.stopId_ = lh.to_stop_id_,
+                .scheduledDeparture_ = start},
+      .to_ = {.stopId_ = stop_id(lh.to_stop_id_),
               .lat_ = lh.to_loc_.pos_.lat_,
               .lon_ = lh.to_loc_.pos_.lng_,
               .level_ = level_to_api(lh.to_loc_.lvl_),
               .arrival_ = end,
-              .scheduledArrival_ = end,
-              .cancelled_ = true},
+              .scheduledArrival_ = end},
       .duration_ = std::max(std::int64_t{0}, lh.sched_end_ - lh.sched_start_),
       .startTime_ = start,
       .endTime_ = end,
@@ -185,9 +186,16 @@ api::Leg make_dummy_leg(leg_hint const& lh, std::string error) {
       .realTime_ = false,
       .scheduled_ = lh.scheduled_,
       .displayName_ = lh.display_name_,
-      .cancelled_ = true,
-      .alerts_ = {{api::Alert{.headerText_ = std::move(error)}}},
   };
+}
+
+api::Leg make_dummy_leg(leg_hint const& lh, std::string error) {
+  auto leg = make_leg_from_hint(lh);
+  leg.from_.cancelled_ = true;
+  leg.to_.cancelled_ = true;
+  leg.cancelled_ = true;
+  leg.alerts_ = {{api::Alert{.headerText_ = std::move(error)}}};
+  return leg;
 }
 
 proto_leg_t make_leg_id(std::string const& display_name,
@@ -639,21 +647,23 @@ n::unixtime_t sched_to_unix(std::int64_t const s) {
 
 // Verifies the decoded itinerary-id legs match the expected shape:
 // [first-mile offset] TRANSIT [, TRANSFER, TRANSIT]... [last-mile offset]
+// + legs to keep as encoded anywhere (incl. no transit).
 template <typename Leg>
 void verify_leg_structure(std::vector<Leg> const& legs) {
   utl::verify<net::bad_request_exception>(!legs.empty(),
                                           "itinerary id: empty leg structure");
   utl::verify<net::bad_request_exception>(
       utl::any_of(legs,
-                  [](auto&& l) { return l.input_.is_public_transport(); }),
+                  [](auto&& l) {
+                    return l.input_.is_public_transport() || l.keep_as_encoded_;
+                  }),
       "itinerary id: no transit leg found");
 
-  for (auto i = std::size_t{0U}; i != legs.size(); ++i) {
-    auto const is_transit = legs[i].input_.is_public_transport();
+  for (auto i = std::size_t{1U}; i < legs.size(); ++i) {
     utl::verify<net::bad_request_exception>(
-        i == 0U || is_transit != legs[i - 1U].input_.is_public_transport(),
-        "itinerary id: invalid leg structure (two consecutive {} legs)",
-        is_transit ? "transit" : "non-transit");
+        !legs[i].input_.is_public_transport() ||
+            !legs[i - 1U].input_.is_public_transport(),
+        "itinerary id: invalid leg structure (two consecutive transit legs)");
   }
 }
 
@@ -701,6 +711,9 @@ api::Itinerary reconstruct_itinerary(
     // all offsets for alternative lookup
     std::vector<n::routing::offset> offsets_{};
     n::routing::td_offsets_t td_offsets_{};
+
+    // ODM / ride sharing, or consecutive non-transit legs (ODM wait at stop).
+    bool keep_as_encoded_{false};
   };
 
   auto const non_dummy_match_mode =
@@ -849,6 +862,13 @@ api::Itinerary reconstruct_itinerary(
                                         bool const has_next_transit) {
     auto const& jl = *legs[i].transit_;
 
+    // Re-routed first/last mile, otherwise start/end at the transit leg.
+    auto const& first =
+        i != 0U && !legs[i - 1U].keep_as_encoded_ ? legs[i - 1U] : legs[i];
+    auto const& last = i + 1U < legs.size() && !legs[i + 1U].keep_as_encoded_
+                           ? legs[i + 1U]
+                           : legs[i];
+
     auto const add_equivalents = [&](std::vector<n::routing::offset>& offsets,
                                      n::location_idx_t const l) {
       n::routing::for_each_meta(
@@ -873,13 +893,13 @@ api::Itinerary reconstruct_itinerary(
       q.start_match_mode_ = non_dummy_match_mode;
       q.use_start_footpaths_ = !routing.is_osr_loaded();
       if (routing.is_osr_loaded()) {
-        auto offsets = get_offsets(legs.front().input_, /*is_start=*/true,
+        auto offsets = get_offsets(first.input_, /*is_start=*/true,
                                    flm.pre_transit_modes_);
-        if (is_transit(legs.front())) {
+        if (is_transit(first)) {
           add_equivalents(offsets, jl.from_);
         }
         q.start_ = std::move(offsets);
-        q.td_start_ = get_td_offsets(legs.front().input_, /*is_start=*/true,
+        q.td_start_ = get_td_offsets(first.input_, /*is_start=*/true,
                                      sched_to_unix(legs[i].input_.sched_start_),
                                      flm.pre_transit_modes_);
       } else {
@@ -890,13 +910,13 @@ api::Itinerary reconstruct_itinerary(
     if (!has_next_transit) {
       q.dest_match_mode_ = non_dummy_match_mode;
       if (routing.is_osr_loaded()) {
-        auto offsets = get_offsets(legs.back().input_, /*is_start=*/false,
+        auto offsets = get_offsets(last.input_, /*is_start=*/false,
                                    flm.post_transit_modes_);
-        if (is_transit(legs.back())) {
+        if (is_transit(last)) {
           add_equivalents(offsets, jl.to_);
         }
         q.destination_ = std::move(offsets);
-        q.td_dest_ = get_td_offsets(legs.back().input_, /*is_start=*/false,
+        q.td_dest_ = get_td_offsets(last.input_, /*is_start=*/false,
                                     sched_to_unix(legs[i].input_.sched_end_),
                                     flm.post_transit_modes_);
       } else {
@@ -922,15 +942,15 @@ api::Itinerary reconstruct_itinerary(
       if (has_prev_transit) {
         return legs[i - 2U].transit_->arr_time_;
       }
-      if (!is_transit(legs.front())) {
+      if (!is_transit(first)) {
         if (auto const access = n::routing::lookup_offset(
                 jl.from_, jl.dep_time_, n::routing::side::kBoarding,
-                legs.front().offsets_, legs.front().td_offsets_);
+                first.offsets_, first.td_offsets_);
             access.has_value()) {
           return access->dep_time_;
         }
         return jl.dep_time_ - (sched_to_unix(legs[i].input_.sched_start_) -
-                               sched_to_unix(legs.front().input_.sched_start_));
+                               sched_to_unix(first.input_.sched_start_));
       }
       return jl.dep_time_;
     }();
@@ -943,16 +963,26 @@ api::Itinerary reconstruct_itinerary(
   // === Decode & verify ===
   auto legs = utl::to_vec(decode_itinerary_id(id_buf).legs(),
                           [](auto const& x) { return leg{leg_hint{x}}; });
+  auto const is_non_transit = [&](std::size_t const i) {
+    return i < legs.size() && !is_transit(legs[i]);
+  };
+  for (auto const [i, l] : utl::enumerate(legs)) {
+    l.keep_as_encoded_ =
+        l.input_.mode_ == api::ModeEnum::ODM ||
+        l.input_.mode_ == api::ModeEnum::RIDE_SHARING ||
+        (is_non_transit(i) &&
+         ((i != 0U && is_non_transit(i - 1U)) || is_non_transit(i + 1U)));
+  }
   verify_leg_structure(legs);
 
   // === Compute first/last mile offsets. ===
-  if (!is_transit(legs.front())) {
+  if (!is_transit(legs.front()) && !legs.front().keep_as_encoded_) {
     auto const& h = legs.front().input_;
     legs.front().offsets_ = get_offsets(h, /*is_start=*/true, {h.mode_});
     legs.front().td_offsets_ = get_td_offsets(
         h, /*is_start=*/true, sched_to_unix(h.sched_end_), {h.mode_});
   }
-  if (!is_transit(legs.back())) {
+  if (!is_transit(legs.back()) && !legs.back().keep_as_encoded_) {
     auto const& h = legs.back().input_;
     legs.back().offsets_ = get_offsets(h, /*is_start=*/false, {h.mode_});
     legs.back().td_offsets_ = get_td_offsets(
@@ -1006,8 +1036,9 @@ api::Itinerary reconstruct_itinerary(
       continue;
     }
 
-    auto const has_prev_transit = i >= 2U;
-    auto const has_next_transit = i + 2U < legs.size();
+    auto const has_prev_transit = i >= 2U && is_transit(legs[i - 2U]);
+    auto const has_next_transit =
+        i + 2U < legs.size() && is_transit(legs[i + 2U]);
     auto const prev_ok = !has_prev_transit || !failed(legs[i - 2U]);
     auto const next_ok = !has_next_transit || !failed(legs[i + 2U]);
     auto const alternatives =
@@ -1022,7 +1053,7 @@ api::Itinerary reconstruct_itinerary(
   // === Anchor non-transit leg times to the adjacent transit legs. ===
 
   // First -> propagate backward from following transit leg.
-  if (!is_transit(legs.front())) {
+  if (!is_transit(legs.front()) && !legs.front().keep_as_encoded_) {
     auto const duration = legs[0].arr_ - legs[0].dep_;
     legs[0].arr_ = to_unix(legs.at(1).output_.front().startTime_);
     legs[0].dep_ = legs[0].arr_ - duration;
@@ -1030,7 +1061,7 @@ api::Itinerary reconstruct_itinerary(
 
   // Other -> propagate forward from previous transit leg.
   for (auto i = 1U; i < legs.size(); ++i) {
-    if (!is_transit(legs[i])) {
+    if (!is_transit(legs[i]) && !legs[i].keep_as_encoded_) {
       auto const duration = legs[i].arr_ - legs[i].dep_;
       legs[i].dep_ = to_unix(legs[i - 1].output_.back().endTime_);
       legs[i].arr_ = legs[i].dep_ + duration;
@@ -1042,7 +1073,9 @@ api::Itinerary reconstruct_itinerary(
     if (is_transit(legs[i])) {
       continue;
     }
-    legs[i].output_ = (i == 0U || i == legs.size() - 1U)
+    legs[i].output_ = legs[i].keep_as_encoded_
+                          ? std::vector{make_leg_from_hint(legs[i].input_)}
+                      : (i == 0U || i == legs.size() - 1U)
                           ? reconstruct_offset(legs, i)
                           : reconstruct_transfer(legs[i]);
   }
