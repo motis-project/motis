@@ -189,10 +189,6 @@ int batch(int ac, char** av) {
 
   auto out = std::ofstream{responses_path};
 
-  // meta_router (ODM) dispatches sub-queries via ctx_call, which requires a
-  // live ctx fiber operation to suspend/resume on. net::default_exec runs
-  // handlers synchronously without such a context, so it must not be used
-  // here -- mirror server.cc's ctx::scheduler + ctx_exec setup instead.
   auto scheduler = ctx::scheduler<ctx_data>{};
   auto m = motis_instance{ctx_exec{scheduler.runner_.ios(), scheduler}, d, c,
                           ""};
@@ -205,19 +201,6 @@ int batch(int ac, char** av) {
   pt->in_high(queries.size());
   auto const start_batch = std::chrono::steady_clock::now();
 
-  // ctx_exec completion callbacks are only ever invoked from the thread that
-  // calls scheduler.runner_.run() below (it alone drives the ctx scheduler's
-  // io_context), so this counter needs no synchronization.
-  //
-  // Deliberately NOT using runner_.run(n_threads, /*quit_on_ios_exit=*/true):
-  // that shutdown path has ctx::runner::run() call work_stack_.clear() on
-  // this thread while worker threads may still be concurrently popping from
-  // the same work_stack_ -- a real race in ctx::runner, unrelated to this
-  // tool, that a ThreadSanitizer run reproduced as a SEGV in
-  // ctx::stack_manager::dealloc. Stopping the scheduler explicitly once all
-  // queries have completed (mirroring server.cc's shutdown handler) avoids
-  // that path entirely: work_stack_.stop() lets each worker's poll() loop
-  // exit on its own before being joined.
   auto completed = std::size_t{0U};
   auto const on_query_done = [&] {
     if (++completed == queries.size()) {
@@ -264,8 +247,6 @@ int batch(int ac, char** av) {
     }
   }
 
-  // runs the ctx scheduler's io loop + worker threads on this thread until
-  // on_query_done() above calls scheduler.runner_.stop().
   if (!queries.empty()) {
     scheduler.runner_.run(n_threads);
   }
