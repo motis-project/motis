@@ -591,7 +591,7 @@ api::stoptimes_response stop_times::operator()(
             return {
                 .place_ = bwd_compat_lvl_adjust(std::move(place), api_version),
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
-                .realTime_ = fr.is_rt(),
+                .realTime_ = s.has_rt_data(ev_type),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
                 .tripFrom_ = bwd_compat_lvl_adjust(
                     to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,

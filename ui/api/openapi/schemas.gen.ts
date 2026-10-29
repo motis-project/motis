@@ -548,6 +548,18 @@ export const PickupDropoffTypeSchema = {
     enum: ['NORMAL', 'NOT_ALLOWED']
 } as const;
 
+export const TimestampReasonSchema = {
+    type: 'string',
+    description: `Reason for an arrival/departure timestamp, i.e. what the time is based on.
+- \`NO_RT_DATA\` - no real-time data available, the time is the scheduled time
+- \`INCONSISTENT_RT\` - no consistent real-time data available for this event, the time was changed by MOTIS, e.g. to prevent the vehicle from arriving before departing at a previous stop, or because the real-time data could not be matched unambiguously
+- \`OBSERVED\` - the time is a real-time time that was observed/recorded by the real-time data source
+- \`PROPAGATED\` - the time is a real-time time that was computed by propagating the real-time delay of a preceding event
+- \`PREDICTED\` - the time is a real-time time that was predicted by the real-time data source
+`,
+    enum: ['NO_RT_DATA', 'INCONSISTENT_RT', 'OBSERVED', 'PROPAGATED', 'PREDICTED']
+} as const;
+
 export const WheelchairAccessibilitySchema = {
     type: 'string',
     enum: ['ACCESSIBLE', 'NOT_ACCESSIBLE']
@@ -655,6 +667,18 @@ Comes from the GTFS \`stop_code\` field.
             description: 'Whether this stop is cancelled due to the realtime situation.',
             type: 'boolean'
         },
+        arrivalTimestampReason: {
+            description: `Reason for the arrival timestamp, i.e. what the arrival time is based on.
+Only set for stops of transit trips with an arrival.
+`,
+            '$ref': '#/components/schemas/TimestampReason'
+        },
+        departureTimestampReason: {
+            description: `Reason for the departure timestamp, i.e. what the departure time is based on.
+Only set for stops of transit trips with a departure.
+`,
+            '$ref': '#/components/schemas/TimestampReason'
+        },
         alerts: {
             description: 'Alerts for this stop.',
             type: 'array',
@@ -749,7 +773,7 @@ export const StopTimeSchema = {
             description: 'Transport mode for this leg'
         },
         realTime: {
-            description: 'Whether there is real-time data about this leg',
+            description: 'Whether there is real-time data for this arrival/departure (i.e. `place.arrivalTimestampReason`/`place.departureTimestampReason` is neither `NO_RT_DATA` nor `INCONSISTENT_RT`)',
             type: 'boolean'
         },
         headsign: {
@@ -939,7 +963,7 @@ export const TripSegmentSchema = {
             format: 'date-time'
         },
         realTime: {
-            description: 'Whether there is real-time data about this leg',
+            description: 'Whether there is real-time data for the departure or arrival of this leg',
             type: 'boolean'
         },
         polyline: {
@@ -1001,11 +1025,13 @@ export const StepInstructionSchema = {
         },
         fromOsmNode: {
             description: 'OpenStreetMap node ID where this segment starts',
-            type: 'integer'
+            type: 'integer',
+            format: 'int64'
         },
         toOsmNode: {
             description: 'OpenStreetMap node ID where this segment ends',
-            type: 'integer'
+            type: 'integer',
+            format: 'int64'
         },
         polyline: {
             '$ref': '#/components/schemas/EncodedPolyline'
@@ -1612,7 +1638,7 @@ If leg is footpath:
             description: 'scheduled leg arrival time'
         },
         realTime: {
-            description: 'Whether there is real-time data about this leg',
+            description: 'Whether there is real-time data for the departure or arrival of this leg (i.e. `from.departureTimestampReason` or `to.arrivalTimestampReason` is neither `NO_RT_DATA` nor `INCONSISTENT_RT`)',
             type: 'boolean'
         },
         scheduled: {

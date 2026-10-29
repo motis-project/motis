@@ -12,6 +12,7 @@ namespace motis::ep {
 struct matches {
   boost::json::value operator()(boost::json::value const&) const;
 
+  config const& config_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   tag_lookup const& tags_;
   nigiri::timetable const& tt_;

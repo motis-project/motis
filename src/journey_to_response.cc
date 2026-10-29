@@ -601,7 +601,8 @@ api::Itinerary journey_to_response(
                         enter_stop.scheduled_time(n::event_type::kDep),
                     .scheduledEndTime_ =
                         exit_stop.scheduled_time(n::event_type::kArr),
-                    .realTime_ = fr.is_rt(),
+                    .realTime_ = enter_stop.has_rt_data(n::event_type::kDep) ||
+                                 exit_stop.has_rt_data(n::event_type::kArr),
                     .scheduled_ = fr.is_scheduled(),
                     .interlineWithPreviousLeg_ = !is_first_part,
                     .headsign_ = std::string{enter_stop.direction(

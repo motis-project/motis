@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
 	import { geocode, type LocationType, type Match, type Mode } from '@motis-project/motis-client';
-	import { MapPinHouse as House, MapPin as Place } from '@lucide/svelte';
+	import { MapPinHouse as House, MapPin as Place, Trash2 } from '@lucide/svelte';
 	import { parseCoordinatesToLocation, type Location } from './Location';
-	import { language } from './i18n/translation';
+	import { language, t } from './i18n/translation';
 	import * as maplibregl from 'maplibre-gl';
 	import { getModeStyle, type LegLike } from './modeStyle';
+	import { clearHistoryLocations, getHistoryLocations, recordHistoryLocation } from './history';
+	import { cn } from './utils';
 
 	let {
 		items = $bindable([]),
@@ -15,7 +17,8 @@
 		place,
 		type,
 		transitModes,
-		onChange = () => {}
+		onChange = () => {},
+		class: className
 	}: {
 		items?: Array<Location>;
 		selected: Location;
@@ -25,10 +28,25 @@
 		type?: undefined | LocationType;
 		transitModes?: Mode[];
 		onChange?: (location: Location) => void;
+		class?: string;
 	} = $props();
 
 	let inputValue = $state('');
 	let match = $state('');
+	let open = $state(false);
+
+	const historyForType = () => {
+		const locations = getHistoryLocations();
+		return type ? locations.filter((l) => l.match?.type === type) : locations;
+	};
+
+	const showHistoryHint = $derived(!inputValue && items.length > 0);
+
+	const restoreSelectedLabel = () => {
+		if (!inputValue && selected?.label) {
+			inputValue = selected.label;
+		}
+	};
 
 	const getDisplayArea = (match: Match | undefined) => {
 		if (match) {
@@ -63,7 +81,8 @@
 	};
 
 	const updateGuesses = async () => {
-		const coord = parseCoordinatesToLocation(inputValue);
+		const text = inputValue;
+		const coord = parseCoordinatesToLocation(text);
 		if (coord) {
 			selected = coord;
 			items = [];
@@ -76,7 +95,7 @@
 		const { data: matches, error } = await geocode({
 			query: {
 				...biasPlace,
-				text: inputValue,
+				text,
 				language: [language],
 				mode: transitModes,
 				type: type ? [type] : undefined
@@ -85,6 +104,9 @@
 		if (error) {
 			console.error('TYPEAHEAD ERROR: ', error);
 			return;
+		}
+		if (text !== inputValue) {
+			return; // input changed while waiting for the response
 		}
 		items = matches!.map((match: Match): Location => {
 			return {
@@ -111,18 +133,18 @@
 
 	let ref = $state<HTMLElement | null>(null);
 	$effect(() => {
-		if (ref && inputValue) {
+		if (ref) {
 			(ref as HTMLInputElement).value = inputValue;
 		}
 	});
 
 	let timer: ReturnType<typeof setTimeout>;
 	$effect(() => {
+		clearTimeout(timer);
 		if (inputValue) {
-			clearTimeout(timer);
-			timer = setTimeout(() => {
-				updateGuesses();
-			}, 150);
+			timer = setTimeout(updateGuesses, 150);
+		} else {
+			items = historyForType();
 		}
 	});
 </script>
@@ -144,10 +166,17 @@
 	type="single"
 	allowDeselect={false}
 	value={match}
+	bind:open
+	onOpenChange={(o: boolean) => {
+		if (!o) {
+			restoreSelectedLabel();
+		}
+	}}
 	onValueChange={(e: string) => {
 		if (e) {
 			selected = deserialize(e);
 			inputValue = selected.label!;
+			recordHistoryLocation(selected);
 			onChange(selected);
 		}
 	}}
@@ -156,9 +185,24 @@
 		{placeholder}
 		{name}
 		bind:ref
-		class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+		class={cn(
+			'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+			className
+		)}
 		autocomplete="off"
 		oninput={(e: Event) => (inputValue = (e.currentTarget as HTMLInputElement).value)}
+		onfocus={() => {
+			if (!inputValue) {
+				open = true;
+			}
+		}}
+		onpointerdown={() => {
+			if (!open) {
+				inputValue = '';
+				open = true;
+			}
+		}}
+		onblur={restoreSelectedLabel}
 		aria-label={placeholder}
 		data-combobox-input={inputValue}
 	/>
@@ -166,8 +210,25 @@
 		<Combobox.Portal>
 			<Combobox.Content
 				align="start"
-				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-50 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
+				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-50 max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
 			>
+				{#if showHistoryHint}
+					<div class="flex items-center justify-between border-b px-4 py-2 text-sm text-foreground">
+						<span>{t.history}</span>
+
+						<button
+							class="rounded p-1 hover:bg-accent"
+							onclick={() => {
+								clearHistoryLocations();
+								items = historyForType();
+							}}
+							aria-label="Clear history"
+						>
+							<Trash2 class="size-4" />
+						</button>
+					</div>
+				{/if}
+
 				{#each items as item (item.match)}
 					<Combobox.Item
 						class="flex w-full cursor-default select-none rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
