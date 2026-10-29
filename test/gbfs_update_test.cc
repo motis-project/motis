@@ -1149,3 +1149,27 @@ TEST(motis, gbfs_update_last_update_of_aggregated_feed_with_valid_manifest) {
   auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
   EXPECT_NE(nullptr, gbfs->providers_.at(idx));
 }
+
+TEST(motis, gbfs_update_aggregated_feed_without_providers) {
+  auto const dir = make_temp_dir("manifest-empty");
+  auto const c = make_gbfs_config(dir, "agg");
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  write_manifest(dir, {});
+  run_update(c, gbfs, metrics);
+  ASSERT_NE(nullptr, gbfs);
+
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs, metrics);
+  auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
+  ASSERT_NE(nullptr, gbfs->providers_.at(idx));
+
+  auto const prev = gbfs;
+  write_manifest(dir, {});
+  run_update(c, gbfs, metrics);
+  ASSERT_NE(prev, gbfs);
+  EXPECT_EQ(nullptr, gbfs->providers_.at(idx));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg:provider-a"));
+}

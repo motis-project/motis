@@ -1292,6 +1292,10 @@ struct gbfs_update {
   }
 
   awaitable<void> update_aggregated_feed_provider_feeds(aggregated_feed& af) {
+    if (af.feeds_.empty()) {
+      co_return;
+    }
+
     auto executor = co_await asio::this_coro::executor;
     co_await asio::experimental::make_parallel_group(
         utl::to_vec(af.feeds_,
