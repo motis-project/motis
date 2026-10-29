@@ -141,10 +141,17 @@ metrics_registry::metrics_registry(
                        .Register(registry_)},
       last_update_rt_{last_update_.Add({{"feed", "rt"}})},
       last_update_gbfs_{last_update_.Add({{"feed", "gbfs"}})},
-      gbfs_last_update_timestamp_seconds_{
+      gbfs_last_attempted_update_timestamp_seconds_{
           prometheus::BuildGauge()
-              .Name("motis_gbfs_last_update_timestamp_seconds")
-              .Help("Timestamp of last successful GBFS update per provider")
+              .Name("motis_gbfs_last_attempted_update_timestamp_seconds")
+              .Help("Timestamp of the last GBFS update per provider in which "
+                    "at least one file was fetched")
+              .Register(registry_)},
+      gbfs_last_successful_update_timestamp_seconds_{
+          prometheus::BuildGauge()
+              .Name("motis_gbfs_last_successful_update_timestamp_seconds")
+              .Help("Timestamp of the last GBFS update per provider in which "
+                    "all fetched files were loaded successfully")
               .Register(registry_)},
       gbfs_feed_timestamp_seconds_{
           prometheus::BuildGauge()
