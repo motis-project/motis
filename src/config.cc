@@ -154,6 +154,8 @@ void config::verify() const {
               "reverse_geocode_max_results must be >= 1");
   utl::verify(!server_ || server_->gpu_states_ >= 1U,
               "server.gpu_states must be >= 1");
+  utl::verify(!gbfs_ || gbfs_->cache_size_ >= 1U,
+              "gbfs.cache_size must be >= 1");
 
   if (timetable_) {
     utl::verify(!timetable_->route_shapes_.has_value() ||

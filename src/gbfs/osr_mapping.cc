@@ -226,6 +226,11 @@ struct osr_mapping {
       }
     }
 
+    // edge index = way position of the additional node during routing
+    if (node_matches.size() > osr::kMaxWaysPerNode) {
+      node_matches.resize(osr::kMaxWaysPerNode);
+    }
+
     return node_matches;
   }
 

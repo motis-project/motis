@@ -1,5 +1,6 @@
 #pragma once
 
+#include <exception>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -41,9 +42,11 @@ public:
     // check with shared lock if entry already exists
     {
       auto read_lock = std::shared_lock{mutex_};
-      if (auto it = cache_map_.find(key); it != cache_map_.end()) {
-        move_to_front(key);
-        return it->second->value_;
+      if (auto const it = cache_map_.find(key); it != cache_map_.end()) {
+        auto value = it->second->value_;
+        read_lock.unlock();
+        touch(key);
+        return value;
       }
     }
 
@@ -71,7 +74,17 @@ public:
     write_lock.unlock();
 
     // compute the value
-    auto value = compute_fn();
+    auto value = std::shared_ptr<Value>{};
+    try {
+      value = compute_fn();
+    } catch (...) {
+      auto const ex = std::current_exception();
+      write_lock.lock();
+      pending_computations_.erase(key);
+      write_lock.unlock();
+      promise.set_exception(ex);
+      throw;
+    }
 
     // store the result
     write_lock.lock();
@@ -92,7 +105,7 @@ public:
     return value;
   }
 
-  std::shared_ptr<Value> get(Key const key) {
+  std::shared_ptr<Value> get(Key const key) const {
     auto read_lock = std::shared_lock{mutex_};
     if (auto it = cache_map_.find(key); it != cache_map_.end()) {
       return it->second->value_;
@@ -100,18 +113,9 @@ public:
     return nullptr;
   }
 
-  bool contains(Key const key) {
+  bool contains(Key const key) const {
     auto read_lock = std::shared_lock{mutex_};
     return cache_map_.find(key) != cache_map_.end();
-  }
-
-  template <typename F>
-  void update_if_exists(Key const key, F update_fn) {
-    auto write_lock = std::unique_lock{mutex_};
-    if (auto it = cache_map_.find(key); it != cache_map_.end()) {
-      it->second->value_ = update_fn(it->second->value_);
-      move_to_front(key);
-    }
   }
 
   /// adds an entry to the cache if there is still space or updates
@@ -148,28 +152,29 @@ public:
     }
   }
 
-  std::vector<std::pair<Key, std::shared_ptr<Value>>> get_all_entries() const {
+  std::size_t size() const {
     auto read_lock = std::shared_lock{mutex_};
-    auto entries = std::vector<std::pair<Key, std::shared_ptr<Value>>>{};
-    entries.reserve(lru_order_.size());
-    for (auto const it = lru_order_.rbegin(); it != lru_order_.rend(); ++it) {
-      if (auto const map_it = cache_map_.find(*it);
-          map_it != cache_map_.end()) {
-        entries.emplace_back(map_it->first, map_it->second->value_);
-      }
-    }
-    return entries;
+    return lru_order_.size();
   }
 
-  std::size_t size() const { return lru_order_.size(); }
-
-  bool empty() const { return lru_order_.empty(); }
+  bool empty() const {
+    auto read_lock = std::shared_lock{mutex_};
+    return lru_order_.empty();
+  }
 
 private:
   struct cache_entry {
     Key key_{};
     std::shared_ptr<Value> value_{};
   };
+
+  // runs on every cache hit: skip instead of waiting for the lock
+  void touch(Key const key) {
+    if (auto write_lock = std::unique_lock{mutex_, std::try_to_lock};
+        write_lock.owns_lock()) {
+      move_to_front(key);
+    }
+  }
 
   void move_to_front(Key const key) {
     auto const it = utl::find(lru_order_, key);
