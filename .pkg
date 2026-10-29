@@ -17,7 +17,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=7c78f91a7ae9a9fdb9ed29ce5ba2e8c19acc8cb1
+  commit=bba61c2882db8bb057f9cdca0dee784f105959f1
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -54,6 +54,10 @@
   url=git@github.com:motis-project/prometheus-cpp.git
   branch=master
   commit=e420cd7cf3995a994220b40a36c987ac8e67c0bf
+[pugixml]
+  url=git@github.com:motis-project/pugixml.git
+  branch=master
+  commit=bb45e30c5bf21b3599eb5b4b7fa20547043c3e24
 [reflect-cpp]
   url=git@github.com:motis-project/reflect-cpp.git
   branch=main
