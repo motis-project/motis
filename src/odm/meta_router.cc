@@ -109,7 +109,7 @@ meta_router::meta_router(ep::routing const& r,
       ride_sharing_direct_{ride_sharing_direct},
       api_version_{api_version},
       tt_{r_.tt_},
-      rt_{r.rt_},
+      rt_{std::atomic_load(&r.rt_)},
       rtt_{(query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
             query.realtimeMode_ ==
                 api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
