@@ -21,6 +21,7 @@ struct flex_output : public output {
               tz_map_t const*,
               tag_lookup const&,
               nigiri::timetable const&,
+              nigiri::rt_timetable const*,
               flex_areas const&,
               mode_payload,
               flex_additional_nodes const&,
@@ -50,6 +51,7 @@ private:
   adr_ext const* ae_;
   tz_map_t const* tz_;
   nigiri::timetable const& tt_;
+  nigiri::rt_timetable const* rtt_;
   tag_lookup const& tags_;
   flex_areas const& fa_;
   flex_additional_nodes const& additional_nodes_;
