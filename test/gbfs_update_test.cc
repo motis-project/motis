@@ -480,10 +480,11 @@ config make_gbfs_config_without_ttl_overwrite(fs::path const& dir,
   return c;
 }
 
-void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
+void run_update(config const& c,
+                std::shared_ptr<gbfs_data>& gbfs,
+                metrics_registry& metrics) {
   auto& d = street_data();
   auto ioc = boost::asio::io_context{};
-  auto metrics = metrics_registry{};
   boost::asio::co_spawn(
       ioc,
       [&]() -> boost::asio::awaitable<void> {
@@ -491,6 +492,55 @@ void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
       },
       boost::asio::detached);
   ioc.run();
+}
+
+void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
+  auto metrics = metrics_registry{};
+  run_update(c, gbfs, metrics);
+}
+
+bool has_feed_timestamp(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_feed_timestamp_seconds_.Has({{"provider_id", id}});
+}
+
+bool has_last_update(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_last_update_timestamp_seconds_.Has({{"provider_id", id}});
+}
+
+prometheus::Gauge& last_update(metrics_registry& m, std::string const& id) {
+  return m.gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
+}
+
+bool has_last_attempted(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_last_attempted_update_timestamp_seconds_.Has(
+      {{"provider_id", id}});
+}
+
+bool has_last_successful(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_last_successful_update_timestamp_seconds_.Has(
+      {{"provider_id", id}});
+}
+
+prometheus::Gauge& last_attempted(metrics_registry& m, std::string const& id) {
+  return m.gbfs_last_attempted_update_timestamp_seconds_.Add(
+      {{"provider_id", id}});
+}
+
+prometheus::Gauge& last_successful(metrics_registry& m, std::string const& id) {
+  return m.gbfs_last_successful_update_timestamp_seconds_.Add(
+      {{"provider_id", id}});
+}
+
+void reset_update_timestamps(metrics_registry& m, std::string const& id) {
+  last_update(m, id).Set(0.0);
+  last_attempted(m, id).Set(0.0);
+  last_successful(m, id).Set(0.0);
+}
+
+bool has_vehicle_count(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_vehicle_count_.Has({{"provider_id", id},
+                                    {"provider_group_id", "Test Bikes"},
+                                    {"form_factor", "BICYCLE"}});
 }
 
 provider_routing_data const& routing_data_for(gbfs_data& gbfs,
@@ -1045,4 +1095,179 @@ TEST(motis, gbfs_update_handles_v1_feed_without_vehicle_types) {
   EXPECT_FALSE(p.products_.empty());
   EXPECT_TRUE(p.has_vehicles_to_rent_);
   EXPECT_GT(additional_node_count(*gbfs, p), 0U);
+}
+
+TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
+  auto const dir = make_temp_dir("manifest-metrics");
+  auto const c = make_gbfs_config(dir, "agg");
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  // initialization fails: update attempted, but never successful
+  run_update(c, gbfs, metrics);
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  ASSERT_TRUE(has_last_update(metrics, "agg"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
+  EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
+  EXPECT_FALSE(has_last_successful(metrics, "agg"));
+
+  write_default_feed(dir / "provider-a");
+  write_default_feed(dir / "provider-b");
+  write_manifest(dir, {"provider-a", "provider-b"});
+  run_update(c, gbfs, metrics);
+
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  EXPECT_GT(last_update(metrics, "agg").Value(), 0.0);
+  EXPECT_GT(last_successful(metrics, "agg").Value(), 0.0);
+  EXPECT_EQ(last_attempted(metrics, "agg").Value(),
+            last_successful(metrics, "agg").Value());
+  for (auto const id : {"agg:provider-a", "agg:provider-b"}) {
+    EXPECT_TRUE(has_feed_timestamp(metrics, id));
+    EXPECT_TRUE(has_last_update(metrics, id));
+    EXPECT_TRUE(has_last_attempted(metrics, id));
+    EXPECT_TRUE(has_last_successful(metrics, id));
+    EXPECT_TRUE(has_vehicle_count(metrics, id));
+  }
+
+  // provider removed from manifest: its metrics are removed
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs, metrics);
+
+  EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_last_update(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_last_attempted(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_last_successful(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_vehicle_count(metrics, "agg:provider-b"));
+
+  // manifest can't be loaded: keep previous provider feeds
+  write_file(dir / "manifest.json", "{");
+  reset_update_timestamps(metrics, "agg");
+  run_update(c, gbfs, metrics);
+
+  auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
+  EXPECT_NE(nullptr, gbfs->providers_.at(idx));
+  EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_TRUE(has_vehicle_count(metrics, "agg:provider-a"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
+  EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
+  EXPECT_EQ(0.0, last_successful(metrics, "agg").Value());
+
+  // valid json, but not a manifest: keep previous provider feeds
+  write_file(dir / "manifest.json", R"({"error": "rate limited"})");
+  last_attempted(metrics, "agg").Set(0.0);
+  run_update(c, gbfs, metrics);
+
+  EXPECT_NE(nullptr,
+            gbfs->providers_.at(gbfs->provider_by_id_.at("agg:provider-a")));
+  EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
+  EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
+  EXPECT_EQ(0.0, last_successful(metrics, "agg").Value());
+}
+
+TEST(motis, gbfs_update_metrics_of_aggregated_feed_with_valid_manifest) {
+  auto const dir = make_temp_dir("manifest-valid");
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+  auto c = make_gbfs_config(dir, "agg");
+  c.gbfs_->feeds_.at("agg").ttl_->overwrite_->at("manifest") = 3600U;
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(c, gbfs, metrics);
+
+  EXPECT_GT(last_successful(metrics, "agg").Value(), 0.0);
+
+  // manifest is not fetched again while valid
+  write_file(dir / "manifest.json", "{");
+  reset_update_timestamps(metrics, "agg");
+  run_update(c, gbfs, metrics);
+
+  EXPECT_GT(last_update(metrics, "agg").Value(), 0.0);
+  EXPECT_EQ(0.0, last_attempted(metrics, "agg").Value());
+  EXPECT_EQ(0.0, last_successful(metrics, "agg").Value());
+  EXPECT_GT(last_successful(metrics, "agg:provider-a").Value(), 0.0);
+  EXPECT_FALSE(metrics.gbfs_fetch_errors_total_.Has(
+      {{"provider_id", "agg"}, {"file", "manifest"}}));
+  auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
+  EXPECT_NE(nullptr, gbfs->providers_.at(idx));
+}
+
+TEST(motis, gbfs_update_aggregated_feed_without_providers) {
+  auto const dir = make_temp_dir("manifest-empty");
+  auto const c = make_gbfs_config(dir, "agg");
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  write_manifest(dir, {});
+  run_update(c, gbfs, metrics);
+  ASSERT_NE(nullptr, gbfs);
+
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs, metrics);
+  auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
+  ASSERT_NE(nullptr, gbfs->providers_.at(idx));
+
+  auto const prev = gbfs;
+  write_manifest(dir, {});
+  run_update(c, gbfs, metrics);
+  ASSERT_NE(prev, gbfs);
+  EXPECT_EQ(nullptr, gbfs->providers_.at(idx));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg:provider-a"));
+}
+
+TEST(motis, gbfs_update_metrics_for_standalone_feed) {
+  auto const dir = make_temp_dir("standalone-metrics");
+  write_default_feed(dir);
+  auto const c = make_gbfs_config(dir);
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_successful(metrics, "test").Value(), 0.0);
+  EXPECT_EQ(last_attempted(metrics, "test").Value(),
+            last_successful(metrics, "test").Value());
+
+  // one file can't be loaded
+  write_file(dir / "station_status.json", "{");
+  reset_update_timestamps(metrics, "test");
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_update(metrics, "test").Value(), 0.0);
+  EXPECT_GT(last_attempted(metrics, "test").Value(), 0.0);
+  EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
+
+  // discovery can't be loaded
+  write_station_status(dir);
+  write_file(dir / "gbfs.json", "{");
+  reset_update_timestamps(metrics, "test");
+  run_update(c, gbfs, metrics);
+  EXPECT_EQ(0.0, last_update(metrics, "test").Value());
+  EXPECT_GT(last_attempted(metrics, "test").Value(), 0.0);
+  EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
+
+  write_discovery(dir);
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_successful(metrics, "test").Value(), 0.0);
+}
+
+TEST(motis, gbfs_update_metrics_while_files_are_valid) {
+  auto const dir = make_temp_dir("standalone-metrics-ttl");
+  write_default_feed(dir);
+  auto c = make_gbfs_config(dir);
+  for (auto& [_, ttl] : *c.gbfs_->feeds_.at("test").ttl_->overwrite_) {
+    ttl = 3600U;
+  }
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_successful(metrics, "test").Value(), 0.0);
+
+  reset_update_timestamps(metrics, "test");
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_update(metrics, "test").Value(), 0.0);
+  EXPECT_EQ(0.0, last_attempted(metrics, "test").Value());
+  EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
 }
