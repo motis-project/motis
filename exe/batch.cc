@@ -200,13 +200,6 @@ int batch(int ac, char** av) {
   pt->in_high(queries.size());
   auto const start_batch = std::chrono::steady_clock::now();
 
-  auto completed = std::size_t{0U};
-  auto const on_query_done = [&] {
-    if (++completed == queries.size()) {
-      scheduler.runner_.stop();
-    }
-  };
-
   for (auto id = std::size_t{0U}; id != queries.size(); ++id) {
     starts[id] = std::chrono::steady_clock::now();
     try {
@@ -237,12 +230,10 @@ int batch(int ac, char** av) {
                             std::chrono::steady_clock::now() - starts[id])
                             .count()));
             pt->increment();
-            on_query_done();
           },
           false);
     } catch (std::exception const& e) {
       std::cerr << "ERROR IN QUERY " << id << ": " << e.what() << "\n";
-      on_query_done();
     }
   }
 
