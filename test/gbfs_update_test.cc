@@ -1271,3 +1271,82 @@ TEST(motis, gbfs_update_metrics_while_files_are_valid) {
   EXPECT_EQ(0.0, last_attempted(metrics, "test").Value());
   EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
 }
+
+TEST(motis, gbfs_update_aggregated_feed_becomes_standalone) {
+  auto const dir = make_temp_dir("switch-to-standalone");
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  auto const c = make_gbfs_config(dir, "feed");
+  run_update(c, gbfs, metrics);
+  auto const child_idx = gbfs->provider_by_id_.at("feed:provider-a");
+
+  write_default_feed(dir);
+  fs::copy_file(dir / "gbfs.json", dir / "manifest.json",
+                fs::copy_options::overwrite_existing);
+  run_update(c, gbfs, metrics);
+
+  EXPECT_TRUE(gbfs->aggregated_feeds_->empty());
+  EXPECT_EQ(1U, gbfs->standalone_feeds_->size());
+  EXPECT_EQ(nullptr, gbfs->providers_.at(child_idx));
+  auto const& p = gbfs->providers_.at(gbfs->provider_by_id_.at("feed"));
+  ASSERT_NE(nullptr, p);
+  EXPECT_EQ(1U, p->stations_.size());
+  EXPECT_TRUE(has_feed_timestamp(metrics, "feed"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "feed:provider-a"));
+}
+
+TEST(motis, gbfs_update_standalone_feed_becomes_aggregated) {
+  auto const dir = make_temp_dir("switch-to-aggregated");
+  write_default_feed(dir);
+
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  auto const c = make_gbfs_config(dir, "feed");
+  run_update(c, gbfs, metrics);
+  auto const idx = gbfs->provider_by_id_.at("feed");
+
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs, metrics);
+
+  EXPECT_TRUE(gbfs->standalone_feeds_->empty());
+  EXPECT_EQ(1U, gbfs->aggregated_feeds_->size());
+  EXPECT_EQ(nullptr, gbfs->providers_.at(idx));
+  auto const& p =
+      gbfs->providers_.at(gbfs->provider_by_id_.at("feed:provider-a"));
+  ASSERT_NE(nullptr, p);
+  EXPECT_EQ(1U, p->stations_.size());
+  EXPECT_TRUE(has_last_successful(metrics, "feed"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "feed"));
+  EXPECT_TRUE(has_feed_timestamp(metrics, "feed:provider-a"));
+}
+
+TEST(motis, gbfs_update_removed_provider_is_removed_from_rtree_and_cache) {
+  auto const dir = make_temp_dir("manifest-cleanup");
+  write_default_feed(dir / "provider-a");
+  write_default_feed(dir / "provider-b");
+  write_manifest(dir, {"provider-a", "provider-b"});
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  auto const c = make_gbfs_config(dir, "agg");
+  run_update(c, gbfs);
+  auto const& p =
+      *gbfs->providers_.at(gbfs->provider_by_id_.at("agg:provider-b"));
+  auto const idx = p.idx_;
+  auto const station_pos = p.stations_.begin()->second.info_.pos_;
+  auto const vehicle_pos = p.vehicle_status_.front().pos_;
+  ASSERT_TRUE(rtree_contains(*gbfs, station_pos, idx));
+  ASSERT_TRUE(rtree_contains(*gbfs, vehicle_pos, idx));
+  ASSERT_TRUE(gbfs->cache_.contains(idx));
+
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs);
+
+  EXPECT_EQ(nullptr, gbfs->providers_.at(idx));
+  EXPECT_FALSE(rtree_contains(*gbfs, station_pos, idx));
+  EXPECT_FALSE(rtree_contains(*gbfs, vehicle_pos, idx));
+  EXPECT_FALSE(gbfs->cache_.contains(idx));
+}

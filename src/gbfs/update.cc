@@ -222,6 +222,22 @@ gbfs_products_idx_t product_of_vehicle(
   return vt_to_product[vs.vehicle_type_idx_];
 }
 
+bool is_manifest(json::value const& root) {
+  if (!root.is_object()) {
+    return false;
+  }
+  auto const& obj = root.as_object();
+  auto const data = obj.find("data");
+  return (data != obj.end() && data->value().is_object() &&
+          data->value().as_object().contains("datasets")) ||
+         obj.contains("systems");
+}
+
+bool is_discovery(json::value const& root) {
+  return root.is_object() && root.as_object().contains("data") &&
+         root.at("data").is_object() && !parse_discovery(root).empty();
+}
+
 bool same_partition(gbfs_provider const& a, gbfs_provider const& b) {
   if (a.products_.size() != b.products_.size()) {
     return false;
@@ -354,8 +370,9 @@ struct gbfs_update {
                         asio::use_awaitable);
       }
 
+      remove_feeds_with_changed_type();
+      cleanup_removed_providers();
       co_await init_missing_config_feeds();
-      remove_metrics_of_removed_providers();
     }
 
     apply_pending_routing_updates();
@@ -401,12 +418,13 @@ struct gbfs_update {
     }
   }
 
-  // providers that were removed from their aggregated feed
-  void remove_metrics_of_removed_providers() {
+  void cleanup_removed_providers() {
     for (auto const& [id, idx] : prev_d_->provider_by_id_) {
       auto const& prev = prev_d_->providers_[idx];
       if (prev != nullptr && d_->providers_[idx] == nullptr) {
         remove_gbfs_metrics(*prev);
+        remove_from_rtrees(*prev);
+        d_->cache_.remove(idx);
       }
     }
   }
@@ -509,6 +527,20 @@ struct gbfs_update {
     }
   }
 
+  void remove_feeds_with_changed_type() {
+    auto const changed = [&](auto const& feed) {
+      return feeds_with_changed_type_.contains(feed->id_);
+    };
+    std::erase_if(*d_->aggregated_feeds_, changed);
+    std::erase_if(*d_->standalone_feeds_, changed);
+    for (auto const& id : feeds_with_changed_type_) {
+      if (auto const it = d_->provider_by_id_.find(id);
+          it != end(d_->provider_by_id_)) {
+        d_->providers_[it->second] = nullptr;
+      }
+    }
+  }
+
   bool is_config_feed_initialized(std::string const& id) const {
     return utl::any_of(*d_->standalone_feeds_,
                        [&](auto const& pf) { return pf->id_ == id; }) ||
@@ -595,14 +627,10 @@ struct gbfs_update {
       auto discovery =
           co_await fetch_file(discovery_name, config.url_, headers, oauth, id,
                               dir, default_ttl, overwrite_ttl);
-      auto const& root = discovery.json_.as_object();
-      if ((root.contains("data") &&
-           root.at("data").as_object().contains("datasets")) ||
-          root.contains("systems")) {
-        // file is not an individual feed, but a manifest.json / Lamassu file
-        co_return co_await init_aggregated_feed(id, config.url_, headers, dir,
-                                                std::move(oauth), root,
-                                                default_ttl, overwrite_ttl);
+      if (is_manifest(discovery.json_)) {
+        co_return co_await init_aggregated_feed(
+            id, config.url_, headers, dir, std::move(oauth),
+            discovery.json_.as_object(), default_ttl, overwrite_ttl);
       }
 
       auto saf =
@@ -714,6 +742,11 @@ struct gbfs_update {
         discovery =
             co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_, pf.id_,
                                 pf.dir_, pf.default_ttl_, pf.overwrite_ttl_);
+      }
+      if (discovery && c_.feeds_.contains(pf.id_) &&
+          is_manifest(discovery->json_)) {
+        feeds_with_changed_type_.insert(pf.id_);
+        co_return;
       }
       if (discovery) {
         auto urls = parse_discovery(discovery->json_);
@@ -1077,6 +1110,19 @@ struct gbfs_update {
     }
   }
 
+  void remove_from_rtrees(gbfs_provider const& provider) {
+    auto const vt_to_product = build_vehicle_type_to_product(provider);
+    for (auto const& vs : provider.vehicle_status_) {
+      mod_vehicle(provider, vt_to_product, vs, false);
+    }
+    for (auto const& st : provider.stations_ | std::views::values) {
+      mod_station(provider, st, false);
+    }
+    for (auto const& zone : provider.geofencing_zones_.zones_) {
+      d_->provider_zone_rtree_.remove(zone.bounding_box(), provider.idx_);
+    }
+  }
+
   void update_rtree(gbfs_provider const& provider,
                     gbfs_provider const* prev_provider,
                     bool const stations_changed,
@@ -1184,6 +1230,10 @@ struct gbfs_update {
         auto const file = co_await fetch_file(
             "manifest", af.url_, af.headers_, af.oauth_, af.id_, af.dir_,
             af.default_ttl_, af.overwrite_ttl_);
+        if (is_discovery(file.json_)) {
+          feeds_with_changed_type_.insert(af.id_);
+          co_return;
+        }
         process_aggregated_feed(af, file.json_.as_object());
         set_last_update(af.id_);
         set_update_timestamps(af.id_, true);
@@ -1620,6 +1670,7 @@ struct gbfs_update {
   std::optional<proxy> proxy_;
 
   std::vector<pending_routing_update> pending_routing_updates_;
+  hash_set<std::string> feeds_with_changed_type_;
 };
 
 awaitable<void> update(config const& c,
