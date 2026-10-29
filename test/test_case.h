@@ -20,6 +20,9 @@ using motis::data;
 // Requires an element for each reusable test case
 enum class test_case {
   FFM_one_to_many,
+  // Same feed without osr_footpath: the default profile keeps the loader's
+  // footpath layer (beelines and transfers.txt).
+  FFM_one_to_many_no_osr_footpath,
 };
 
 using test_case_params = std::pair<std::string_view, config>;

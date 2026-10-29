@@ -50,7 +50,8 @@ json::value update_elevator::operator()(json::value const& query) const {
 
   auto new_e =
       elevators{w_, elevator_ids_, elevator_nodes_, std::move(elevators_copy)};
-  auto new_rtt = n::rt::create_rt_timetable(tt_, rtt->base_day_);
+  // keep the real-time data, only the walks change
+  auto new_rtt = n::rt_timetable{*rtt};
   update_rtt_td_footpaths(
       w_, l_, pl_, tt_, loc_rtree_, new_e, matches_, tasks, rtt, new_rtt,
       std::chrono::seconds{c_.timetable_.value().max_footpath_length_ * 60});

@@ -833,6 +833,9 @@ TEST(motis, itinerary_id_reconstruct_flex_location_group_first_mile) {
   run_flex_first_mile_test("flex_group", "2019-05-02");
 }
 
+// transfers.txt states FFM_10 -> FFM_101 as 3 min. The routed walk takes 6
+// min, with which RE2 (arr 10:25) would miss S3 (dep 10:30); the rule stays
+// authoritative with osr_footpath.
 constexpr auto kMultiHopGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -873,6 +876,11 @@ S3,10:38:00,10:38:00,FFM_HAUPT_S,1,0,0
 # calendar_dates.txt
 service_id,date,exception_type
 S1,20190501,1
+
+# transfers.txt
+from_stop_id,to_stop_id,transfer_type,min_transfer_time
+FFM_10,FFM_101,2,180
+FFM_101,FFM_10,2,180
 )";
 
 TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
@@ -2090,7 +2098,7 @@ data& get_elevator_test_case() {
   return d;
 }
 
-TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
+TEST(motis, itinerary_id_refresh_offset_waits_for_elevator) {
   auto& d = get_elevator_test_case();
   d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
   d.rt_->e_ = std::make_unique<elevators>(
@@ -2113,6 +2121,7 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
   ASSERT_FALSE(original.legs_.empty());
   ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_)
       << "expected first leg to be a wheelchair walk";
+  auto const original_access_dur = original.legs_.front().duration_;
 
   auto new_rtt = std::make_unique<nigiri::rt_timetable>(
       nigiri::rt_timetable{*d.rt_->rtt_});
@@ -2128,10 +2137,17 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
   auto const refreshed = refresh(query.to_url("?"));
 
-  ASSERT_EQ(api::ModeEnum::WALK, refreshed.legs_.front().mode_);
-  EXPECT_EQ(true, refreshed.legs_.front().cancelled_.value_or(false))
-      << "first-mile access should be cancelled when the DA-HBF Gleis 9/10 "
-         "elevator is out of service and the platform is unreachable";
+  auto const& access = refreshed.legs_.front();
+  // The DA-HBF Gleis 9/10 elevator is out of service from 2019-04-30T00:00Z:
+  // the access walks to the platform before that and waits there.
+  constexpr auto const kOutageStart = std::int64_t{1556582400};
+  EXPECT_EQ(api::ModeEnum::WALK, access.mode_);
+  EXPECT_NE(true, access.cancelled_.value_or(false));
+  EXPECT_EQ(original_access_dur, access.duration_);
+  EXPECT_LE(access.endTime_.get_unixtime_seconds(), kOutageStart);
+  ASSERT_GT(refreshed.legs_.size(), 1U);
+  EXPECT_LT(access.endTime_.get_unixtime_seconds(),
+            refreshed.legs_[1].startTime_.get_unixtime_seconds());
 }
 
 TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
@@ -2355,6 +2371,80 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
     EXPECT_EQ(plan_transit[i]->alternatives_,
               refresh_transit[i]->alternatives_);
   }
+}
+
+// Transfer rules: FB3 leaves U one minute after FA arrives, which only the
+// FA -> FB3 rule allows (U asks for two minutes), so FA arrives at a virtual
+// location of U. FB3 is a leg alternative for FB in the plan and in the
+// refresh, whose alternatives start where FA arrives, not at U itself.
+constexpr auto kLegAltTransferRulesGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+U,U,55.0,13.0,0,
+L,L,55.1,13.0,0,
+M,M,55.2,13.0,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_type
+RF1,DB,RF1,,3
+RF2,DB,RF2,,3
+
+# trips.txt
+route_id,service_id,trip_id
+RF1,S1,FA
+RF2,S1,FB
+RF2,S1,FB3
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+FA,10:00:00,10:00:00,L,0
+FA,10:30:00,10:30:00,U,1
+FB,10:33:00,10:33:00,U,0
+FB,11:00:00,11:00:00,M,1
+FB3,10:31:00,10:31:00,U,0
+FB3,11:05:00,11:05:00,M,1
+
+# transfers.txt
+from_stop_id,to_stop_id,transfer_type,min_transfer_time,from_route_id,to_route_id,from_trip_id,to_trip_id
+U,U,2,120,,,,
+U,U,2,60,,,FA,FB3
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, itinerary_id_refresh_leg_alternatives_follow_transfer_rules) {
+  auto const cfg = make_config(kLegAltTransferRulesGtfs);
+  auto d = import_test_data(cfg, "leg_alt_transfer_rules");
+  ASSERT_NE(0U, test::n_virts(*d.tt_)) << "precondition";
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=test_L&toPlace=test_M"
+      "&time=2019-05-01T07:55Z&searchWindow=7200&detailedLegs=true"
+      "&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const plan_transit = transit_legs(plan_itin);
+  ASSERT_EQ(2U, plan_transit.size());
+  auto const& plan_fb = *plan_transit[1];
+  EXPECT_TRUE(any_alt_trip_contains(plan_fb, "FB3"));
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = plan_itin.id_;
+  query.numLegAlternatives_ = 5;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const refresh_transit = transit_legs(refreshed);
+  ASSERT_EQ(2U, refresh_transit.size());
+  auto const& refresh_fb = *refresh_transit[1];
+  EXPECT_TRUE(any_alt_trip_contains(refresh_fb, "FB3"));
+  EXPECT_EQ(plan_fb.alternatives_, refresh_fb.alternatives_);
 }
 
 // Cross-timezone journey with first/last mile WALK access. The first transit
