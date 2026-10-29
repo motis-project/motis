@@ -1,3 +1,8 @@
+#if defined(_MSC_VER)
+// needs to be the first to include WinSock.h
+#include "boost/asio.hpp"
+#endif
+
 #include <fstream>
 #include <iostream>
 
