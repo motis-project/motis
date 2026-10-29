@@ -79,11 +79,6 @@ n::location_idx_t random_stop(n::timetable const& tt,
   return s;
 }
 
-// Finds the window of at most `max_window_days` consecutive days with the most
-// stop events. Each transport is weighted by the number of stops it serves
-// (i.e., roughly its number of departure/arrival events), so that a long
-// intercity run counts more than a short shuttle. Flex transports are only
-// taken into account if `with_flex` is set, mirroring whether FLEX is routed.
 n::interval<date::sys_days> busiest_window(n::timetable const& tt,
                                            unsigned const max_window_days,
                                            bool const with_flex) {
