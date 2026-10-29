@@ -2646,6 +2646,13 @@ export const ErrorSchema = {
         error: {
             type: 'string',
             description: 'error message'
+        },
+        unknownCodes: {
+            type: 'array',
+            description: 'Set if the error was caused by unknown timetable location IDs. Contains all unknown IDs from the request (e.g. fromPlace, toPlace, via, offset stopId).',
+            items: {
+                type: 'string'
+            }
         }
     }
 } as const;
