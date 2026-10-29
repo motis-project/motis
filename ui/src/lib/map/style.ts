@@ -860,155 +860,6 @@ export const getStyle = (
 			// minzoom 6: rail comes first, motorway/trunk one zoom later (only
 			// those two kinds exist below z6 in the tiles).
 			{
-				id: 'road-motorway',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 6,
-				filter: [
-					'all',
-					['has', 'ref'],
-					['==', ['get', 'rail'], false],
-					['==', ['get', 'kind'], 'motorway'],
-					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['get', 'zoom'], 12]]
-				],
-				paint: {
-					// dimmed in tunnels
-					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
-					// like VersaTiles: links get the same color as their parent kind
-					// (motorway_link = motorway, ...), only the width is reduced
-					'line-color': c.motorway,
-					'line-width': [
-						'let',
-						'base',
-						['case', ['to-boolean', ['get', 'link']], 3, 3.5],
-						roadWidthInterpolation
-					]
-				}
-			},
-			{
-				id: 'road-trunk',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 6,
-				filter: [
-					'all',
-					['has', 'ref'],
-					['==', ['get', 'rail'], false],
-					['==', ['get', 'kind'], 'trunk'],
-					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['get', 'zoom'], 12]]
-				],
-				paint: {
-					// dimmed in tunnels
-					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
-					// like VersaTiles: links get the same color as their parent kind
-					// (motorway_link = motorway, ...), only the width is reduced
-					'line-color': c.motorwayLink,
-					'line-width': [
-						'let',
-						'base',
-						['case', ['to-boolean', ['get', 'link']], 2.5, 3],
-						roadWidthInterpolation
-					]
-				}
-			},
-			{
-				id: 'road-primary-secondary',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 6,
-				filter: [
-					'all',
-					['has', 'ref'],
-					['==', ['get', 'rail'], false],
-					['in', ['get', 'kind'], ['literal', ['primary', 'secondary', 'runway', 'taxiway']]],
-					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['zoom'], 13]],
-					['any', ['==', ['get', 'kind'], 'secondary'], ['>', ['zoom'], 11]]
-				],
-				paint: {
-					// dimmed in tunnels
-					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
-					// like VersaTiles: links get the same color as their parent kind
-					// (motorway_link = motorway, ...), only the width is reduced
-					'line-color': c.primarySecondary,
-					'line-width': [
-						'let',
-						'base',
-						[
-							'case',
-							['to-boolean', ['get', 'link']],
-							['match', ['get', 'kind'], ['primary', 'secondary'], 1.75, 0.75],
-							['literal', 2.5]
-						],
-						roadWidthInterpolation
-					]
-				}
-			},
-			{
-				id: 'road-tertiary',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 6,
-				filter: [
-					'all',
-					['has', 'ref'],
-					['==', ['get', 'rail'], false],
-					['==', ['get', 'kind'], 'tertiary'],
-					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['zoom'], 13]],
-					['>', ['zoom'], 11]
-				],
-				paint: {
-					// dimmed in tunnels
-					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
-					// like VersaTiles: links get the same color as their parent kind
-					// (motorway_link = motorway, ...), only the width is reduced
-					'line-color': c.linkTertiary,
-					'line-width': [
-						'let',
-						'base',
-						['case', ['to-boolean', ['get', 'link']], 0.75, 1.75],
-						roadWidthInterpolation
-					]
-				}
-			},
-			{
-				id: 'road-residential',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 11,
-				filter: [
-					'all',
-					['has', 'ref'],
-					['==', ['get', 'rail'], false],
-					['==', ['get', 'kind'], 'residential']
-				],
-				paint: {
-					// dimmed in tunnels
-					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
-					'line-color': c.residential,
-					'line-width': ['let', 'base', 1.5, roadWidthInterpolation]
-				}
-			},
-			{
 				id: 'road',
 				type: 'line',
 				source: 'osm',
@@ -1055,6 +906,155 @@ export const getStyle = (
 					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
 					'line-color': c.road,
 					'line-width': ['let', 'base', 0.75, roadWidthInterpolation]
+				}
+			},
+			{
+				id: 'road-residential',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 11,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
+					['==', ['get', 'kind'], 'residential']
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					'line-color': c.residential,
+					'line-width': ['let', 'base', 1.5, roadWidthInterpolation]
+				}
+			},
+			{
+				id: 'road-tertiary',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 6,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
+					['==', ['get', 'kind'], 'tertiary'],
+					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['zoom'], 13]],
+					['>', ['zoom'], 11]
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					// like VersaTiles: links get the same color as their parent kind
+					// (motorway_link = motorway, ...), only the width is reduced
+					'line-color': c.linkTertiary,
+					'line-width': [
+						'let',
+						'base',
+						['case', ['to-boolean', ['get', 'link']], 0.75, 1.75],
+						roadWidthInterpolation
+					]
+				}
+			},
+			{
+				id: 'road-primary-secondary',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 6,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
+					['in', ['get', 'kind'], ['literal', ['primary', 'secondary', 'runway', 'taxiway']]],
+					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['zoom'], 13]],
+					['any', ['==', ['get', 'kind'], 'secondary'], ['>', ['zoom'], 11]]
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					// like VersaTiles: links get the same color as their parent kind
+					// (motorway_link = motorway, ...), only the width is reduced
+					'line-color': c.primarySecondary,
+					'line-width': [
+						'let',
+						'base',
+						[
+							'case',
+							['to-boolean', ['get', 'link']],
+							['match', ['get', 'kind'], ['primary', 'secondary'], 1.75, 0.75],
+							['literal', 2.5]
+						],
+						roadWidthInterpolation
+					]
+				}
+			},
+			{
+				id: 'road-trunk',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 6,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
+					['==', ['get', 'kind'], 'trunk'],
+					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['get', 'zoom'], 12]]
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					// like VersaTiles: links get the same color as their parent kind
+					// (motorway_link = motorway, ...), only the width is reduced
+					'line-color': c.motorwayLink,
+					'line-width': [
+						'let',
+						'base',
+						['case', ['to-boolean', ['get', 'link']], 2.5, 3],
+						roadWidthInterpolation
+					]
+				}
+			},
+			{
+				id: 'road-motorway',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 6,
+				filter: [
+					'all',
+					['has', 'ref'],
+					['==', ['get', 'rail'], false],
+					['==', ['get', 'kind'], 'motorway'],
+					['any', ['!', ['to-boolean', ['get', 'link']]], ['>=', ['get', 'zoom'], 12]]
+				],
+				paint: {
+					// dimmed in tunnels
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.5, 1],
+					// like VersaTiles: links get the same color as their parent kind
+					// (motorway_link = motorway, ...), only the width is reduced
+					'line-color': c.motorway,
+					'line-width': [
+						'let',
+						'base',
+						['case', ['to-boolean', ['get', 'link']], 3, 3.5],
+						roadWidthInterpolation
+					]
 				}
 			},
 			// streets with designated bicycle infrastructure, tinted like VersaTiles
