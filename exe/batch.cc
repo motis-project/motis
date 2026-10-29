@@ -28,7 +28,6 @@
 
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
-namespace json = boost::json;
 
 struct thousands_sep : std::numpunct<char> {
   char_type do_thousands_sep() const override { return ','; }
