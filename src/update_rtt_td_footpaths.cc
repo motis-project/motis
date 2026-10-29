@@ -1,5 +1,7 @@
 #include "motis/update_rtt_td_footpaths.h"
 
+#include <cmath>
+
 #include <cassert>
 #include <map>
 
@@ -123,6 +125,8 @@ std::vector<n::td_footpath> get_td_footpaths(
         max, dir, max_matching_distance, &blocked_mem);
 
     for (auto const [to, p] : utl::zip(neighbors, results)) {
+      // Travel time (not the search cost, which includes penalties), rounded
+      // up like every other offset and footpath.
       auto const minutes = p.has_value()
                                ? n::duration_t{static_cast<n::duration_t::rep>(
                                      std::ceil(p->duration_.count() / 60.0))}
