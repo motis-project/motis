@@ -1277,6 +1277,8 @@ struct gbfs_update {
                     << ") invalid Lamassu system: " << ex.what() << "\n";
         }
       }
+    } else {
+      throw utl::fail("GBFS manifest contains neither datasets nor systems");
     }
 
     add_skipped_entries(af.id_, "manifest", skipped_entries);

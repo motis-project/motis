@@ -1117,6 +1117,15 @@ TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
   EXPECT_TRUE(has_vehicle_count(metrics, "agg:provider-a"));
   EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
   EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
+
+  // valid json, but not a manifest: keep previous provider feeds
+  write_file(dir / "manifest.json", R"({"error": "rate limited"})");
+  run_update(c, gbfs, metrics);
+
+  EXPECT_NE(nullptr,
+            gbfs->providers_.at(gbfs->provider_by_id_.at("agg:provider-a")));
+  EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
 }
 
 TEST(motis, gbfs_update_last_update_of_aggregated_feed_with_valid_manifest) {
