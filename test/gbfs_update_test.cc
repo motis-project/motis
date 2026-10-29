@@ -1094,12 +1094,9 @@ TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
   auto metrics = metrics_registry{};
   auto gbfs = std::shared_ptr<gbfs_data>{};
 
-  // initialization fails: type of feed unknown, report as never updated
+  // initialization fails: update attempted, but never successful
   run_update(c, gbfs, metrics);
-  ASSERT_TRUE(has_feed_timestamp(metrics, "agg"));
-  EXPECT_EQ(0.0,
-            metrics.gbfs_feed_timestamp_seconds_.Add({{"provider_id", "agg"}})
-                .Value());
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
   EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
   EXPECT_FALSE(has_last_successful(metrics, "agg"));
 

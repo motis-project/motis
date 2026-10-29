@@ -355,10 +355,6 @@ struct gbfs_update {
     apply_pending_routing_updates();
   }
 
-  void ensure_gbfs_metrics(std::string const& id) {
-    metrics_->gbfs_feed_timestamp_seconds_.Add({{"provider_id", id}});
-  }
-
   void set_update_timestamps(std::string const& id, bool const success) {
     auto const now = static_cast<double>(std::time(nullptr));
     metrics_->gbfs_last_attempted_update_timestamp_seconds_
@@ -617,9 +613,6 @@ struct gbfs_update {
 
       co_return co_await update_provider_feed(*saf, std::move(discovery));
     } catch (std::exception const& ex) {
-      // not known yet whether this is a standalone or an aggregated feed:
-      // report as never updated until initialization succeeds
-      ensure_gbfs_metrics(id);
       set_update_timestamps(id, false);
       inc_fetch_error(id, "gbfs");
       std::cerr << "[GBFS] error initializing feed " << id << " ("
@@ -630,7 +623,6 @@ struct gbfs_update {
   awaitable<void> update_provider_feed(
       provider_feed const& pf,
       std::optional<gbfs_file> discovery = std::nullopt) {
-    ensure_gbfs_metrics(pf.id_);
     auto& provider = add_provider(pf);
 
     // check if exists in old data - if so, reuse existing file infos
@@ -1163,10 +1155,6 @@ struct gbfs_update {
 
     process_aggregated_feed(af, root);
     set_update_timestamps(af.id_, true);
-    // an aggregated feed has no last_updated field itself
-    // (only its provider feeds do)
-    remove_gauge(metrics_->gbfs_feed_timestamp_seconds_,
-                 {{"provider_id", af.id_}});
     co_await update_aggregated_feed_provider_feeds(af);
     d_->aggregated_feeds_->emplace_back(
         std::make_unique<aggregated_feed>(std::move(af)));
