@@ -355,6 +355,11 @@ struct gbfs_update {
     apply_pending_routing_updates();
   }
 
+  void set_last_update(std::string const& id) {
+    metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}})
+        .SetToCurrentTime();
+  }
+
   void set_update_timestamps(std::string const& id, bool const success) {
     auto const now = static_cast<double>(std::time(nullptr));
     metrics_->gbfs_last_attempted_update_timestamp_seconds_
@@ -375,6 +380,8 @@ struct gbfs_update {
   }
 
   void remove_gbfs_metrics(gbfs_provider const& provider) {
+    remove_gauge(metrics_->gbfs_last_update_timestamp_seconds_,
+                 {{"provider_id", provider.id_}});
     remove_gauge(metrics_->gbfs_last_attempted_update_timestamp_seconds_,
                  {{"provider_id", provider.id_}});
     remove_gauge(metrics_->gbfs_last_successful_update_timestamp_seconds_,
@@ -613,6 +620,7 @@ struct gbfs_update {
 
       co_return co_await update_provider_feed(*saf, std::move(discovery));
     } catch (std::exception const& ex) {
+      metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
       set_update_timestamps(id, false);
       inc_fetch_error(id, "gbfs");
       std::cerr << "[GBFS] error initializing feed " << id << " ("
@@ -623,6 +631,8 @@ struct gbfs_update {
   awaitable<void> update_provider_feed(
       provider_feed const& pf,
       std::optional<gbfs_file> discovery = std::nullopt) {
+    metrics_->gbfs_last_update_timestamp_seconds_.Add(
+        {{"provider_id", pf.id_}});
     auto& provider = add_provider(pf);
 
     // check if exists in old data - if so, reuse existing file infos
@@ -844,6 +854,7 @@ struct gbfs_update {
                      station_status_updated || vehicle_status_updated ||
                      vehicle_status_removed || geofencing_updated;
 
+      set_last_update(pf.id_);
       metrics_->gbfs_feed_timestamp_seconds_.Add({{"provider_id", pf.id_}})
           .Set(std::chrono::duration_cast<std::chrono::duration<double>>(
                    provider.last_updated_.time_since_epoch())
@@ -1154,6 +1165,7 @@ struct gbfs_update {
                               .overwrite_ttl_ = overwrite_ttl};
 
     process_aggregated_feed(af, root);
+    set_last_update(af.id_);
     set_update_timestamps(af.id_, true);
     co_await update_aggregated_feed_provider_feeds(af);
     d_->aggregated_feeds_->emplace_back(
@@ -1167,6 +1179,7 @@ struct gbfs_update {
             "manifest", af.url_, af.headers_, af.oauth_, af.id_, af.dir_,
             af.default_ttl_, af.overwrite_ttl_);
         process_aggregated_feed(af, file.json_.as_object());
+        set_last_update(af.id_);
         set_update_timestamps(af.id_, true);
       } catch (std::exception const& ex) {
         // keep the previous list of provider feeds
@@ -1175,6 +1188,8 @@ struct gbfs_update {
         std::cerr << "[GBFS] error processing aggregated feed " << af.id_
                   << " (" << af.url_ << "): " << ex.what() << "\n";
       }
+    } else {
+      set_last_update(af.id_);
     }
     co_await update_aggregated_feed_provider_feeds(af);
   }

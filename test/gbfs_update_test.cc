@@ -503,6 +503,14 @@ bool has_feed_timestamp(metrics_registry const& m, std::string const& id) {
   return m.gbfs_feed_timestamp_seconds_.Has({{"provider_id", id}});
 }
 
+bool has_last_update(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_last_update_timestamp_seconds_.Has({{"provider_id", id}});
+}
+
+prometheus::Gauge& last_update(metrics_registry& m, std::string const& id) {
+  return m.gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
+}
+
 bool has_last_attempted(metrics_registry const& m, std::string const& id) {
   return m.gbfs_last_attempted_update_timestamp_seconds_.Has(
       {{"provider_id", id}});
@@ -524,6 +532,7 @@ prometheus::Gauge& last_successful(metrics_registry& m, std::string const& id) {
 }
 
 void reset_update_timestamps(metrics_registry& m, std::string const& id) {
+  last_update(m, id).Set(0.0);
   last_attempted(m, id).Set(0.0);
   last_successful(m, id).Set(0.0);
 }
@@ -1097,6 +1106,8 @@ TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
   // initialization fails: update attempted, but never successful
   run_update(c, gbfs, metrics);
   EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  ASSERT_TRUE(has_last_update(metrics, "agg"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
   EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
   EXPECT_FALSE(has_last_successful(metrics, "agg"));
 
@@ -1106,11 +1117,13 @@ TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
   run_update(c, gbfs, metrics);
 
   EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  EXPECT_GT(last_update(metrics, "agg").Value(), 0.0);
   EXPECT_GT(last_successful(metrics, "agg").Value(), 0.0);
   EXPECT_EQ(last_attempted(metrics, "agg").Value(),
             last_successful(metrics, "agg").Value());
   for (auto const id : {"agg:provider-a", "agg:provider-b"}) {
     EXPECT_TRUE(has_feed_timestamp(metrics, id));
+    EXPECT_TRUE(has_last_update(metrics, id));
     EXPECT_TRUE(has_last_attempted(metrics, id));
     EXPECT_TRUE(has_last_successful(metrics, id));
     EXPECT_TRUE(has_vehicle_count(metrics, id));
@@ -1122,6 +1135,7 @@ TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
 
   EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
   EXPECT_FALSE(has_feed_timestamp(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_last_update(metrics, "agg:provider-b"));
   EXPECT_FALSE(has_last_attempted(metrics, "agg:provider-b"));
   EXPECT_FALSE(has_last_successful(metrics, "agg:provider-b"));
   EXPECT_FALSE(has_vehicle_count(metrics, "agg:provider-b"));
@@ -1136,6 +1150,7 @@ TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
   EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
   EXPECT_TRUE(has_vehicle_count(metrics, "agg:provider-a"));
   EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
   EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
   EXPECT_EQ(0.0, last_successful(metrics, "agg").Value());
 
@@ -1147,6 +1162,7 @@ TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
   EXPECT_NE(nullptr,
             gbfs->providers_.at(gbfs->provider_by_id_.at("agg:provider-a")));
   EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
   EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
   EXPECT_EQ(0.0, last_successful(metrics, "agg").Value());
 }
@@ -1168,6 +1184,7 @@ TEST(motis, gbfs_update_metrics_of_aggregated_feed_with_valid_manifest) {
   reset_update_timestamps(metrics, "agg");
   run_update(c, gbfs, metrics);
 
+  EXPECT_GT(last_update(metrics, "agg").Value(), 0.0);
   EXPECT_EQ(0.0, last_attempted(metrics, "agg").Value());
   EXPECT_EQ(0.0, last_successful(metrics, "agg").Value());
   EXPECT_GT(last_successful(metrics, "agg:provider-a").Value(), 0.0);
@@ -1217,6 +1234,7 @@ TEST(motis, gbfs_update_metrics_for_standalone_feed) {
   write_file(dir / "station_status.json", "{");
   reset_update_timestamps(metrics, "test");
   run_update(c, gbfs, metrics);
+  EXPECT_GT(last_update(metrics, "test").Value(), 0.0);
   EXPECT_GT(last_attempted(metrics, "test").Value(), 0.0);
   EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
 
@@ -1225,6 +1243,7 @@ TEST(motis, gbfs_update_metrics_for_standalone_feed) {
   write_file(dir / "gbfs.json", "{");
   reset_update_timestamps(metrics, "test");
   run_update(c, gbfs, metrics);
+  EXPECT_EQ(0.0, last_update(metrics, "test").Value());
   EXPECT_GT(last_attempted(metrics, "test").Value(), 0.0);
   EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
 
@@ -1233,7 +1252,7 @@ TEST(motis, gbfs_update_metrics_for_standalone_feed) {
   EXPECT_GT(last_successful(metrics, "test").Value(), 0.0);
 }
 
-TEST(motis, gbfs_update_metrics_unchanged_while_files_are_valid) {
+TEST(motis, gbfs_update_metrics_while_files_are_valid) {
   auto const dir = make_temp_dir("standalone-metrics-ttl");
   write_default_feed(dir);
   auto c = make_gbfs_config(dir);
@@ -1248,6 +1267,7 @@ TEST(motis, gbfs_update_metrics_unchanged_while_files_are_valid) {
 
   reset_update_timestamps(metrics, "test");
   run_update(c, gbfs, metrics);
+  EXPECT_GT(last_update(metrics, "test").Value(), 0.0);
   EXPECT_EQ(0.0, last_attempted(metrics, "test").Value());
   EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
 }

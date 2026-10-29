@@ -141,6 +141,12 @@ metrics_registry::metrics_registry(
                        .Register(registry_)},
       last_update_rt_{last_update_.Add({{"feed", "rt"}})},
       last_update_gbfs_{last_update_.Add({{"feed", "gbfs"}})},
+      gbfs_last_update_timestamp_seconds_{
+          prometheus::BuildGauge()
+              .Name("motis_gbfs_last_update_timestamp_seconds")
+              .Help("Timestamp of the last GBFS update per provider in which "
+                    "its gbfs.json / manifest.json was valid (0 = never)")
+              .Register(registry_)},
       gbfs_last_attempted_update_timestamp_seconds_{
           prometheus::BuildGauge()
               .Name("motis_gbfs_last_attempted_update_timestamp_seconds")
