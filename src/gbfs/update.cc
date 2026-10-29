@@ -1164,6 +1164,10 @@ struct gbfs_update {
         std::cerr << "[GBFS] error processing aggregated feed " << af.id_
                   << " (" << af.url_ << "): " << ex.what() << "\n";
       }
+    } else {
+      metrics_->gbfs_last_update_timestamp_seconds_
+          .Add({{"provider_id", af.id_}})
+          .SetToCurrentTime();
     }
     co_await update_aggregated_feed_provider_feeds(af);
   }

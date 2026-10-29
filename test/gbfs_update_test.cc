@@ -507,6 +507,10 @@ bool has_last_update(metrics_registry const& m, std::string const& id) {
   return m.gbfs_last_update_timestamp_seconds_.Has({{"provider_id", id}});
 }
 
+prometheus::Gauge& last_update(metrics_registry& m, std::string const& id) {
+  return m.gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
+}
+
 bool has_vehicle_count(metrics_registry const& m, std::string const& id) {
   return m.gbfs_vehicle_count_.Has({{"provider_id", id},
                                     {"provider_group_id", "Test Bikes"},
@@ -1104,6 +1108,7 @@ TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
 
   // manifest can't be loaded: keep previous provider feeds
   write_file(dir / "manifest.json", "{");
+  last_update(metrics, "agg").Set(0.0);
   run_update(c, gbfs, metrics);
 
   auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
@@ -1111,4 +1116,27 @@ TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
   EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
   EXPECT_TRUE(has_vehicle_count(metrics, "agg:provider-a"));
   EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
+}
+
+TEST(motis, gbfs_update_last_update_of_aggregated_feed_with_valid_manifest) {
+  auto const dir = make_temp_dir("manifest-valid");
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+  auto c = make_gbfs_config(dir, "agg");
+  c.gbfs_->feeds_.at("agg").ttl_->overwrite_->at("manifest") = 3600U;
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(c, gbfs, metrics);
+
+  // manifest is not fetched again while valid, but is still up to date
+  write_file(dir / "manifest.json", "{");
+  last_update(metrics, "agg").Set(0.0);
+  run_update(c, gbfs, metrics);
+
+  EXPECT_GT(last_update(metrics, "agg").Value(), 0.0);
+  EXPECT_FALSE(metrics.gbfs_fetch_errors_total_.Has(
+      {{"provider_id", "agg"}, {"file", "manifest"}}));
+  auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
+  EXPECT_NE(nullptr, gbfs->providers_.at(idx));
 }
