@@ -207,6 +207,12 @@ int batch(int ac, char** av) {
           {boost::beast::http::verb::get,
            boost::beast::string_view{queries.at(id)}, 11},
           [&, id](net::web_server::http_res_t const& res) {
+            response_time.add(
+                id, static_cast<std::uint64_t>(
+                        std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - starts[id])
+                            .count()));
+            pt->increment();
             std::visit(
                 [&](auto&& r) {
                   using ResponseType = std::decay_t<decltype(r)>;
@@ -224,12 +230,6 @@ int batch(int ac, char** av) {
                   }
                 },
                 res);
-            response_time.add(
-                id, static_cast<std::uint64_t>(
-                        std::chrono::duration_cast<std::chrono::milliseconds>(
-                            std::chrono::steady_clock::now() - starts[id])
-                            .count()));
-            pt->increment();
           },
           false);
     } catch (std::exception const& e) {
