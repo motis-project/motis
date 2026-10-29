@@ -1162,6 +1162,18 @@ export type RentalStation = {
     vehicleDocksAvailable: {
         [key: string]: (number);
     };
+    /**
+     * Number of docks or parking spots at this station.
+     *
+     */
+    capacity?: number;
+    /**
+     * Total number of free docks at this station, for feeds that publish
+     * the total instead of per vehicle type counts. Absent if the feed
+     * does not publish num_docks_available.
+     *
+     */
+    numDocksAvailable?: number;
     stationArea?: MultiPolygon;
     /**
      * Bounding box of the area covered by this station,
