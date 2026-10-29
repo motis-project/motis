@@ -144,7 +144,20 @@ metrics_registry::metrics_registry(
       gbfs_last_update_timestamp_seconds_{
           prometheus::BuildGauge()
               .Name("motis_gbfs_last_update_timestamp_seconds")
-              .Help("Timestamp of last successful GBFS update per provider")
+              .Help("Timestamp of the last GBFS update per provider in which "
+                    "its gbfs.json / manifest.json was valid (0 = never)")
+              .Register(registry_)},
+      gbfs_last_attempted_update_timestamp_seconds_{
+          prometheus::BuildGauge()
+              .Name("motis_gbfs_last_attempted_update_timestamp_seconds")
+              .Help("Timestamp of the last GBFS update per provider in which "
+                    "at least one file was fetched")
+              .Register(registry_)},
+      gbfs_last_successful_update_timestamp_seconds_{
+          prometheus::BuildGauge()
+              .Name("motis_gbfs_last_successful_update_timestamp_seconds")
+              .Help("Timestamp of the last GBFS update per provider in which "
+                    "all fetched files were loaded successfully")
               .Register(registry_)},
       gbfs_feed_timestamp_seconds_{
           prometheus::BuildGauge()

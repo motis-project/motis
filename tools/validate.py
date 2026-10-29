@@ -46,7 +46,7 @@ def run(cmd, cwd=None):
 
 def generate(motis, data, n, date, work, modes=None, bounds=None):
     cmd = [motis, "generate", "-d", data, "-n", str(n), "--lb_rank", "0",
-           "--first_day", date, "--last_day", date]
+           "--first_day", date, "--n_days", "1"]
     if modes:
         cmd += ["-m", modes]
     if bounds:

@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <numeric>
 
 #include "conf/configuration.h"
 
@@ -48,11 +49,67 @@ constexpr auto kEuropeBounds = R"({
     [[ [ -11, 72 ], [ -11, 36 ], [ 32, 36 ], [ 32, 72 ], [ -11, 72 ] ]]
 })";
 
+n::interval<date::sys_days> busiest_window(n::timetable const& tt,
+                                           unsigned const max_window_days,
+                                           bool const with_flex) {
+  auto const& date_range = tt.date_range_;
+  auto const tt_days =
+      static_cast<unsigned>((date_range.to_ - date_range.from_).count());
+  auto const window_days = std::min(max_window_days, tt_days);
+
+  auto stops_per_bitfield =
+      n::vector_map<n::bitfield_idx_t, std::uint64_t>(tt.bitfields_.size());
+  for (auto t = n::transport_idx_t{0U}; t != tt.transport_traffic_days_.size();
+       ++t) {
+    stops_per_bitfield[tt.transport_traffic_days_[t]] +=
+        tt.route_location_seq_[tt.transport_route_[t]].size();
+  }
+  if (with_flex) {
+    for (auto t = n::flex_transport_idx_t{0U};
+         t != tt.flex_transport_traffic_days_.size(); ++t) {
+      stops_per_bitfield[tt.flex_transport_traffic_days_[t]] +=
+          tt.flex_stop_seq_[tt.flex_transport_stop_seq_[t]].size();
+    }
+  }
+
+  auto const first_day_idx = to_idx(tt.day_idx(date_range.from_));
+  auto stops_per_day = std::vector<std::uint64_t>(tt_days, 0ULL);
+  for (auto i = n::bitfield_idx_t{0U}; i != stops_per_bitfield.size(); ++i) {
+    auto const n_stops = stops_per_bitfield[i];
+    if (n_stops == 0U) {
+      continue;
+    }
+    auto const& b = tt.bitfields_[i];
+    for (auto day = 0U; day != tt_days; ++day) {
+      if (b.test(first_day_idx + day)) {
+        stops_per_day[day] += n_stops;
+      }
+    }
+  }
+
+  auto sum = std::accumulate(stops_per_day.begin(),
+                             std::next(stops_per_day.begin(), window_days),
+                             std::uint64_t{0U});
+  auto best_sum = sum;
+  auto best_start = 0U;
+  for (auto day = window_days; day != tt_days; ++day) {
+    sum += stops_per_day[day];
+    sum -= stops_per_day[day - window_days];
+    if (sum > best_sum) {
+      best_sum = sum;
+      best_start = day - window_days + 1U;
+    }
+  }
+
+  return {date_range.from_ + date::days{best_start},
+          date_range.from_ + date::days{best_start + window_days}};
+}
+
 int generate(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto n = 100U;
   auto first_day = std::optional<date::sys_days>{};
-  auto last_day = std::optional<date::sys_days>{};
+  auto n_days = 14U;
   auto time_of_day = std::optional<std::uint32_t>{};
   auto modes = std::optional<std::vector<api::ModeEnum>>{};
   auto max_dist = 800.0;  // m
@@ -80,10 +137,6 @@ int generate(int ac, char** av) {
 
   auto const parse_first_day = [&](std::string_view const s) {
     first_day = parse_date(s);
-  };
-
-  auto const parse_last_day = [&](std::string_view const s) {
-    last_day = parse_date(s);
   };
 
   auto const parse_modes = [&](std::string_view const s) {
@@ -131,9 +184,10 @@ int generate(int ac, char** av) {
       ("help", "Prints this help message")  //
       ("n,n", po::value(&n)->default_value(n), "number of queries")  //
       ("first_day", po::value<std::string>()->notifier(parse_first_day),
-       "first day of query generation, format: YYYY-MM-DD")  //
-      ("last_day", po::value<std::string>()->notifier(parse_last_day),
-       "last day of query generation, format: YYYY-MM-DD")  //
+       "first day of query generation, format: YYYY-MM-DD (default: start of "
+       "the n_days window with the most stop events)")  //
+      ("n_days", po::value(&n_days)->default_value(n_days),
+       "number of days of query generation")  //
       ("time_of_day", po::value<std::uint32_t>()->notifier(parse_time_of_day),
        "fixes the time of day of all queries to the given number of hours "
        "after midnight, i.e., 0 - 23")  //
@@ -200,21 +254,23 @@ int generate(int ac, char** av) {
   fmt::println("Timetable ---\nn_locations: {}\nn_routes: {}\nn_trips: {}\n---",
                d.tt_->n_locations(), d.tt_->n_routes(), d.tt_->n_trips());
 
-  first_day = first_day
-                  ? d.tt_->date_range_.clamp(*first_day)
-                  : std::chrono::time_point_cast<date::sys_days::duration>(
-                        d.tt_->external_interval().from_);
-  last_day = last_day ? d.tt_->date_range_.clamp(
-                            std::max(*first_day + date::days{1U}, *last_day))
-                      : d.tt_->date_range_.clamp(*first_day + date::days{14U});
-  if (*first_day == *last_day) {
+  auto last_day = date::sys_days{};
+  if (first_day) {
+    first_day = d.tt_->date_range_.clamp(*first_day);
+    last_day = d.tt_->date_range_.clamp(*first_day + date::days{n_days});
+  } else {
+    auto const window = busiest_window(*d.tt_, n_days, use_flex);
+    first_day = window.from_;
+    last_day = window.to_;
+  }
+  if (*first_day == last_day) {
     fmt::println(
-        "can not generate queries: date range [{}, {}] has zero length after "
+        "can not generate queries: date range [{}, {}) has zero length after "
         "clamping",
-        *first_day, *last_day);
+        *first_day, last_day);
     return 1;
   }
-  fmt::println("date range: [{}, {}], tt={}", *first_day, *last_day,
+  fmt::println("date range: [{}, {}), tt={}", *first_day, last_day,
                d.tt_->external_interval());
 
   auto const in_bounds = [&](auto const& pos) {
@@ -319,7 +375,7 @@ int generate(int ac, char** av) {
 
   population.match_stops(*d.tt_, master_stops);
 
-  events.count_events(*d.tt_, master_stops, *first_day, *last_day);
+  events.count_events(*d.tt_, master_stops, *first_day, last_day);
 
   struct flex_seed {
     geo::latlng from_;
@@ -485,11 +541,12 @@ int generate(int ac, char** av) {
 
     auto const random_time = [&] {
       using namespace std::chrono_literals;
-      s.p_.time_ = *first_day +
-                   rand_in(0U, static_cast<std::uint32_t>(
-                                   (*last_day - *first_day).count())) *
-                       date::days{1U} +
-                   (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
+      s.p_.time_ =
+          *first_day +
+          rand_in(0U,
+                  static_cast<std::uint32_t>((last_day - *first_day).count())) *
+              date::days{1U} +
+          (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
     };
 
     random_from_to();

@@ -19,7 +19,7 @@ void event_sampler::add_options(po::options_description& desc) {
       ("event_weighted", po::value(&enabled_)->default_value(enabled_),
        "sample from_place with probability proportional to its departure "
        "count and to_place with probability proportional to its arrival "
-       "count within [first_day, last_day); with lb_rank/geo_rank, to_place "
+       "count within the query date range; with lb_rank/geo_rank, to_place "
        "stays the exact rank and only from_place is weighted (lb_rank is on "
        "by default: use --lb_rank 0 to weight to_place); not supported with "
        "FLEX");
