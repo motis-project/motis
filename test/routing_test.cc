@@ -1143,10 +1143,10 @@ S,20190501,1
     // A budget this small cannot produce the leg on its own.
     auto const reconstruct = [&](precomputed_route const& p) {
       auto cache = street_routing_cache_t{};
-      return street_routing(*d.w_, *d.l_, nullptr, nullptr, {},
-                            to_place(from, "", {}), to_place(to, "", {}), out,
-                            start, start + offset->duration(), 250.0, {}, cache,
-                            blocked_mem, 6U, true, 1s, p);
+      return street_routing(
+          *d.w_, *d.l_, nullptr, nullptr, {}, to_place(from, "", "", {}),
+          to_place(to, "", "", {}), out, start, start + offset->duration(),
+          250.0, {}, cache, blocked_mem, 6U, true, 1s, p);
     };
 
     auto const restored = reconstruct(precomputed);

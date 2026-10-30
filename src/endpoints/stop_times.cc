@@ -650,7 +650,7 @@ api::stoptimes_response stop_times::operator()(
               })
               .or_else([&]() {
                 return query_center.transform([](osr::location const& loc) {
-                  return to_place(loc, "center", std::nullopt);
+                  return to_place(loc, "center", "center", std::nullopt);
                 });
               })
               .transform([&](api::Place&& pl) {
