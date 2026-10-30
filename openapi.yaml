@@ -4458,11 +4458,15 @@ components:
       type: object
       required:
         - name
+        - localName
         - lat
         - lon
       properties:
         name:
           description: name of the transit stop / PoI / address
+          type: string
+        localName:
+          description: name of the transit stop / PoI / address in the local language
           type: string
         stopId:
           description: The ID of the stop. This is often something that users don't care about.

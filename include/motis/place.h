@@ -41,6 +41,7 @@ osr::level_t get_lvl(osr::ways const*,
 
 api::Place to_place(osr::location,
                     std::string_view name,
+                    std::string_view local_name,
                     std::optional<std::string> const& tz);
 
 api::Place to_place(
@@ -56,6 +57,7 @@ api::Place to_place(
     place_t start = osr::location{},
     place_t dest = osr::location{},
     std::string_view name = "",
+    std::string_view local_name = "",
     std::optional<std::string> const& fallback_tz = std::nullopt);
 
 api::Place to_place(nigiri::timetable const*,
