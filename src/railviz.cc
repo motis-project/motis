@@ -579,7 +579,7 @@ Response build_routes_response(
               enc.push(p);
               ++n_points;
             });
-        if (fr.is_scheduled()) {
+        if (shapes != nullptr && fr.is_scheduled()) {
           auto const trp_idx = fr.trip_idx();
           auto const shp_idx = shapes->get_shape_idx(trp_idx);
           if (shp_idx != n::scoped_shape_idx_t::invalid()) {
