@@ -97,6 +97,7 @@ struct config {
                                            {"ODM", false}}};
       std::optional<std::vector<rt>> rt_{};
       std::optional<std::string> default_timezone_{};
+      std::optional<std::string> default_feed_lang_{};
     };
 
     struct shapes_debug {

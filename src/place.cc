@@ -46,9 +46,11 @@ tt_location::tt_location(nigiri::location_idx_t const l,
 
 api::Place to_place(osr::location const l,
                     std::string_view name,
+                    std::string_view local_name,
                     std::optional<std::string> const& tz) {
   return {
       .name_ = std::string{name},
+      .localName_ = std::string{local_name},
       .lat_ = l.pos_.lat_,
       .lon_ = l.pos_.lng_,
       .level_ =
@@ -129,11 +131,12 @@ api::Place to_place(n::timetable const* tt,
                     place_t const start,
                     place_t const dest,
                     std::string_view name,
+                    std::string_view local_name,
                     std::optional<std::string> const& fallback_tz) {
   return std::visit(
       utl::overloaded{
           [&](osr::location const& l) {
-            return to_place(l, name, fallback_tz);
+            return to_place(l, name, local_name, fallback_tz);
           },
           [&](tt_location const tt_l) -> api::Place {
             utl::verify(tt && tags, "resolving stops requires timetable");
@@ -142,12 +145,12 @@ api::Place to_place(n::timetable const* tt,
             if (l == n::get_special_station(n::special_station::kStart)) {
               if (std::holds_alternative<osr::location>(start)) {
                 return to_place(std::get<osr::location>(start), "START",
-                                fallback_tz);
+                                "START", fallback_tz);
               }
               l = std::get<tt_location>(start).l_;
             } else if (l == n::get_special_station(n::special_station::kEnd)) {
               if (std::holds_alternative<osr::location>(dest)) {
-                return to_place(std::get<osr::location>(dest), "END",
+                return to_place(std::get<osr::location>(dest), "END", "END",
                                 fallback_tz);
               }
               l = std::get<tt_location>(dest).l_;
@@ -178,6 +181,7 @@ api::Place to_place(n::timetable const* tt,
             return {
                 .name_ = std::string{tt->translate(
                     lang, tt->locations_.names_.at(p))},
+                .localName_ = std::string{tt->get_default_name(p)},
                 .stopId_ = tags->id(*tt, l),
                 .parentId_ = p == n::location_idx_t::invalid() || p == l
                                  ? std::nullopt
@@ -222,7 +226,7 @@ api::Place to_place(n::timetable const* tt,
   auto const fallback_tz = s.get_tz_name(
       s.stop_idx_ == 0 ? n::event_type::kDep : n::event_type::kArr);
   auto p = to_place(tt, tags, w, pl, matches, ae, tz_map, lang, tt_location{s},
-                    start, dest, "", fallback_tz);
+                    start, dest, "", "", fallback_tz);
   p.track_ = s.get_track_override(ev_type)
                  .transform([](std::string_view t) { return std::string{t}; })
                  .or_else([&]() { return p.track_; });

@@ -531,14 +531,14 @@ api::Itinerary journey_to_response(
         itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
     auto const fallback_tz =
         pred == nullptr ? get_first_run_tz() : pred->to_.tz_;
-    auto const from =
-        pred == nullptr
-            ? to_place(&tt, &tags, w, pl, matches, ae, tz_map, lang,
-                       tt_location{j_leg.from_}, start, dest, "", fallback_tz)
-            : pred->to_;
+    auto const from = pred == nullptr
+                          ? to_place(&tt, &tags, w, pl, matches, ae, tz_map,
+                                     lang, tt_location{j_leg.from_}, start,
+                                     dest, "", "", fallback_tz)
+                          : pred->to_;
     auto const to =
         to_place(&tt, &tags, w, pl, matches, ae, tz_map, lang,
-                 tt_location{j_leg.to_}, start, dest, "", fallback_tz);
+                 tt_location{j_leg.to_}, start, dest, "", "", fallback_tz);
 
     auto is_unique =
         unique_stop_map_t{0U, parent_name_hash{&tt}, parent_name_eq{&tt}};
@@ -551,6 +551,7 @@ api::Itinerary journey_to_response(
           it != end(is_unique) && !it->second) {
         p.name_ =
             tt.translate(lang, tt.locations_.names_[s.get_location_idx()]);
+        p.localName_ = tt.get_default_name(s.get_location_idx());
       }
       return p;
     };
