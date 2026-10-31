@@ -144,7 +144,7 @@ flex_output::flex_output(osr::ways const& w,
                          n::timetable const& tt,
                          n::rt_timetable const* rtt,
                          flex_areas const& fa,
-                         mode_payload const id,
+                         std::vector<mode_payload> ids,
                          flex_additional_nodes const& additional_nodes,
                          osr::sharing_data sharing_data)
     : w_{w},
@@ -158,7 +158,7 @@ flex_output::flex_output(osr::ways const& w,
       fa_{fa},
       additional_nodes_{additional_nodes},
       sharing_data_{std::move(sharing_data)},
-      mode_payload_{id} {}
+      ids_{std::move(ids)} {}
 
 flex_output::~flex_output() = default;
 
@@ -167,7 +167,7 @@ bool flex_output::is_time_dependent() const { return false; }
 api::ModeEnum flex_output::get_mode() const { return api::ModeEnum::FLEX; }
 
 transport_mode_t flex_output::get_cache_key() const {
-  return transport_mode(api::ModeEnum::FLEX, mode_payload_.to_payload());
+  return transport_mode(api::ModeEnum::FLEX, ids_.front().to_payload());
 }
 
 osr::search_profile flex_output::get_profile() const {
@@ -186,13 +186,15 @@ void flex_output::annotate_leg(n::lang_t const& lang,
     return;
   }
 
-  auto const t = mode_payload_.get_flex_transport();
-  auto const stop_seq = tt_.flex_stop_seq_[tt_.flex_transport_stop_seq_[t]];
+  // All transports of `ids_` share the stop sequence.
+  auto const stop_seq =
+      tt_.flex_stop_seq_
+          [tt_.flex_transport_stop_seq_[ids_.front().get_flex_transport()]];
   auto from_stop = std::optional<n::stop_idx_t>{};
   auto to_stop = std::optional<n::stop_idx_t>{};
   for (auto i = 0U; i != stop_seq.size(); ++i) {
     auto const stop_idx = static_cast<n::stop_idx_t>(
-        mode_payload_.get_dir() == osr::direction::kForward
+        ids_.front().get_dir() == osr::direction::kForward
             ? i
             : stop_seq.size() - i - 1U);
     auto const stop = stop_seq[stop_idx];
@@ -216,6 +218,9 @@ void flex_output::annotate_leg(n::lang_t const& lang,
     return;
   }
 
+  auto const start =
+      std::chrono::time_point_cast<n::unixtime_t::duration>(*leg.startTime_);
+  auto const [t, day] = get_flex_transport(tt_, ids_, *from_stop, start);
   auto const trip = tt_.flex_transport_trip_[t];
   auto const get_alerts =
       [&](n::location_idx_t const l) -> std::optional<std::vector<api::Alert>> {
@@ -252,9 +257,6 @@ void flex_output::annotate_leg(n::lang_t const& lang,
 
   // Time windows are relative to the (UTC) traffic day of the transport.
   auto const time_windows = tt_.flex_transport_stop_time_windows_[t];
-  auto const day = std::chrono::floor<std::chrono::days>(
-      leg.startTime_.time_ - time_windows[*from_stop].from_);
-
   leg.from_.flexStartPickupDropOffWindow_ =
       day + time_windows[*from_stop].from_;
   leg.from_.flexEndPickupDropOffWindow_ = day + time_windows[*from_stop].to_;
@@ -265,8 +267,6 @@ void flex_output::annotate_leg(n::lang_t const& lang,
   auto const agency =
       tt_.route_ids_[src].route_id_provider_[tt_.trip_route_id_[trip]];
   auto const tz = n::to_time_zone(tt_.timezones_[tt_.providers_[agency].tz_]);
-  auto const start =
-      std::chrono::time_point_cast<n::unixtime_t::duration>(*leg.startTime_);
   leg.from_.pickupBookingRule_ = get_booking_rule(
       tt_, lang, tt_.flex_transport_pickup_booking_rule_[t][*from_stop], start,
       tz);

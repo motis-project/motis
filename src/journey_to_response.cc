@@ -810,7 +810,7 @@ api::Itinerary journey_to_response(
                             "flex leg without a retained search");
                 out = std::make_unique<flex::flex_output>(
                     *w, pl, matches, ae, tz_map, tags, tt, rtt, *fl,
-                    flex::mode_payload{mode.payload_},
+                    std::vector{flex::mode_payload{mode.payload_}},
                     *precomputed.flex_additional_nodes_,
                     precomputed.flex_additional_nodes_->to_sharing_data());
               } else if (to_mode(mode) == api::ModeEnum::RENTAL) {

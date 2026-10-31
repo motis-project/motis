@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "motis/flex/flex_routing_data.h"
 #include "motis/flex/mode_payload.h"
 #include "motis/osr/street_routing.h"
@@ -23,7 +25,7 @@ struct flex_output : public output {
               nigiri::timetable const&,
               nigiri::rt_timetable const*,
               flex_areas const&,
-              mode_payload,
+              std::vector<mode_payload>,
               flex_additional_nodes const&,
               osr::sharing_data);
   ~flex_output() override;
@@ -56,7 +58,8 @@ private:
   flex_areas const& fa_;
   flex_additional_nodes const& additional_nodes_;
   osr::sharing_data sharing_data_;
-  mode_payload mode_payload_;
+  // Candidates for the leg (same stop sequence), see `get_flex_transport`.
+  std::vector<mode_payload> ids_;
 };
 
 }  // namespace motis::flex
