@@ -676,7 +676,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
             flex::prepare_sharing_data(*tt_, *w_, *l_, pl_, *fa_, matches_,
                                        ids.front(), ids.front().get_dir(), frd);
         route_with_profile(flex::flex_output{
-            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, rtt, *fa_, ids.front(),
+            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, rtt, *fa_, ids,
             frd.additional_nodes_, std::move(sharing)});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
