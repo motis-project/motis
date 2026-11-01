@@ -171,12 +171,7 @@ std::optional<n::location_idx_t> tag_lookup::find_location(
   utl::verify<net::not_found_exception>(src != n::source_idx_t::invalid(),
                                         "unknown feed id {:?}", tag);
 
-  auto const it = tt.locations_.location_id_to_idx_.find({id, src});
-  if (it == end(tt.locations_.location_id_to_idx_)) {
-    return std::nullopt;
-  }
-
-  return it->second;
+  return tt.find({id, src});
 }
 
 void tag_lookup::write(std::filesystem::path const& p) const {

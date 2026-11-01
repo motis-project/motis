@@ -98,7 +98,7 @@ TEST(odm, prima_update) {
   n::loader::finalize(tt, ctx);
 
   auto const get_loc_idx = [&](auto&& s) {
-    return tt.locations_.location_id_to_idx_.at({.id_ = s, .src_ = src});
+    return tt.find({.id_ = s, .src_ = src}).value();
   };
 
   auto const loc = osr::location{};

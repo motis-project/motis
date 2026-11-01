@@ -223,12 +223,10 @@ void flex_output::annotate_leg(n::lang_t const& lang,
       return std::nullopt;
     }
     auto alerts = std::vector<api::Alert>{};
-    for (auto const& id : tt_.trip_ids_[trip]) {
-      for (auto const& a : rtt_->alerts_.get_alerts(
-               tt_, tt_.trip_id_src_[id], trip,
-               n::rt_transport_idx_t::invalid(), l, false)) {
-        alerts.emplace_back(to_alert(rtt_->alerts_, a, lang));
-      }
+    for (auto const& a :
+         rtt_->alerts_.get_alerts(tt_, tt_.trip_id_src_[trip], trip,
+                                  n::rt_transport_idx_t::invalid(), l, false)) {
+      alerts.emplace_back(to_alert(rtt_->alerts_, a, lang));
     }
     return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
   };
@@ -261,7 +259,7 @@ void flex_output::annotate_leg(n::lang_t const& lang,
   leg.to_.flexStartPickupDropOffWindow_ = day + time_windows[*to_stop].from_;
   leg.to_.flexEndPickupDropOffWindow_ = day + time_windows[*to_stop].to_;
 
-  auto const src = tt_.trip_id_src_[tt_.trip_ids_[trip].front()];
+  auto const src = tt_.trip_id_src_[trip];
   auto const agency =
       tt_.route_ids_[src].route_id_provider_[tt_.trip_route_id_[trip]];
   auto const tz = n::to_time_zone(tt_.timezones_[tt_.providers_[agency].tz_]);
