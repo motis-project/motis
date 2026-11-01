@@ -9,7 +9,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=f89fd090dadf63db8b6aa651c20336eea7186464
+  commit=354b50591d72bac31e2eb22e9d70d600514424bf
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -37,7 +37,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=18bf63c29457e78761428c1383bc5abbe78235ae
+  commit=1ccdf6972b854d17963b1d7843614446824b1e1a
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master

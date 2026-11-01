@@ -91,9 +91,8 @@ trip_id<std::string> tag_lookup::id_fragments(
   if (s.fr_->is_scheduled()) {
     // trip id
     auto const t = s.get_trip_idx(ev_type);
-    auto const id_idx = tt.trip_ids_[t].front();
-    auto const id = tt.trip_id_strings_[id_idx].view();
-    auto const src = tt.trip_id_src_[id_idx];
+    auto const id = tt.trip_id_strings_[t].view();
+    auto const src = tt.trip_id_src_[t];
 
     // start date + start time
     auto const [day, gtfs_static_dep] = s.get_trip_start(ev_type);

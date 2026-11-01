@@ -116,12 +116,9 @@ std::optional<std::vector<api::Alert>> get_alerts(
          return std::optional{rs.first.get_location_idx()};
        }).value_or(n::location_idx_t::invalid());
   auto alerts = std::vector<api::Alert>{};
-  for (auto const& t : tt.trip_ids_[x]) {
-    auto const src = tt.trip_id_src_[t];
-    for (auto const& a :
-         rtt->alerts_.get_alerts(tt, src, x, fr.rt_, l, fuzzy_stop)) {
-      alerts.emplace_back(call_to_alert(a));
-    }
+  for (auto const& a : rtt->alerts_.get_alerts(tt, tt.trip_id_src_[x], x,
+                                               fr.rt_, l, fuzzy_stop)) {
+    alerts.emplace_back(call_to_alert(a));
   }
 
   return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
