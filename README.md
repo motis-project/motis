@@ -84,7 +84,9 @@ wget https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.zip
 ./motis server
 ```
 
-**Windows (PowerShell)**
+**Windows**
+
+Enter the lines in PowerShell:
 
 ```pwsh
 Invoke-WebRequest https://github.com/motis-project/motis/releases/latest/download/motis-windows.zip -OutFile motis-windows.zip
@@ -95,18 +97,6 @@ Invoke-WebRequest https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.
 ./motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
 ./motis import
 ./motis server
-```
-
-**Windows (cmd.exe)**
-
-```cmd
-curl.exe -L -o motis-windows.zip https://github.com/motis-project/motis/releases/latest/download/motis-windows.zip
-tar -xf motis-windows.zip
-curl.exe -L -o aachen.osm.pbf https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
-curl.exe -L -o AVV_GTFS_Masten_mit_SPNV.zip https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.zip
-motis.exe config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
-motis.exe import
-motis.exe server
 ```
 
 # Documentation
