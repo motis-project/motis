@@ -610,6 +610,7 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
 }
 
 std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
+    n::rt_timetable const* rtt,
     elevators const* e,
     gbfs::gbfs_routing_data& gbfs_rd,
     n::lang_t const& lang,
@@ -675,7 +676,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
             flex::prepare_sharing_data(*tt_, *w_, *l_, pl_, *fa_, matches_,
                                        ids.front(), ids.front().get_dir(), frd);
         route_with_profile(flex::flex_output{
-            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, *fa_, ids.front(),
+            *w_, pl_, matches_, ae_, tz_, *tags_, *tt_, rtt, *fa_, ids.front(),
             frd.additional_nodes_, std::move(sharing)});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
@@ -935,7 +936,7 @@ api::plan_response routing::route(api::plan_params const& query,
   auto [direct, fastest_direct] =
       t.has_value() && !direct_modes.empty() && w_ && l_
           ? route_direct(
-                e, gbfs_rd, lang, from_p, to_p, direct_modes,
+                annotation_rtt, e, gbfs_rd, lang, from_p, to_p, direct_modes,
                 query.directRentalFormFactors_,
                 query.directRentalPropulsionTypes_,
                 query.directRentalProviders_, query.directRentalProviderGroups_,

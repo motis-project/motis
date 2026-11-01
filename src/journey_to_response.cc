@@ -116,12 +116,9 @@ std::optional<std::vector<api::Alert>> get_alerts(
          return std::optional{rs.first.get_location_idx()};
        }).value_or(n::location_idx_t::invalid());
   auto alerts = std::vector<api::Alert>{};
-  for (auto const& t : tt.trip_ids_[x]) {
-    auto const src = tt.trip_id_src_[t];
-    for (auto const& a :
-         rtt->alerts_.get_alerts(tt, src, x, fr.rt_, l, fuzzy_stop)) {
-      alerts.emplace_back(call_to_alert(a));
-    }
+  for (auto const& a : rtt->alerts_.get_alerts(tt, tt.trip_id_src_[x], x,
+                                               fr.rt_, l, fuzzy_stop)) {
+    alerts.emplace_back(call_to_alert(a));
   }
 
   return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
@@ -808,7 +805,7 @@ api::Itinerary journey_to_response(
                 utl::verify(precomputed.flex_additional_nodes_ != nullptr,
                             "flex leg without a retained search");
                 out = std::make_unique<flex::flex_output>(
-                    *w, pl, matches, ae, tz_map, tags, tt, *fl,
+                    *w, pl, matches, ae, tz_map, tags, tt, rtt, *fl,
                     flex::mode_payload{mode.payload_},
                     *precomputed.flex_additional_nodes_,
                     precomputed.flex_additional_nodes_->to_sharing_data());

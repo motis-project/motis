@@ -91,9 +91,8 @@ trip_id<std::string> tag_lookup::id_fragments(
   if (s.fr_->is_scheduled()) {
     // trip id
     auto const t = s.get_trip_idx(ev_type);
-    auto const id_idx = tt.trip_ids_[t].front();
-    auto const id = tt.trip_id_strings_[id_idx].view();
-    auto const src = tt.trip_id_src_[id_idx];
+    auto const id = tt.trip_id_strings_[t].view();
+    auto const src = tt.trip_id_src_[t];
 
     // start date + start time
     auto const [day, gtfs_static_dep] = s.get_trip_start(ev_type);
@@ -172,12 +171,7 @@ std::optional<n::location_idx_t> tag_lookup::find_location(
   utl::verify<net::not_found_exception>(src != n::source_idx_t::invalid(),
                                         "unknown feed id {:?}", tag);
 
-  auto const it = tt.locations_.location_id_to_idx_.find({id, src});
-  if (it == end(tt.locations_.location_id_to_idx_)) {
-    return std::nullopt;
-  }
-
-  return it->second;
+  return tt.find({id, src});
 }
 
 void tag_lookup::write(std::filesystem::path const& p) const {

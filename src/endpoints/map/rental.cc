@@ -390,6 +390,8 @@ api::rentals_response rental::operator()(
             .formFactors_ = sorted_form_factors,
             .vehicleTypesAvailable_ = std::move(types_available),
             .vehicleDocksAvailable_ = std::move(docks_available),
+            .capacity_ = st.info_.capacity_,
+            .numDocksAvailable_ = st.status_.num_docks_available_,
             .stationArea_ = st.info_.station_area_ != nullptr
                                 ? std::optional{multipoly_to_api(
                                       st.info_.station_area_.get())}

@@ -481,6 +481,72 @@ export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
 
 export type Reservation = 'NONE' | 'COMPULSORY';
 
+/**
+ * GTFS-Flex `booking_type`:
+ * - `REAL_TIME`: real time booking
+ * - `UP_TO_SAME_DAY`: up to same-day booking with advance notice
+ * - `UP_TO_PRIOR_DAYS`: up to prior day(s) booking
+ *
+ */
+export type BookingType = 'REAL_TIME' | 'UP_TO_SAME_DAY' | 'UP_TO_PRIOR_DAYS';
+
+/**
+ * GTFS-Flex booking rule (`booking_rules.txt`).
+ * Days before the day of travel are counted in the agency timezone (only days of `prior_notice_service_id` if set).
+ * `prior_notice_start_time` and `prior_notice_last_time` are local times in the agency timezone
+ * (see https://github.com/google/transit/issues/670).
+ *
+ */
+export type BookingRule = {
+    bookingType: BookingType;
+    /**
+     * Minimum number of minutes before travel to make the booking request (`UP_TO_SAME_DAY`).
+     */
+    priorNoticeDurationMin?: number;
+    /**
+     * Maximum number of minutes before travel to make the booking request (`UP_TO_SAME_DAY`).
+     */
+    priorNoticeDurationMax?: number;
+    /**
+     * Earliest time to make the booking request for this leg.
+     * - `UP_TO_SAME_DAY`: `startTime` of the leg minus `priorNoticeDurationMax`
+     * - `UP_TO_PRIOR_DAYS`: `prior_notice_start_time` on the day `prior_notice_start_day` days before the day of travel
+     *
+     */
+    earliestBookingTime?: string;
+    /**
+     * Latest time to make the booking request for this leg.
+     * - `UP_TO_SAME_DAY`: `startTime` of the leg minus `priorNoticeDurationMin`
+     * - `UP_TO_PRIOR_DAYS`: `prior_notice_last_time` on the day `prior_notice_last_day` days before the day of travel
+     *
+     */
+    latestBookingTime?: string;
+    /**
+     * Message to riders utilizing service at a stop when booking on-demand pickup and drop off.
+     */
+    message?: string;
+    /**
+     * Message to riders utilizing service at a stop when booking on-demand pickup.
+     */
+    pickupMessage?: string;
+    /**
+     * Message to riders utilizing service at a stop when booking on-demand drop off.
+     */
+    dropOffMessage?: string;
+    /**
+     * Phone number to call to make the booking request.
+     */
+    phoneNumber?: string;
+    /**
+     * URL providing information about the booking rule.
+     */
+    infoUrl?: string;
+    /**
+     * URL to an online interface or app where the booking request can be made.
+     */
+    bookingUrl?: string;
+};
+
 export type Place = {
     /**
      * name of the transit stop / PoI / address
@@ -601,6 +667,14 @@ export type Place = {
      * Time that on-demand service ends
      */
     flexEndPickupDropOffWindow?: string;
+    /**
+     * for `FLEX` transports, the booking rule for boarding at this place (`from` of the leg)
+     */
+    pickupBookingRule?: BookingRule;
+    /**
+     * for `FLEX` transports, the booking rule for alighting at this place (`to` of the leg)
+     */
+    dropOffBookingRule?: BookingRule;
     /**
      * available transport modes for stops
      */
@@ -1162,6 +1236,18 @@ export type RentalStation = {
     vehicleDocksAvailable: {
         [key: string]: (number);
     };
+    /**
+     * Number of docks or parking spots at this station.
+     *
+     */
+    capacity?: number;
+    /**
+     * Total number of free docks at this station, for feeds that publish
+     * the total instead of per vehicle type counts. Absent if the feed
+     * does not publish num_docks_available.
+     *
+     */
+    numDocksAvailable?: number;
     stationArea?: MultiPolygon;
     /**
      * Bounding box of the area covered by this station,

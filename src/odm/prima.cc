@@ -50,6 +50,7 @@ prima::prima(std::string const& prima_url,
 
 n::duration_t init_direct(std::vector<direct_ride>& rides,
                           ep::routing const& r,
+                          n::rt_timetable const* rtt,
                           elevators const* e,
                           gbfs::gbfs_routing_data& gbfs,
                           api::Place const& from_p,
@@ -61,7 +62,7 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
       std::min(query.maxMatchingDistance_,
                r.config_.get_limits().max_max_matching_distance_);
   auto [_, direct_duration] = r.route_direct(
-      e, gbfs, {}, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt,
+      rtt, e, gbfs, {}, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt,
       std::nullopt, std::nullopt, std::nullopt, false, intvl.from_, false,
       get_osr_parameters(query), query.pedestrianProfile_,
       query.elevationCosts_, kODMMaxDuration, max_matching_distance,
@@ -166,8 +167,8 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
       (r.ride_sharing_bounds_ == nullptr ||
        (r.ride_sharing_bounds_->contains(from_.pos_) &&
         r.ride_sharing_bounds_->contains(to_.pos_)))) {
-    direct_duration_ = init_direct(direct_ride_sharing_, r, e, gbfs, from, to,
-                                   search_intvl, query, api_version);
+    direct_duration_ = init_direct(direct_ride_sharing_, r, rtt, e, gbfs, from,
+                                   to, search_intvl, query, api_version);
 
     if (use_direct_taxi && r.odm_bounds_ != nullptr &&
         r.odm_bounds_->contains(from_.pos_) &&

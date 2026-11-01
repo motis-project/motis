@@ -78,9 +78,11 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
     auto const l_additional_node_idx = next_add_node_idx++;
 
     auto matches = osr::match_result{};
-    lookup.complete_match<osr::foot<false>>(
+    matches.start(pos.lvl_);
+    lookup.get_way_candidates<osr::foot<false>>(
         osr::foot<false>::parameters{}, pos, false, osr::direction::kForward,
-        kMaxGbfsMatchingDistance, nullptr, std::nullopt, {}, matches);
+        kMaxGbfsMatchingDistance, nullptr, matches);
+    matches.finish();
 
     auto const m = matches[osr::match_idx_t{0U}];
     for (auto j = std::size_t{0U}; j != m.size(); ++j) {
