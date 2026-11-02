@@ -262,6 +262,10 @@ struct osr_mapping {
           continue;
         }
 
+        if (is_returning && st.info_.station_area_) {
+          map_station_area(rd, st.info_.station_area_.get());
+        }
+
         auto const matches = get_node_matches(
             osr::location{st.info_.pos_, osr::level_t{}}, prod.form_factor_);
         if (matches.empty()) {
@@ -275,21 +279,6 @@ struct osr_mapping {
         }
         if (is_returning) {
           rd.end_allowed_.set(additional_node_id, true);
-          if (st.info_.station_area_) {
-            auto const* geom = st.info_.station_area_.get();
-            auto const rect = tg_geom_rect(geom);
-            auto const bb = geo::box{geo::latlng{rect.min.y, rect.min.x},
-                                     geo::latlng{rect.max.y, rect.max.x}};
-            auto const* osr_r = w_.r_.get();
-            l_.find(bb, [&](osr::way_idx_t const way) {
-              for (auto const n : osr_r->way_nodes_[way]) {
-                if (multipoly_contains_point(geom,
-                                             w_.get_node_pos(n).as_latlng())) {
-                  rd.end_allowed_.set(n, true);
-                }
-              }
-            });
-          }
         }
         for (auto const& m : matches) {
           auto const& node = m.node_;
@@ -310,6 +299,20 @@ struct osr_mapping {
         }
       }
     }
+  }
+
+  void map_station_area(routing_data& rd, tg_geom const* geom) const {
+    auto const rect = tg_geom_rect(geom);
+    auto const bb = geo::box{geo::latlng{rect.min.y, rect.min.x},
+                             geo::latlng{rect.max.y, rect.max.x}};
+    auto const* osr_r = w_.r_.get();
+    l_.find(bb, [&](osr::way_idx_t const way) {
+      for (auto const n : osr_r->way_nodes_[way]) {
+        if (multipoly_contains_point(geom, w_.get_node_pos(n).as_latlng())) {
+          rd.end_allowed_.set(n, true);
+        }
+      }
+    });
   }
 
   void map_vehicles() {
