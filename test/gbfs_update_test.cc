@@ -20,6 +20,12 @@
 
 #include "fmt/format.h"
 
+#include "utl/helpers/algorithm.h"
+
+#include "osr/routing/additional_edge.h"
+#include "osr/types.h"
+#include "osr/ways.h"
+
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/gbfs/data.h"
@@ -98,10 +104,12 @@ void write_system_information(fs::path const& dir,
 void write_vehicle_types(
     fs::path const& dir,
     bool const include_scooter = false,
-    std::string_view const bike_return_constraint = "hybrid") {
+    std::string_view const bike_return_constraint = "hybrid",
+    std::string_view const type_id = kBikeType,
+    std::string_view const form_factor = "bicycle") {
   auto types = json::array{};
-  types.push_back({{"vehicle_type_id", "bike"},
-                   {"form_factor", "bicycle"},
+  types.push_back({{"vehicle_type_id", type_id},
+                   {"form_factor", form_factor},
                    {"propulsion_type", "human"},
                    {"return_constraint", bike_return_constraint}});
   if (include_scooter) {
@@ -926,6 +934,65 @@ TEST(motis, gbfs_update_global_geofencing_rules) {
   auto const n = osr::node_idx_t{0U};
   EXPECT_FALSE(prod_rd->end_allowed_.test(n));
   EXPECT_TRUE(prod_rd->through_allowed_.test(n));
+}
+
+std::vector<osr::additional_edge> station_edges(
+    geo::latlng const& pos,
+    std::string_view const type_id,
+    std::string_view const form_factor) {
+  auto const dir = make_temp_dir("station-matching");
+  write_discovery(dir, "");
+  write_system_information(dir);
+  write_vehicle_types(dir, false, "any_station", type_id, form_factor);
+  write_station_information(dir, pos.lat_, pos.lng_);
+  write_station_status(dir, 3U, false, type_id);
+  write_empty_geofencing(dir);
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(make_gbfs_config(dir), gbfs);
+
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  auto const& w = *street_data().w_;
+  auto const prod_rd = gbfs->get_products_routing_data(
+      w, *street_data().l_, gbfs_products_ref{p.idx_, gbfs_products_idx_t{0}});
+  auto const it =
+      prod_rd->compressed_.additional_edges_.find(osr::node_idx_t{w.n_nodes()});
+  if (it == end(prod_rd->compressed_.additional_edges_)) {
+    return {};
+  }
+  return {begin(it->second), end(it->second)};
+}
+
+bool has_way(osr::additional_edge const& e,
+             bool (osr::way_properties::*accessible)() const) {
+  auto const& r = *street_data().w_->r_;
+  return utl::any_of(r.node_ways_[e.to_], [&](osr::way_idx_t const way) {
+    return (r.way_properties_[way].*accessible)();
+  });
+}
+
+void expect_extra_vehicle_node(std::vector<osr::additional_edge> const& edges,
+                               bool (osr::way_properties::*accessible)() const,
+                               osr::distance_t const max_dist) {
+  ASSERT_FALSE(edges.empty());
+  auto const closest =
+      *std::ranges::min_element(edges, {}, &osr::additional_edge::distance_);
+  EXPECT_FALSE(has_way(closest, accessible));
+  EXPECT_TRUE(utl::any_of(edges, [&](osr::additional_edge const& e) {
+    return has_way(e, accessible) && e.distance_ <= max_dist;
+  }));
+}
+
+TEST(motis, gbfs_update_station_next_to_sidewalk_gets_bike_node) {
+  expect_extra_vehicle_node(
+      station_edges({50.1128788, 8.6797332}, kBikeType, "bicycle"),
+      &osr::way_properties::is_bike_accessible, 50U);
+}
+
+TEST(motis, gbfs_update_car_station_gets_car_node) {
+  expect_extra_vehicle_node(
+      station_edges({49.8726662, 8.6314312}, "car", "car"),
+      &osr::way_properties::is_car_accessible, 100U);
 }
 
 TEST(motis, gbfs_update_station_area_marks_base_nodes_return_allowed) {
