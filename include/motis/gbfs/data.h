@@ -132,13 +132,13 @@ struct station_information {
   std::shared_ptr<tg_geom> station_area_{};
 
   geo::box bounding_box() const {
+    auto bb = geo::box{pos_, pos_};
     if (station_area_) {
       auto const rect = tg_geom_rect(station_area_.get());
-      return geo::box{geo::latlng{rect.min.y, rect.min.x},
-                      geo::latlng{rect.max.y, rect.max.x}};
-    } else {
-      return geo::box{pos_, pos_};
+      bb.extend(geo::box{geo::latlng{rect.min.y, rect.min.x},
+                         geo::latlng{rect.max.y, rect.max.x}});
     }
+    return bb;
   }
 };
 

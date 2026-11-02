@@ -902,6 +902,39 @@ TEST(motis, gbfs_parser_invalid_station_area_is_ignored) {
   EXPECT_EQ(nullptr, station.info_.station_area_.get());
 }
 
+TEST(motis, gbfs_parser_station_bounding_box_includes_position) {
+  auto provider = gbfs_provider{.id_ = "provider"};
+
+  load_station_information(provider, json::parse(R"({
+    "data": {
+      "stations": [
+        {
+          "station_id": "station-1",
+          "name": "Station",
+          "lat": 47.10511,
+          "lon": 6.823428,
+          "station_area": {
+            "type": "MultiPolygon",
+            "coordinates": [[[
+              [47.105152, 6.822401],
+              [47.104378, 6.8235707],
+              [47.105095, 6.8246326],
+              [47.105152, 6.822401]
+            ]]]
+          }
+        }
+      ]
+    }
+  })"));
+
+  auto const& station = provider.stations_.at("station-1");
+  ASSERT_NE(nullptr, station.info_.station_area_.get());
+  auto const bb = station.info_.bounding_box();
+  auto const area_corner = geo::latlng{6.822401, 47.105152};
+  EXPECT_TRUE(bb.contains(geo::box{station.info_.pos_, station.info_.pos_}));
+  EXPECT_TRUE(bb.contains(geo::box{area_corner, area_corner}));
+}
+
 TEST(motis, gbfs_parser_structurally_invalid_feeds_throw) {
   auto provider = gbfs_provider{.id_ = "provider"};
 
