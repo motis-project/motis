@@ -1,7 +1,5 @@
 #include "motis/compute_footpaths.h"
 
-#include "nigiri/loader/build_lb_graph.h"
-
 #include "cista/mmap.h"
 #include "cista/serialization.h"
 
@@ -209,25 +207,9 @@ void compute_footpaths(
           pt->update_monotonic(n_done + i);
         });
 
-    auto transfers_in =
-        n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
-    transfers_in.resize(tt.n_locations());
-    for (auto const [i, out] : utl::enumerate(transfers)) {
-      auto const l = n::location_idx_t{i};
-      for (auto const fp : out) {
-        assert(fp.target() < tt.n_locations());
-        transfers_in[fp.target()].push_back(n::footpath{l, fp.duration()});
-      }
-    }
     for (auto const& x : transfers) {
       tt.locations_.footpaths_out_[mode.profile_idx_].emplace_back(x);
     }
-    for (auto const& x : transfers_in) {
-      tt.locations_.footpaths_in_[mode.profile_idx_].emplace_back(x);
-    }
-
-    n::loader::build_lb_graph<n::direction::kForward>(tt, mode.profile_idx_);
-    n::loader::build_lb_graph<n::direction::kBackward>(tt, mode.profile_idx_);
 
     if (mode.is_default_profile_) {
       walks.clear();
