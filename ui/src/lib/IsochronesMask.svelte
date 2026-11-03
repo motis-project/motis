@@ -71,7 +71,7 @@
 		maxTravelTime: number;
 		serverConfig: ServerConfig | undefined;
 		geocodingBiasPlace?: maplibregl.LngLatLike;
-		time: Date | undefined;
+		time: Date;
 		useRoutedTransfers: boolean;
 		pedestrianProfile: PedestrianProfile;
 		requireBikeTransport: boolean;

@@ -416,9 +416,7 @@
 	let viaMinimumStay = $state(
 		urlParams?.has('via') ? getUrlArray('viaMinimumStay').map((s) => parseIntOr(s, 0)) : undefined
 	);
-	let time = $state<Date | undefined>(
-		urlParams?.has('time') ? new Date(urlParams.get('time')!) : undefined
-	);
+	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
 		urlParams?.get('searchWindow')
@@ -607,7 +605,7 @@
 		from.match && to.match && !advancedOptionsOpen
 			? ({
 					query: omitDefaults({
-						time: time?.toISOString(),
+						time: time.toISOString(),
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
 						arriveBy,
@@ -717,7 +715,7 @@
 					query: {
 						one: toPlaceString(one),
 						maxTravelTime: Math.ceil(maxTravelTime / 60),
-						...(time ? { time: time.toISOString() } : {}),
+						time: time.toISOString(),
 						transitModes,
 						maxTransfers,
 						arriveBy,
