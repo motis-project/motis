@@ -234,7 +234,7 @@ struct osr_mapping {
       for (auto const& [id, st] : provider_.stations_) {
         auto is_renting =
             st.status_.is_renting_ && st.status_.num_vehicles_available_ > 0;
-        auto is_returning = st.status_.is_returning_;
+        auto const is_returning = station_allows_return(st, prod);
 
         // if the station lists vehicles available by type, at least one of
         // the vehicle types included in the product segment must be available
@@ -243,19 +243,6 @@ struct osr_mapping {
               st.status_.vehicle_types_available_, [&](auto const& vt) {
                 return vt.second != 0 && prod.includes_vehicle_type(vt.first);
               });
-        }
-
-        // same for returning vehicles
-        if (is_returning && !st.status_.vehicle_docks_available_.empty()) {
-          is_returning = utl::any_of(
-              st.status_.vehicle_docks_available_, [&](auto const& vt) {
-                return vt.second != 0 && prod.includes_vehicle_type(vt.first);
-              });
-        } else if (is_returning && st.status_.num_docks_available_ &&
-                   st.info_.capacity_.value_or(0U) > 0U) {
-          // no counts per vehicle type: fall back to the published total,
-          // but only for stations that declare physical docks
-          is_returning = *st.status_.num_docks_available_ != 0;
         }
 
         if (!is_renting && !is_returning) {

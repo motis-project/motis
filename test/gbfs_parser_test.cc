@@ -536,6 +536,83 @@ TEST(motis, gbfs_free_floating_return_rejects_station_only_products) {
                                               geo::latlng{48.1, 11.1}));
 }
 
+TEST(motis, gbfs_return_allowed_in_returning_station_area) {
+  auto provider = gbfs_provider{.id_ = "provider"};
+  load_vehicle_types(provider, json::parse(R"({
+    "data": {
+      "vehicle_types": [{
+        "vehicle_type_id": "bike",
+        "form_factor": "bicycle",
+        "propulsion_type": "human",
+        "return_constraint": "any_station"
+      }]
+    }
+  })"));
+  load_station_information(provider, json::parse(R"({
+    "data": {
+      "stations": [
+        {
+          "station_id": "returning",
+          "name": "Returning",
+          "lat": 48.1,
+          "lon": 11.1,
+          "station_area": {
+            "type": "MultiPolygon",
+            "coordinates": [[[
+              [11.0, 48.0], [11.2, 48.0], [11.2, 48.2],
+              [11.0, 48.2], [11.0, 48.0]
+            ]]]
+          }
+        },
+        {
+          "station_id": "full",
+          "name": "Full",
+          "lat": 48.5,
+          "lon": 11.5,
+          "station_area": {
+            "type": "MultiPolygon",
+            "coordinates": [[[
+              [11.4, 48.4], [11.6, 48.4], [11.6, 48.6],
+              [11.4, 48.6], [11.4, 48.4]
+            ]]]
+          }
+        }
+      ]
+    }
+  })"));
+  load_station_status(provider, json::parse(R"({
+    "data": {
+      "stations": [
+        {
+          "station_id": "returning",
+          "num_bikes_available": 0,
+          "is_renting": true,
+          "is_returning": true
+        },
+        {
+          "station_id": "full",
+          "num_bikes_available": 5,
+          "is_renting": true,
+          "is_returning": true,
+          "vehicle_docks_available": [
+            {"vehicle_type_ids": ["bike"], "count": 0}
+          ]
+        }
+      ]
+    }
+  })"));
+
+  auto const product =
+      provider_products{.vehicle_types_ = {vehicle_type_idx_t{0U}},
+                        .return_constraint_ = return_constraint::kAnyStation,
+                        .known_return_constraint_ = true};
+  EXPECT_FALSE(allows_free_floating_return_at(provider, product,
+                                              geo::latlng{48.15, 11.15}));
+  EXPECT_TRUE(allows_return_at(provider, product, geo::latlng{48.15, 11.15}));
+  EXPECT_FALSE(allows_return_at(provider, product, geo::latlng{48.55, 11.55}));
+  EXPECT_FALSE(allows_return_at(provider, product, geo::latlng{48.3, 11.3}));
+}
+
 TEST(motis, gbfs_parser_geofencing_skips_bad_parts_and_unknown_type_rules) {
   auto provider = gbfs_provider{.id_ = "provider"};
 
