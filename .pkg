@@ -37,7 +37,7 @@
 [nigiri]
   url=git@github.com:spheppner/nigiri.git
   branch=private-feeds
-  commit=208c0163f4029f3c20fbce82a51b543d60a15457
+  commit=9aec8041fa4e5b443efcb0024df3cf31c80d92e3
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
