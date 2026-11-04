@@ -212,6 +212,7 @@ TEST(motis, feed_labels) {
   EXPECT_TRUE(flex("&excludeLabels=rufbus").empty());
 
   // Refreshing an itinerary of a hidden dataset requires its label.
+  // Without it, the bus leg can't be reconstructed and is cancelled.
   auto const res =
       routing(std::string{kAToB} + "&directModes=&includeLabels=hotel");
   ASSERT_EQ(1U, res.itineraries_.size());
@@ -219,10 +220,16 @@ TEST(motis, feed_labels) {
   auto query = api::refreshItinerary_params{};
   query.itineraryId_ = res.itineraries_.front().id_;
   query.includeLabels_ = {"hotel"};
-  EXPECT_EQ(res.itineraries_.front().legs_.size(),
-            refresh(query.to_url("?")).legs_.size());
+  auto const with_label = refresh(query.to_url("?"));
+  ASSERT_EQ(3U, with_label.legs_.size());
+  EXPECT_EQ("H", with_label.legs_[1].routeShortName_);
+  EXPECT_FALSE(with_label.legs_[1].cancelled_.value_or(false));
+
   query.includeLabels_ = {};
-  EXPECT_ANY_THROW(refresh(query.to_url("?")));
+  auto const without_label = refresh(query.to_url("?"));
+  ASSERT_EQ(3U, without_label.legs_.size());
+  EXPECT_TRUE(without_label.legs_[1].cancelled_.value_or(false));
+  EXPECT_FALSE(without_label.legs_[1].tripId_.has_value());
 }
 
 TEST(motis, feed_labels_geocode) {
