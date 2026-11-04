@@ -2586,6 +2586,31 @@ For example, this can be used to allow only \`SUBURBAN,SUBWAY,TRAM\`.
             default: ['TRANSIT'],
             explode: false
         },
+        includeLabels: {
+            description: `Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+If this is empty (the default), MOTIS uses all datasets that are not hidden.
+Hidden datasets (\`hidden: true\` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+`,
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            default: [],
+            explode: false
+        },
+        excludeLabels: {
+            description: `Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+`,
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            default: [],
+            explode: false
+        },
         preTransitModes: {
             description: `Optional. Default is \`WALK\`. Does not apply to direct connections (see \`directMode\`).
 
