@@ -3613,6 +3613,21 @@ export type ReverseGeocodeError = (Error);
 export type GeocodeData = {
     query: {
         /**
+         * Optional. Excludes stops of the specified datasets from the suggestions, unless they are also part of a used dataset.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits stop suggestions to stops from the specified datasets. A stop is suggested if at least one of its datasets is used.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
+        /**
          * language tags as used in OpenStreetMap
          * (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
