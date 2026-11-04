@@ -1126,6 +1126,8 @@ api::plan_response routing::route(api::plan_params const& query,
                       : n::kFootProfile
                 : 0U),
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
+        .blocked_ = labels_.blocked(*tt_, rtt, query.includeLabels_,
+                                    query.excludeLabels_),
         .require_bike_transport_ = query.requireBikeTransport_,
         .require_car_transport_ = query.requireCarTransport_,
         .no_compulsory_reservation_ = query.noCompulsoryReservation_,
@@ -1223,9 +1225,10 @@ api::plan_response routing::route(api::plan_params const& query,
                  (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
-                 !q.td_start_.empty() || !q.td_dest_.empty() ||
-                 !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-                 q.require_bike_transport_ || q.require_car_transport_ ||
+                 q.blocked_.any() || !q.td_start_.empty() ||
+                 !q.td_dest_.empty() || !q.transfer_time_settings_.default_ ||
+                 !q.via_stops_.empty() || q.require_bike_transport_ ||
+                 q.require_car_transport_ ||
                  q.no_compulsory_reservation_) {
         auto raptor_state = n::routing::raptor_state{};
         r = n::routing::raptor_search(

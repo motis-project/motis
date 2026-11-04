@@ -25,6 +25,7 @@ struct railviz_rt_index {
 };
 
 api::trips_response get_trains(tag_lookup const&,
+                               feed_labels const&,
                                nigiri::timetable const&,
                                nigiri::rt_timetable const*,
                                nigiri::shapes_storage const*,

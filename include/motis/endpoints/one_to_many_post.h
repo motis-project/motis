@@ -36,6 +36,7 @@ struct one_to_many_intermodal_post {
   nigiri::timetable const& tt_;
   std::shared_ptr<rt> const& rt_;
   tag_lookup const& tags_;
+  feed_labels const& labels_;
   flex::flex_areas const* fa_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;
   platform_matches_t const* matches_;

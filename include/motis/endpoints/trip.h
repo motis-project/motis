@@ -22,6 +22,7 @@ struct trip {
   adr_ext const* ae_;
   tz_map_t const* tz_;
   tag_lookup const& tags_;
+  feed_labels const& labels_;
   point_rtree<nigiri::location_idx_t> const& loc_tree_;
   std::shared_ptr<rt> const& rt_;
 };

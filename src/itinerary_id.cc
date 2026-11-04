@@ -681,6 +681,7 @@ api::Itinerary reconstruct_itinerary(
     n::lang_t const& lang,
     std::size_t const num_leg_alternatives,
     n::routing::clasz_mask_t const allowed_claszes,
+    n::routing::blocked_feeds const& blocked_labels,
     bool const require_bike_transport,
     bool const require_car_transport,
     bool const no_compulsory_reservation,
@@ -882,12 +883,12 @@ api::Itinerary reconstruct_itinerary(
 
     auto q = n::routing::make_alternative_query(
         stop_times_ep.tt_, rt.rtt_.get(),
-        n::routing::query{
-            .prf_idx_ = safe_prf_idx,
-            .allowed_claszes_ = allowed_claszes,
-            .require_bike_transport_ = require_bike_transport,
-            .require_car_transport_ = require_car_transport,
-            .no_compulsory_reservation_ = no_compulsory_reservation},
+        n::routing::query{.prf_idx_ = safe_prf_idx,
+                          .allowed_claszes_ = allowed_claszes,
+                          .blocked_ = blocked_labels,
+                          .require_bike_transport_ = require_bike_transport,
+                          .require_car_transport_ = require_car_transport,
+                          .no_compulsory_reservation_ = no_compulsory_reservation},
         has_prev_transit ? legs[i - 2U].to_ : n::location_idx_t::invalid(),
         has_next_transit ? legs[i + 2U].from_ : n::location_idx_t::invalid());
 

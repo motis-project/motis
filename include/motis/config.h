@@ -82,6 +82,7 @@ struct config {
       bool operator==(dataset const&) const = default;
 
       std::string path_;
+      std::optional<std::vector<std::string>> labels_{};
       std::optional<std::string> script_{};
       bool extend_calendar_{false};
       bool default_bikes_allowed_{false};

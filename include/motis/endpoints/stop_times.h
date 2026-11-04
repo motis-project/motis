@@ -40,6 +40,7 @@ struct stop_times {
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   nigiri::timetable const& tt_;
   tag_lookup const& tags_;
+  feed_labels const& labels_;
   std::shared_ptr<rt> const& rt_;
 };
 

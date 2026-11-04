@@ -343,6 +343,9 @@ void data::load_osr() {
 
 void data::load_tt(fs::path const& p) {
   tags_ = tag_lookup::read(path_ / "tags.bin");
+  if (config_.timetable_.has_value()) {
+    labels_ = feed_labels{*config_.timetable_, *tags_};
+  }
   tt_ = n::timetable::read(path_ / p);
   tt_->resolve();
   location_rtree_ = std::make_unique<point_rtree<n::location_idx_t>>(
