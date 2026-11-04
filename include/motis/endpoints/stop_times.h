@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "nigiri/routing/query.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
 #include "nigiri/types.h"
@@ -28,6 +29,7 @@ struct stop_times {
       std::optional<nigiri::event_type> const&,
       std::optional<nigiri::location_idx_t> const& query_stop,
       std::optional<osr::location> const& query_center,
+      nigiri::routing::blocked_feeds const&,
       bool const disable_stoptimes_max_limit = false) const;
 
   config const& config_;

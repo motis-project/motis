@@ -64,7 +64,7 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
   auto [_, direct_duration] = r.route_direct(
       rtt, e, gbfs, {}, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt,
       std::nullopt, std::nullopt, std::nullopt, false, intvl.from_, false,
-      get_osr_parameters(query), query.pedestrianProfile_,
+      get_osr_parameters(query), {}, query.pedestrianProfile_,
       query.elevationCosts_, kODMMaxDuration, max_matching_distance,
       kODMDirectFactor, query.detailedLegs_, api_version);
 

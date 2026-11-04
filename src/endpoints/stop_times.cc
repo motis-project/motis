@@ -392,6 +392,7 @@ std::vector<n::rt::run> stop_times::get_runs(
     std::optional<nigiri::event_type> const& ev_type,
     std::optional<nigiri::location_idx_t> const& query_stop,
     std::optional<osr::location> const& query_center,
+    n::routing::blocked_feeds const& blocked,
     bool const disable_stoptimes_max_limit) const {
   auto const max_results = disable_stoptimes_max_limit
                                ? 999888777U
@@ -430,8 +431,6 @@ std::vector<n::rt::run> stop_times::get_runs(
       query_stop.has_value(), query_center.has_value());
 
   auto const allowed_clasz = to_clasz_mask(query.mode_);
-  auto const blocked =
-      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_);
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(fmt::format(
       "{}|{}",
       query.direction_
@@ -499,7 +498,9 @@ std::vector<nigiri::rt::run> stop_times::get_runs(
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
-  return this->get_runs(query, rtt, ev_type, query_stop, query_center);
+  return this->get_runs(
+      query, rtt, ev_type, query_stop, query_center,
+      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_));
 }
 
 api::stoptimes_response stop_times::operator()(
@@ -529,7 +530,8 @@ api::stoptimes_response stop_times::operator()(
 
   auto const events = this->get_runs(
       query, rtt, is_both ? std::nullopt : std::optional{base_ev_type},
-      query_stop, query_center);
+      query_stop, query_center,
+      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_));
 
   auto const get_time = [&](n::rt::run const& r) {
     auto const fr = n::rt::frun{tt_, rtt, r};

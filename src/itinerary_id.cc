@@ -24,7 +24,6 @@
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
-#include "utl/erase_if.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/verify.h"
 #include "utl/visit.h"
@@ -336,11 +335,8 @@ std::vector<st_candidate> get_st_candidates_in_radius(
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
-  auto events =
-      st_ep.get_runs(query, nullptr, ev_type, query_stop, query_center, true);
-  utl::erase_if(events, [&](n::rt::run const& r) {
-    return blocked.routes_.test(st_ep.tt_.transport_route_[r.t_.t_idx_]);
-  });
+  auto const events = st_ep.get_runs(query, nullptr, ev_type, query_stop,
+                                     query_center, blocked, true);
 
   return utl::to_vec(events, [&](n::rt::run const r) -> st_candidate {
     auto const fr = n::rt::frun{st_ep.tt_, nullptr, r};
