@@ -27,6 +27,7 @@ struct feed_labels {
   src_set resolve(std::vector<std::string> const&) const;
 
   std::unordered_map<std::string, src_set> by_name_;
+  src_set hidden_;
   cista::base_t<nigiri::source_idx_t> n_srcs_{0U};
 };
 

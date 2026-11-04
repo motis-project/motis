@@ -63,6 +63,7 @@ timetable:
   datasets:
     de:
       path: delfi.gtfs.zip
+      hidden: false
       extend_calendar: false
       default_bikes_allowed: false
       default_cars_allowed: false
@@ -80,6 +81,7 @@ timetable:
           protocol: gtfsrt
     nl:
       path: nl.gtfs.zip
+      hidden: false
       extend_calendar: false
       default_bikes_allowed: false
       default_cars_allowed: false

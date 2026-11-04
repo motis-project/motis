@@ -49,7 +49,8 @@ paths:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           schema:
             default: []
             type: array
@@ -1384,7 +1385,8 @@ paths:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           schema:
             default: []
             type: array
@@ -1890,7 +1892,8 @@ paths:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           schema:
             default: []
             type: array
@@ -2471,7 +2474,8 @@ paths:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           schema:
             default: []
             type: array
@@ -2590,7 +2594,8 @@ paths:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           schema:
             default: []
             type: array
@@ -2935,7 +2940,8 @@ paths:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           schema:
             default: []
             type: array
@@ -3226,7 +3232,8 @@ paths:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           schema:
             default: []
             type: array
@@ -3384,7 +3391,8 @@ paths:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           schema:
             default: []
             type: array
@@ -3495,7 +3503,8 @@ paths:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           schema:
             default: []
             type: array
@@ -6415,7 +6424,8 @@ components:
           description: |
             Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
             Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
-            If this is empty (the default), MOTIS uses all available datasets.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
           type: array
           items:
             type: string

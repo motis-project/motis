@@ -15,6 +15,7 @@ namespace motis {
 feed_labels::feed_labels(config::timetable const& c, tag_lookup const& tags) {
   n_srcs_ =
       static_cast<cista::base_t<n::source_idx_t>>(tags.src_to_tag_.size());
+  hidden_.resize(n_srcs_);
 
   auto const add = [&](std::string const& name, n::source_idx_t const src) {
     auto& b = by_name_[name];
@@ -28,6 +29,9 @@ feed_labels::feed_labels(config::timetable const& c, tag_lookup const& tags) {
                 "dataset \"{}\" is not imported, please re-run the import",
                 tag);
     add(tag, src);
+    if (dataset.hidden_) {
+      hidden_.set(src);
+    }
   }
 
   for (auto const& [tag, dataset] : c.datasets_) {
@@ -62,20 +66,22 @@ n::routing::blocked_feeds feed_labels::blocked(
     n::rt_timetable const* rtt,
     std::vector<std::string> const& include,
     std::vector<std::string> const& exclude) const {
-  if (include.empty() && exclude.empty()) {
+  if (include.empty() && exclude.empty() && !hidden_.any()) {
     return {};
   }
 
-  auto included = src_set{};
-  if (include.empty()) {
-    included.resize(n_srcs_);
-    included.one_out();
-  } else {
-    included = resolve(include);
+  // Named visible datasets limit the request to them. Named hidden datasets
+  // are added on top.
+  auto const named = resolve(include);
+  auto active = named & ~hidden_;
+  if (!active.any()) {
+    active.one_out();
+    active &= ~hidden_;
   }
-  included &= ~resolve(exclude);
+  active |= named & hidden_;
+  active &= ~resolve(exclude);
 
-  return n::routing::make_blocked_feeds(tt, rtt, ~included);
+  return n::routing::make_blocked_feeds(tt, rtt, ~active);
 }
 
 }  // namespace motis

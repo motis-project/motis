@@ -104,6 +104,10 @@ timetable:                          # if not set, no timetable will be loaded
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
       extend_calendar: true         # expand the weekly service pattern beyond the end of `feed_info.txt::feed_end_date` if `feed_end_date` matches `calendar.txt::end_date`
+    hotel:
+      path: hotel-shuttle.gtfs.zip
+      labels: [hotels]              # additional names for `includeLabels`/`excludeLabels` in API requests
+      hidden: true                  # only used for requests that list this dataset (or one of its labels) in `includeLabels`
 gbfs:
   feeds:
     montreal:

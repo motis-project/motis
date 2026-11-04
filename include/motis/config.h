@@ -83,6 +83,7 @@ struct config {
 
       std::string path_;
       std::optional<std::vector<std::string>> labels_{};
+      bool hidden_{false};
       std::optional<std::string> script_{};
       bool extend_calendar_{false};
       bool default_bikes_allowed_{false};
