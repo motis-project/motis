@@ -290,6 +290,10 @@ data::data(std::filesystem::path p, config const& c)
   throw_if_failed("elevators", elevators);
   throw_if_failed("tiles", tiles);
 
+  if (tt_ != nullptr && adr_ext_ != nullptr) {
+    labels_.add_places(*tt_, *adr_ext_);
+  }
+
   utl_verify(
       shapes_ == nullptr || tt_ == nullptr ||
           (tt_->n_routes() == shapes_->route_bboxes_.size() &&

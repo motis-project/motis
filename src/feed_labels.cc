@@ -1,5 +1,11 @@
 #include "motis/feed_labels.h"
 
+#include <utility>
+#include <vector>
+
+#include "utl/enumerate.h"
+#include "utl/erase_duplicates.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/verify.h"
 
 #include "net/bad_request_exception.h"
@@ -61,15 +67,30 @@ feed_labels::src_set feed_labels::resolve(
   return b;
 }
 
-n::routing::blocked_feeds feed_labels::blocked(
-    n::timetable const& tt,
-    n::rt_timetable const* rtt,
+void feed_labels::add_places(n::timetable const& tt, adr_ext const& ae) {
+  auto place_srcs =
+      std::vector<std::pair<adr_extra_place_idx_t, n::source_idx_t>>{};
+  for (auto const [l, p] : utl::enumerate(ae.location_place_)) {
+    if (p != adr_extra_place_idx_t::invalid()) {
+      place_srcs.emplace_back(p, tt.locations_.src_[n::location_idx_t{l}]);
+    }
+  }
+  utl::erase_duplicates(place_srcs);
+
+  auto it = begin(place_srcs);
+  auto srcs = std::vector<n::source_idx_t>{};
+  for (auto p = adr_extra_place_idx_t{0U}; p != ae.place_clasz_.size(); ++p) {
+    srcs.clear();
+    for (; it != end(place_srcs) && it->first == p; ++it) {
+      srcs.push_back(it->second);
+    }
+    place_srcs_.emplace_back(srcs);
+  }
+}
+
+feed_labels::src_set feed_labels::active(
     std::vector<std::string> const& include,
     std::vector<std::string> const& exclude) const {
-  if (include.empty() && exclude.empty() && !hidden_.any()) {
-    return {};
-  }
-
   // Named visible datasets limit the request to them. Named hidden datasets
   // are added on top.
   auto const named = resolve(include);
@@ -80,8 +101,25 @@ n::routing::blocked_feeds feed_labels::blocked(
   }
   active |= named & hidden_;
   active &= ~resolve(exclude);
+  return active;
+}
 
-  return n::routing::make_blocked_feeds(tt, rtt, ~active);
+n::routing::blocked_feeds feed_labels::blocked(
+    n::timetable const& tt,
+    n::rt_timetable const* rtt,
+    std::vector<std::string> const& include,
+    std::vector<std::string> const& exclude) const {
+  if (include.empty() && exclude.empty() && !hidden_.any()) {
+    return {};
+  }
+  return n::routing::make_blocked_feeds(tt, rtt, ~active(include, exclude));
+}
+
+bool feed_labels::is_active(src_set const& active,
+                            adr_extra_place_idx_t const p) const {
+  return utl::any_of(place_srcs_[p], [&](n::source_idx_t const src) {
+    return active.test(src);
+  });
 }
 
 }  // namespace motis

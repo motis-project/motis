@@ -17,6 +17,7 @@
 #include "motis/config.h"
 #include "motis/endpoints/adr/filter_conv.h"
 #include "motis/endpoints/adr/suggestions_to_response.h"
+#include "motis/feed_labels.h"
 #include "motis/parse_location.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
@@ -61,27 +62,24 @@ api::geocode_response geocode::operator()(
       }
     }
   }
+  auto const required_clasz = required_modes.value_or(0U);
+  auto const active =
+      labels_.active(params.includeLabels_, params.excludeLabels_);
+  auto const filter_labels = (~active).any();
   auto const place_filter =
-      required_modes
-          .and_then(
-              [&](n::routing::clasz_mask_t const required_clasz)
-                  -> std::optional<std::function<bool(adr::place_idx_t)>> {
-                if (required_clasz == 0U) {
-                  return std::nullopt;
-                }
-                return {std::function{
-                    [&, required_clasz](adr::place_idx_t place_idx) {
-                      if (t_.place_type_[place_idx] !=
-                          adr::amenity_category::kExtra) {
-                        return true;
-                      }
-                      auto const i = adr_extra_place_idx_t{
-                          static_cast<adr_extra_place_idx_t::value_t>(
-                              place_idx - t_.ext_start_)};
-                      return (ae_->place_clasz_.at(i) & required_clasz) != 0U;
-                    }}};
-              })
-          .value_or(std::function<bool(adr::place_idx_t)>{});
+      required_clasz != 0U || filter_labels
+          ? std::function{[&](adr::place_idx_t const place_idx) {
+              if (t_.place_type_[place_idx] != adr::amenity_category::kExtra) {
+                return true;
+              }
+              auto const i = adr_extra_place_idx_t{
+                  static_cast<adr_extra_place_idx_t::value_t>(place_idx -
+                                                              t_.ext_start_)};
+              return (required_clasz == 0U ||
+                      (ae_->place_clasz_.at(i) & required_clasz) != 0U) &&
+                     (!filter_labels || labels_.is_active(active, i));
+            }}
+          : std::function<bool(adr::place_idx_t)>{};
   auto const config_limit =
       static_cast<std::int64_t>(config_.get_limits().geocode_max_suggestions_);
   auto const requested_limit =

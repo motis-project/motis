@@ -15,6 +15,7 @@ struct geocode {
   platform_matches_t const* matches_;
   nigiri::timetable const* tt_;
   tag_lookup const* tags_;
+  feed_labels const& labels_;
   adr::typeahead const& t_;
   adr::formatter const& f_;
   adr::cache& cache_;
