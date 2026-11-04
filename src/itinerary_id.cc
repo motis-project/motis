@@ -24,6 +24,7 @@
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
+#include "utl/erase_if.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/verify.h"
 #include "utl/visit.h"
@@ -313,7 +314,8 @@ std::vector<st_candidate> get_st_candidates_in_radius(
     std::int64_t const window,
     int const radius_m,
     bool const arrive_by,
-    n::lang_t const& lang) {
+    n::lang_t const& lang,
+    n::routing::blocked_feeds const& blocked) {
   auto query = api::stoptimes_params{};
   query.center_ = fmt::format("{},{}", center.lat_, center.lng_);
   query.time_ = openapi::date_time_t{
@@ -334,8 +336,11 @@ std::vector<st_candidate> get_st_candidates_in_radius(
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
-  auto const events =
+  auto events =
       st_ep.get_runs(query, nullptr, ev_type, query_stop, query_center, true);
+  utl::erase_if(events, [&](n::rt::run const& r) {
+    return blocked.routes_.test(st_ep.tt_.transport_route_[r.t_.t_idx_]);
+  });
 
   return utl::to_vec(events, [&](n::rt::run const r) -> st_candidate {
     auto const fr = n::rt::frun{st_ep.tt_, nullptr, r};
@@ -564,7 +569,8 @@ std::expected<n::routing::journey::leg, std::string> reconstruct_pt_leg(
     ep::stop_times const& stop_times_ep,
     n::rt_timetable const* rtt,
     n::lang_t const& lang,
-    bool const require_display_name_match) {
+    bool const require_display_name_match,
+    n::routing::blocked_feeds const& blocked) {
   auto const fail = [](std::string_view const msg) {
     return std::unexpected{std::string{msg}};
   };
@@ -578,6 +584,9 @@ std::expected<n::routing::journey::leg, std::string> reconstruct_pt_leg(
                                            stop_times_ep.tt_, rtt, lh.trip_id_);
     if (!fr.valid()) {
       return fail("reconstruct_itinerary: additional trip not found");
+    }
+    if (blocked.rt_transports_.test(fr.rt_)) {
+      return fail("reconstruct_itinerary: additional trip is excluded");
     }
     if (fr.is_scheduled()) {
       return fail(
@@ -607,10 +616,12 @@ std::expected<n::routing::journey::leg, std::string> reconstruct_pt_leg(
   } else {
     auto const from_st_res = get_st_candidates_in_radius(
         stop_times_ep, lh.from_loc_.pos_, lh.sched_start_ - kLookbackSeconds,
-        lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, false, lang);
+        lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, false, lang,
+        blocked);
     auto const to_st_res = get_st_candidates_in_radius(
         stop_times_ep, lh.to_loc_.pos_, lh.sched_end_ - kLookbackSeconds,
-        lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, true, lang);
+        lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, true, lang,
+        blocked);
 
     auto const best_from_to =
         get_best_candidate(from_st_res, to_st_res, lh,
@@ -777,7 +788,7 @@ api::Itinerary reconstruct_itinerary(
         flm.pedestrian_profile_, flm.elevation_costs_,
         flm.max_matching_distance_,
         is_start ? flm.max_pre_transit_ : flm.max_post_transit_, anchor_time,
-        stats,
+        blocked_labels, stats,
         is_start ? &otm_searches[n::special_station::kStart]
                  : &otm_searches[n::special_station::kEnd]);
   };
@@ -883,12 +894,13 @@ api::Itinerary reconstruct_itinerary(
 
     auto q = n::routing::make_alternative_query(
         stop_times_ep.tt_, rt.rtt_.get(),
-        n::routing::query{.prf_idx_ = safe_prf_idx,
-                          .allowed_claszes_ = allowed_claszes,
-                          .blocked_ = blocked_labels,
-                          .require_bike_transport_ = require_bike_transport,
-                          .require_car_transport_ = require_car_transport,
-                          .no_compulsory_reservation_ = no_compulsory_reservation},
+        n::routing::query{
+            .prf_idx_ = safe_prf_idx,
+            .allowed_claszes_ = allowed_claszes,
+            .blocked_ = blocked_labels,
+            .require_bike_transport_ = require_bike_transport,
+            .require_car_transport_ = require_car_transport,
+            .no_compulsory_reservation_ = no_compulsory_reservation},
         has_prev_transit ? legs[i - 2U].to_ : n::location_idx_t::invalid(),
         has_next_transit ? legs[i + 2U].from_ : n::location_idx_t::invalid());
 
@@ -998,8 +1010,9 @@ api::Itinerary reconstruct_itinerary(
     if (!is_transit(legs[i])) {
       continue;
     }
-    auto pt = reconstruct_pt_leg(legs[i].input_, stop_times_ep, rt.rtt_.get(),
-                                 lang, require_display_name_match);
+    auto pt =
+        reconstruct_pt_leg(legs[i].input_, stop_times_ep, rt.rtt_.get(), lang,
+                           require_display_name_match, blocked_labels);
     if (pt.has_value()) {
       legs[i].from_ = pt->from_;
       legs[i].to_ = pt->to_;

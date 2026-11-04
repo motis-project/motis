@@ -90,6 +90,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
+  auto const blocked_labels =
+      labels_.blocked(tt_, nullptr, query.includeLabels_, query.excludeLabels_);
   auto const r =
       routing{config_,      w_,      l_,      pl_,       elevations_, &tt_,
               nullptr,      &tags_,  labels_, loc_tree_, fa_,         matches_,
@@ -108,10 +110,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
           nullptr, one, one_dir, one_modes, rental_options{}, osr_params,
           query.pedestrianProfile_, query.elevationCosts_, one_max_time,
           max_matching_distance, gbfs_rd, prepare_stats),
-      .td_start_ = r.get_td_offsets(
-          nullptr, nullptr, one, one_dir, one_modes, osr_params,
-          query.pedestrianProfile_, query.elevationCosts_,
-          max_matching_distance, one_max_time, time, prepare_stats),
+      .td_start_ =
+          r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
+                           osr_params, query.pedestrianProfile_,
+                           query.elevationCosts_, max_matching_distance,
+                           one_max_time, time, blocked_labels, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,
@@ -123,8 +126,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
                      : 1U)
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
-      .blocked_ = labels_.blocked(tt_, nullptr, query.includeLabels_,
-                                  query.excludeLabels_),
+      .blocked_ = blocked_labels,
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .no_compulsory_reservation_ = query.noCompulsoryReservation_,

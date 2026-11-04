@@ -118,6 +118,8 @@ meta_router::meta_router(ep::routing const& r,
       annotation_rtt_{query.realtimeMode_ == api::RealtimeModeEnum::OFF
                           ? nullptr
                           : rt_->rtt_.get()},
+      blocked_labels_{r_.labels_.blocked(
+          *tt_, rtt_, query_.includeLabels_, query_.excludeLabels_)},
       e_{rt_->e_.get()},
       gbfs_rd_{r.w_, r.l_, std::atomic_load(&r.gbfs_)},
       start_{query_.arriveBy_ ? to_ : from_},
@@ -191,8 +193,7 @@ n::routing::query meta_router::get_base_query(
                      : 1U)
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
-      .blocked_ = r_.labels_.blocked(*r_.tt_, rtt_, query_.includeLabels_,
-                                     query_.excludeLabels_),
+      .blocked_ = blocked_labels_,
       .require_bike_transport_ = query_.requireBikeTransport_,
       .require_car_transport_ = query_.requireCarTransport_,
       .no_compulsory_reservation_ = query_.noCompulsoryReservation_,
@@ -415,7 +416,7 @@ api::plan_response meta_router::run() {
           start_modes_, params, query_.pedestrianProfile_,
           query_.elevationCosts_, max_matching_distance_,
           query_.arriveBy_ ? post_transit_time : pre_transit_time,
-          context_intvl, prepare_stats),
+          context_intvl, blocked_labels_, prepare_stats),
       .td_dest_walk_ = r_.get_td_offsets(
           rtt_, e_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
@@ -423,7 +424,7 @@ api::plan_response meta_router::run() {
           dest_modes_, params, query_.pedestrianProfile_,
           query_.elevationCosts_, max_matching_distance_,
           query_.arriveBy_ ? pre_transit_time : post_transit_time,
-          context_intvl, prepare_stats),
+          context_intvl, blocked_labels_, prepare_stats),
       .start_taxi_short_ =
           query_.arriveBy_ ? last_mile_taxi_short : first_mile_taxi_short,
       .start_taxi_long_ =

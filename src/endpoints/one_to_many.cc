@@ -121,6 +121,8 @@ std::vector<api::ParetoSet> transit_durations(
   auto const unreachable = arrive_by ? n::kInvalidDelta<n::direction::kBackward>
                                      : n::kInvalidDelta<n::direction::kForward>;
 
+  auto const blocked_labels = ep.labels_.blocked(
+      ep.tt_, nullptr, query.includeLabels_, query.excludeLabels_);
   auto const r = routing{ep.config_,      ep.w_,        ep.l_,   ep.pl_,
                          ep.elevations_,  &ep.tt_,      nullptr, &ep.tags_,
                          ep.labels_,      ep.loc_tree_, ep.fa_,  ep.matches_,
@@ -141,10 +143,10 @@ std::vector<api::ParetoSet> transit_durations(
                               rental_options{}, osr_params, pedestrian_profile,
                               elevation_costs, one_max_seconds,
                               max_matching_distance, gbfs_rd, prepare_stats),
-      .td_start_ = r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
-                                    osr_params, pedestrian_profile,
-                                    elevation_costs, max_matching_distance,
-                                    one_max_seconds, time, prepare_stats),
+      .td_start_ = r.get_td_offsets(
+          nullptr, nullptr, one, one_dir, one_modes, osr_params,
+          pedestrian_profile, elevation_costs, max_matching_distance,
+          one_max_seconds, time, blocked_labels, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ =
@@ -156,8 +158,7 @@ std::vector<api::ParetoSet> transit_durations(
                              : n::kFootProfile)
                       : n::kDefaultProfile,
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
-      .blocked_ = ep.labels_.blocked(ep.tt_, nullptr, query.includeLabels_,
-                                     query.excludeLabels_),
+      .blocked_ = blocked_labels,
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .no_compulsory_reservation_ = query.noCompulsoryReservation_,
