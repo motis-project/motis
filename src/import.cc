@@ -1,6 +1,7 @@
 #include "motis/import.h"
 
 #include <fstream>
+#include <functional>
 #include <map>
 #include <ostream>
 #include <tuple>
@@ -27,10 +28,12 @@
 #include "tiles/osm/load_osm.h"
 
 #include "nigiri/loader/assistance.h"
+#include "nigiri/loader/build_footpaths.h"
 #include "nigiri/loader/load.h"
 #include "nigiri/loader/loader_interface.h"
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
+#include "nigiri/location_routes.h"
 #include "nigiri/routing/tb/preprocess.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
@@ -158,6 +161,27 @@ cista::hash_t hash_file(fs::path const& p) {
                          static_cast<std::size_t>(50U * 1024U * 1024U)))),
         mmap.size());
   }
+}
+
+std::pair<platform_matches_t, std::optional<way_matches_storage>> write_matches(
+    config const& c,
+    fs::path const& data_path,
+    n::timetable const& tt,
+    data const& d) {
+  auto const progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->status("Prepare Platform Matches");
+  auto matches = get_matches(tt, *d.pl_, *d.w_, *d.l_,
+                             c.timetable_->max_matching_distance_);
+  cista::write(data_path / "matches.bin", matches);
+
+  auto way_matches = std::optional<way_matches_storage>{};
+  if (c.timetable_->preprocess_max_matching_distance_ > 0.0) {
+    progress_tracker->status("Prepare Platform Way Matches");
+    way_matches.emplace(data_path, cista::mmap::protection::WRITE,
+                        c.timetable_->preprocess_max_matching_distance_);
+    way_matches->preprocess_osr_matches(tt, *d.pl_, *d.w_, *d.l_, matches);
+  }
+  return {std::move(matches), std::move(way_matches)};
 }
 
 void import(config const& c,
@@ -325,9 +349,60 @@ void import(config const& c,
                    {"geocoding", c.geocoding_},
                    {"reverse_geocoding", c.reverse_geocoding_}}};
 
+  auto osr_footpath_settings_hash =
+      meta_entry_t{"osr_footpath_settings", cista::BASE_HASH};
+  if (c.timetable_) {
+    auto& h = osr_footpath_settings_hash.second;
+    h = cista::hash_combine(h, c.timetable_->extend_missing_footpaths_,
+                            c.timetable_->max_matching_distance_,
+                            c.timetable_->max_footpath_length_);
+  }
+
+  // osr_footpath: the walks are routed on OSM (from the platform matches)
+  // instead of beelines, the transfer rules apply on them.
+  auto const add_routed_footpaths = [&](n::timetable& tt, auto& walks) {
+    auto d = data{data_path};
+    d.load_osr();
+
+    auto const [matches, way_matches] = write_matches(c, data_path, tt, d);
+
+    utl::get_active_progress_tracker()->status("Route Footpaths");
+    auto const profiles = std::vector<routed_transfers_settings>{
+        {.profile_ = osr::search_profile::kFoot,
+         .profile_idx_ = n::kFootProfile,
+         .max_matching_distance_ = c.timetable_->max_matching_distance_,
+         .extend_missing_ = c.timetable_->extend_missing_footpaths_,
+         .max_duration_ = c.timetable_->max_footpath_length_ * 1min,
+         .is_default_profile_ = true},
+        {.profile_ = osr::search_profile::kWheelchair,
+         .profile_idx_ = n::kWheelchairProfile,
+         .max_matching_distance_ = 8.0,
+         .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+        {.profile_ = osr::search_profile::kCar,
+         .profile_idx_ = n::kCarProfile,
+         .max_matching_distance_ = 250.0,
+         .max_duration_ = 8h,
+         .is_candidate_ = [&](n::location_idx_t const l) {
+           return n::any_route_at(tt, l, [&](n::route_idx_t const r) {
+             return tt.is_flag_set(nigiri::kCarsAllowed, r);
+           });
+         }}};
+    compute_footpaths(*d.w_, *d.l_, *d.pl_, tt, walks, matches,
+                      way_matches.has_value() ? &*way_matches : nullptr,
+                      d.elevations_.get(), profiles);
+  };
+
+  auto tt_hashes = meta_t{tt_hash, n_version()};
+  if (c.osr_footpath_) {
+    tt_hashes.insert(
+        {osm_hash, osr_footpath_settings_hash, osr_version(),
+         osr_footpath_version(), matches_version(),
+         std::pair{"way_matches",
+                   cista::build_hash(c.timetable_.value_or(config::timetable{})
+                                         .preprocess_max_matching_distance_)}});
+  }
   auto tt = task{
-      "tt",
-      {},
+      "tt", c.osr_footpath_ ? std::vector<task*>{&osr} : std::vector<task*>{},
       c.timetable_.has_value(),
       [&]() {
         auto const& t = *c.timetable_;
@@ -369,6 +444,7 @@ void import(config const& c,
                        .default_transfer_time_ =
                            n::duration_t{static_cast<std::int16_t>(
                                t.default_transfer_time_)},
+                       .adjust_footpaths_ = t.adjust_footpaths_,
                        .default_tz_ = dc.default_timezone_.value_or(
                            t.default_timezone_.value_or("")),
                        .bikes_allowed_default_ = to_clasz_bool_array(
@@ -392,11 +468,14 @@ void import(config const& c,
                                })
                                .value_or("")}};
                 }),
-            {.adjust_footpaths_ = t.adjust_footpaths_,
-             .merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
+            {.merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_,
-             .merge_stats_dir_ = data_path},
+             .merge_stats_dir_ = data_path,
+             .walks_ = c.osr_footpath_
+                           ? decltype(n::loader::finalize_options::
+                                          walks_){add_routed_footpaths}
+                           : nullptr},
             interval, assistance.get(), shapes.get(), false))};
 
         tt->write(data_path / "tt.bin");
@@ -404,7 +483,7 @@ void import(config const& c,
         std::ofstream(data_path / "timetable_metrics.json")
             << to_str(n::get_metrics(*tt), *tt);
       },
-      {tt_hash, n_version()}};
+      std::move(tt_hashes)};
 
   auto tbd = task{"tbd",
                   {&tt},
@@ -464,40 +543,15 @@ void import(config const& c,
        {"geocoding", c.geocoding_},
        {"reverse_geocoding", c.reverse_geocoding_}}};
 
-  auto osr_footpath_settings_hash =
-      meta_entry_t{"osr_footpath_settings", cista::BASE_HASH};
-  if (c.timetable_) {
-    auto& h = osr_footpath_settings_hash.second;
-    h = cista::hash_combine(h, c.timetable_->extend_missing_footpaths_,
-                            c.timetable_->max_matching_distance_,
-                            c.timetable_->max_footpath_length_);
-  }
-
   auto matches = task{
       "matches",
       {&tt, &osr},
-      c.timetable_ && (c.use_street_routing() || c.osr_footpath_),
+      c.timetable_ && c.use_street_routing() && !c.osr_footpath_,
       [&]() {
         auto d = data{data_path};
         d.load_tt("tt.bin");
         d.load_osr();
-
-        auto const progress_tracker = utl::get_active_progress_tracker();
-        progress_tracker->status("Prepare Platform Matches").out_bounds(0, 30);
-        cista::write(data_path / "matches.bin",
-                     get_matches(*d.tt_, *d.pl_, *d.w_, *d.l_,
-                                 c.timetable_->max_matching_distance_));
-
-        d.load_matches();
-        if (c.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
-          progress_tracker->status("Prepare Platform Way Matches")
-              .out_bounds(30, 100);
-          way_matches_storage{
-              data_path, cista::mmap::protection::WRITE,
-              c.timetable_.value().preprocess_max_matching_distance_}
-              .preprocess_osr_matches(*d.tt_, *d.pl_, *d.w_, *d.l_,
-                                      *d.matches_);
-        }
+        write_matches(c, data_path, *d.tt_, d);
       },
       {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
        std::pair{"way_matches",
@@ -506,54 +560,6 @@ void import(config const& c,
        std::pair{"max_matching_distance",
                  cista::build_hash(c.timetable_.value_or(config::timetable{})
                                        .max_matching_distance_)}}};
-
-  auto osr_footpath = task{
-      "osr_footpath",
-      {&tt, &osr, &matches},
-      c.osr_footpath_ && c.timetable_,
-      [&]() {
-        auto d = data{data_path};
-        d.load_tt("tt.bin");
-        d.load_osr();
-        d.load_matches();
-        d.load_way_matches();
-
-        auto const profiles = std::vector<routed_transfers_settings>{
-            {.profile_ = osr::search_profile::kFoot,
-             .profile_idx_ = n::kFootProfile,
-             .max_matching_distance_ = c.timetable_->max_matching_distance_,
-             .extend_missing_ = c.timetable_->extend_missing_footpaths_,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
-            {.profile_ = osr::search_profile::kWheelchair,
-             .profile_idx_ = n::kWheelchairProfile,
-             .max_matching_distance_ = 8.0,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
-            {.profile_ = osr::search_profile::kCar,
-             .profile_idx_ = n::kCarProfile,
-             .max_matching_distance_ = 250.0,
-             .max_duration_ = 8h,
-             .is_candidate_ = [&](n::location_idx_t const l) {
-               return utl::any_of(d.tt_->location_routes_[l], [&](auto r) {
-                 return d.tt_->is_flag_set(nigiri::kCarsAllowed, r);
-               });
-             }}};
-        auto const elevator_footpath_map = compute_footpaths(
-            *d.w_, *d.l_, *d.pl_, *d.tt_, *d.matches_, d.way_matches_.get(),
-            d.elevations_.get(), profiles);
-
-        cista::write(data_path / "elevator_footpath_map.bin",
-                     elevator_footpath_map);
-        d.tt_->write(data_path / "tt_ext.bin");
-
-        cista::free_self_allocated(d.tt_.get());
-      },
-      // task dependencies only order the tasks, they do not invalidate: the
-      // footpaths are built from the (way) matches
-      {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
-       osr_footpath_version(), matches_version(), n_version(),
-       std::pair{"way_matches",
-                 cista::build_hash(c.timetable_.value_or(config::timetable{})
-                                       .preprocess_max_matching_distance_)}}};
 
   auto route_shapes_task = task{
       "route_shapes",
@@ -647,9 +653,8 @@ void import(config const& c,
       },
       {tiles_version(), osm_hash, tiles_hash}};
 
-  auto all_tasks = std::vector{&tiles,        &osr,     &adr,
-                               &tt,           &tbd,     &adr_extend,
-                               &osr_footpath, &matches, &route_shapes_task};
+  auto all_tasks = std::vector{
+      &tiles, &osr, &adr, &tt, &tbd, &adr_extend, &matches, &route_shapes_task};
   auto todo = std::set<task*>{};
   if (task_filter.has_value()) {
     auto q = std::vector<task*>{};

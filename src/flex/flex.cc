@@ -386,15 +386,14 @@ void add_flex_td_offsets(osr::ways const& w,
                                              ? iv_at_to_stop << duration
                                              : iv_at_to_stop >> duration;
 
-            if (iv_at_from_stop.from_ < iv_at_from_stop.to_ &&
-                duration < n::footpath::kMaxDuration) {
+            if (iv_at_from_stop.from_ < iv_at_from_stop.to_) {
               auto const mode =
                   transport_mode(api::ModeEnum::FLEX, id.to_payload());
               auto& offsets = ret[l];
               offsets.push_back(n::routing::td_offset::make(
                   iv_at_from_stop.from_, duration, mode));
               offsets.push_back(n::routing::td_offset::make(
-                  iv_at_from_stop.to_, n::footpath::kMaxDuration, mode));
+                  iv_at_from_stop.to_, n::kTdFootpathBan, mode));
             }
           }
         }

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 #include "date/date.h"
@@ -14,14 +15,13 @@
 #include "nigiri/rt/gtfsrt_update.h"
 
 #include "motis-api/motis-api.h"
-#include "motis/compute_footpaths.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
+#include "motis/elevators/update_elevators.h"
 #include "motis/endpoints/routing.h"
 #include "motis/import.h"
-#include "motis/update_rtt_td_footpaths.h"
 
 #include "./util.h"
 
@@ -860,21 +860,14 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   import(c, "test/data_leg_alts_td_footpath_blocked");
   auto d = data{"test/data_leg_alts_td_footpath_blocked", c};
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
-                                          parse_fasta(kElevatorBlockedFasta));
+                                          parse_fasta(std::string_view{"[]"}));
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
-  // Rebuild the rt_timetable's td_footpaths from the elevator state.
-  // Mirrors what `update_elevators` does in production: the
-  // elevator-footpath map (one entry per OSR-routed footpath that
-  // traverses an elevator node, written to disk by `import()`) tells
-  // `update_rtt_td_footpaths` which (from, to) stop pairs to refresh
-  // for the wheelchair profile.
-  auto const elevator_footpath_map = cista::read<elevator_footpath_map_t>(
-      "test/data_leg_alts_td_footpath_blocked/elevator_footpath_map.bin");
-  update_rtt_td_footpaths(
-      *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtree_, *d.rt_->e_,
-      *elevator_footpath_map, *d.matches_, *d.rt_->rtt_,
-      std::chrono::seconds{c.timetable_->max_footpath_length_ * 60});
+  // The elevator update as in production: the stops near an elevator that is
+  // not always working get their wheelchair walks routed again.
+  auto new_rtt = std::make_unique<n::rt_timetable>(*d.rt_->rtt_);
+  d.rt_->e_ = update_elevators(d.config_, d, kElevatorBlockedFasta, *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
 
   // Delay the LOCAL 00:35 ICE alt by 1 min — this is a frequency-
   // expanded trip instance, so trip_id stays "ICE" and start_time
