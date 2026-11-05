@@ -184,9 +184,8 @@ api::ElevationProfile get_elevation_profile(
     std::span<osr::path::segment const> segments,
     double distance,
     unsigned steps) {
-  auto const profile = osr::elevation_profile{
-      w, segments,
-      distance / (steps < segments.size() ? steps : segments.size())};
+  auto const profile =
+      osr::elevation_profile{w, segments.subspan(1, segments.size() - 2)};
   auto points = std::vector<double>{};
   points.resize(profile.elevation_.size() * 3);
   for (auto i = std::size_t{0}; i < profile.elevation_.size(); ++i) {
@@ -197,7 +196,7 @@ api::ElevationProfile get_elevation_profile(
 
   return {.points_ = points,
           .size_ = static_cast<int64_t>(profile.elevation_.size()),
-          .resolution_ = profile.resolution_,
+          .resolution_ = distance / steps,
           .median_ = to_idx(profile.median()),
           .min_ = static_cast<double>(to_idx(profile.min_)),
           .max_ = static_cast<double>(to_idx(profile.max_)),
@@ -301,8 +300,8 @@ api::Itinerary street_routing(osr::ways const& w,
       return {};
     }
     // No street path between the endpoints (e.g. the only wheelchair
-    // connection is an out-of-service elevator) -> emit a cancelled leg so the
-    // broken access/transfer is visible in the journey.
+    // connection is an out-of-service elevator) -> emit a cancelled leg so
+    // the broken access/transfer is visible in the journey.
     return dummy_itinerary(from_place, to_place, out.get_mode(), *start_time,
                            *end_time, api_version, /*cancelled=*/true);
   }
