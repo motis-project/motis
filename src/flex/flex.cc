@@ -248,6 +248,38 @@ flex_routings_t get_flex_routings(
   return routings;
 }
 
+std::pair<n::flex_transport_idx_t, n::unixtime_t> get_flex_transport(
+    n::timetable const& tt,
+    std::vector<mode_payload> const& ids,
+    n::stop_idx_t const stop,
+    n::unixtime_t const t) {
+  // Fallback, no window on a traffic day started before `t`: the window of the
+  // first transport that started last before `t`, ignoring traffic days.
+  auto const first = ids.front().get_flex_transport();
+  auto ret = std::pair{
+      first, n::unixtime_t{std::chrono::floor<date::days>(
+                 t - tt.flex_transport_stop_time_windows_[first][stop].from_)}};
+
+  auto latest_start = std::optional<n::unixtime_t>{};
+  for (auto const id : ids) {
+    auto const x = id.get_flex_transport();
+    auto const& traffic_days =
+        tt.bitfields_[tt.flex_transport_traffic_days_[x]];
+    for (auto const day_idx : get_relevant_days(tt, t)) {
+      auto const day =
+          tt.internal_interval().from_ + to_idx(day_idx) * date::days{1U};
+      auto const start =
+          day + tt.flex_transport_stop_time_windows_[x][stop].from_;
+      if (traffic_days.test(to_idx(day_idx)) && start <= t &&
+          (!latest_start.has_value() || *latest_start < start)) {
+        ret = {x, day};
+        latest_start = start;
+      }
+    }
+  }
+  return ret;
+}
+
 bool is_in_flex_stop(n::timetable const& tt,
                      osr::ways const& w,
                      flex_areas const& fa,
