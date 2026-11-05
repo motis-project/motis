@@ -2,6 +2,8 @@
 
 #include <ctime>
 
+#include "boost/json/array.hpp"
+
 #include "fmt/chrono.h"
 #include "fmt/core.h"
 
@@ -159,8 +161,9 @@ n::location_idx_t tag_lookup::get_location(n::timetable const& tt,
   if (auto const res = find_location(tt, s); res.has_value()) {
     return *res;
   }
-  throw utl::fail<net::not_found_exception>(
-      "Could not find timetable location {:?}", s);
+  throw net::not_found_exception{
+      fmt::format("Could not find timetable location {:?}", s),
+      {{"unknownCodes", boost::json::array{s}}}};
 }
 
 std::optional<n::location_idx_t> tag_lookup::find_location(
@@ -168,8 +171,10 @@ std::optional<n::location_idx_t> tag_lookup::find_location(
   auto const [tag, id] = split_tag_id(s);
 
   auto const src = get_src(tag);
-  utl::verify<net::not_found_exception>(src != n::source_idx_t::invalid(),
-                                        "unknown feed id {:?}", tag);
+  if (src == n::source_idx_t::invalid()) {
+    throw net::not_found_exception{fmt::format("unknown feed id {:?}", tag),
+                                   {{"unknownCodes", boost::json::array{s}}}};
+  }
 
   return tt.find({id, src});
 }
