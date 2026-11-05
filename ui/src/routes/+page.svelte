@@ -909,16 +909,35 @@
 		}
 	});
 
+	const showPlanResponseJson = (text: string, source: string) => {
+		const json = JSON.parse(text);
+		console.log(`${source}: `, json);
+		const response = Promise.resolve(json as PlanResponse);
+		baseResponse = response;
+		routingResponses = [response];
+	};
+
 	if (browser) {
 		addEventListener('paste', (event: ClipboardEvent) => {
-			const paste = event.clipboardData!.getData('text');
-			const json = JSON.parse(paste);
-			console.log('paste: ', json);
-			const response = new Promise<PlanResponse>((resolve, _) => {
-				resolve(json as PlanResponse);
-			});
-			baseResponse = response;
-			routingResponses = [response];
+			showPlanResponseJson(event.clipboardData!.getData('text'), 'paste');
+		});
+
+		const hasFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false;
+		addEventListener('dragover', (event: DragEvent) => {
+			if (hasFiles(event)) {
+				event.preventDefault();
+				event.dataTransfer!.dropEffect = 'copy';
+			}
+		});
+		addEventListener('drop', async (event: DragEvent) => {
+			if (!hasFiles(event)) {
+				return;
+			}
+			event.preventDefault();
+			const file = event.dataTransfer!.files[0];
+			if (file) {
+				showPlanResponseJson(await file.text(), `drop ${file.name}`);
+			}
 		});
 	}
 
