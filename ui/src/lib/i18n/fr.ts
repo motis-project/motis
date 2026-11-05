@@ -39,6 +39,7 @@ const translations: Translations = {
 	arrivalsAt: (stop) => `Arrivées à ${stop}`,
 	later: 'plus tard',
 	earlier: 'plus tôt',
+	onDate: (date: string) => `le ${date}`,
 	departures: 'Départs',
 	departuresAt: (stop) => `Départs à ${stop}`,
 	connections: 'Itinéraires',

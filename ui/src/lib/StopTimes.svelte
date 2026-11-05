@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		type Mode,
+		type StopTime,
 		stoptimes,
 		type StoptimesError,
 		type StoptimesResponse
@@ -8,6 +9,8 @@
 	import { LoaderCircle, ArrowRight, CircleX } from '@lucide/svelte';
 	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import Time from '$lib/Time.svelte';
+	import DaySeparator from '$lib/DaySeparator.svelte';
+	import { PagedEntries } from '$lib/PagedEntries.svelte';
 	import Route from '$lib/Route.svelte';
 	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
@@ -56,6 +59,14 @@
 	});
 	/* eslint-enable svelte/prefer-writable-derived */
 
+	const pages = new PagedEntries(
+		() => responses,
+		(r: StoptimesResponse) => r.stopTimes
+	);
+
+	const scheduledTimestampOf = (stopTime: StopTime) =>
+		arriveBy ? stopTime.place.scheduledArrival! : stopTime.place.scheduledDeparture!;
+
 	const throwOnError = (promise: RequestResult<StoptimesResponse, StoptimesError, false>) =>
 		promise.then((response) => {
 			if (response.error) {
@@ -99,9 +110,14 @@
 		{/if}
 		{#each r.stopTimes as stopTime, i (i)}
 			{@const timestamp = arriveBy ? stopTime.place.arrival! : stopTime.place.departure!}
-			{@const scheduledTimestamp = arriveBy
-				? stopTime.place.scheduledArrival!
-				: stopTime.place.scheduledDeparture!}
+			{@const scheduledTimestamp = scheduledTimestampOf(stopTime)}
+			{@const previous = pages.previous(r, rI, i)}
+			<DaySeparator
+				class="px-3 pt-3"
+				previous={previous ? scheduledTimestampOf(previous) : queryTime}
+				timestamp={scheduledTimestamp}
+				timeZone={stopTime.place.tz}
+			/>
 
 			<div
 				class="gap-y-2 p-3 w-full text-base grid grid-cols-[auto_1fr] border-b duration-500 ease-out transition-all"
@@ -118,7 +134,6 @@
 						)}
 						{timestamp}
 						{scheduledTimestamp}
-						queriedTime={queryTime.toISOString()}
 						{arriveBy}
 					/>
 					<Time
