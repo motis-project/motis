@@ -60,7 +60,7 @@ export const colors = {
 		livingStreet: 'rgb(248, 245, 244)',
 		footpath: 'rgb(160, 160, 160)',
 		cycleway: 'rgb(100, 145, 205)',
-		unclassified: 'rgb(232, 230, 227)',
+		unclassified: '#ffffff',
 		steps: '#ff4524',
 
 		elevatorOutline: '#808080',
@@ -86,10 +86,10 @@ export const colors = {
 	dark: {
 		background: '#292929',
 
-		water: '#1f2830',
+		water: '#03060f',
 		waterText: 'hsl(205, 40%, 65%)',
 		glacier: 'hsl(0, 0%, 10%)',
-		damPier: 'hsl(33, 48%, 5%)',
+		damPier: 'hsl(33, 48%, 8%)',
 		bridgeArea: 'rgb(22, 17, 11)',
 		bridgeCasing: 'rgb(38, 38, 38)',
 		bicycleRoad: 'hsl(203, 100%, 3%)',
@@ -105,7 +105,7 @@ export const colors = {
 		sport: '#272525',
 		sportOutline: '#272525',
 
-		building: '#1F1F1F',
+		building: '#313131',
 		buildingOutline: '#1A1A1A',
 
 		landuseComplex: '#292929',
@@ -114,7 +114,7 @@ export const colors = {
 		landuseResidential: '#292929',
 		landuseRetail: '#292929',
 		landuseConstruction: 'hsl(0, 0%, 34%)',
-		landuseAgriculture: 'hsl(43, 51%, 12%)',
+		landuseAgriculture: 'hsl(43, 20%, 14%)',
 		siteHospital: 'hsl(0, 100%, 30%)',
 
 		landusePark: '#18221f',
@@ -136,21 +136,21 @@ export const colors = {
 		livingStreet: 'rgb(46, 46, 46)',
 		footpath: 'rgb(80, 80, 80)',
 		cycleway: 'rgb(110, 150, 205)',
-		unclassified: 'rgb(50, 50, 50)',
+		unclassified: '#484848',
 		steps: '#70504b',
 
 		elevatorOutline: '#808080',
 		elevator: '#3b423b',
 
-		roadBackResidential: '#414141',
-		roadBackNonResidential: '#414141',
+		roadBackResidential: '#484848',
+		roadBackNonResidential: '#484848',
 
-		motorway: '#414141',
-		motorwayLink: '#414141',
-		primarySecondary: '#414141',
-		linkTertiary: '#414141',
-		residential: '#414141',
-		road: '#414141',
+		motorway: '#484848',
+		motorwayLink: '#484848',
+		primarySecondary: '#484848',
+		linkTertiary: '#484848',
+		residential: '#484848',
+		road: '#484848',
 
 		text: '#9a9a9a',
 		textHalo: 'rgba(0, 0, 0, 0.8)',
