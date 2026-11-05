@@ -344,6 +344,7 @@ jobs:
           ${{ matrix.config.emulator }} ./build/motis generate -n 10
           ${{ matrix.config.emulator }} ./build/motis batch
           ${{ matrix.config.emulator }} ./build/motis compare -q queries.txt -r responses.txt responses.txt
+          python3 tools/check_journeys.py -c config.yml -r responses.txt
 
       - name: Test bin_ver compatibility with previous release
         if: matrix.config.preset == 'linux-amd64-release' && github.event.action != 'published'
