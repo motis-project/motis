@@ -2319,6 +2319,35 @@ paths:
       summary: Translate coordinates to the closest address(es)/places/stops.
       operationId: reverseGeocode
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits stop suggestions to stops from the specified datasets. A stop is suggested if at least one of its datasets is used.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes stops of the specified datasets from the suggestions, unless they are also part of a used dataset.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: place
           in: query
           required: true
@@ -3734,6 +3763,35 @@ paths:
         Routes are filtered by zoom level. On low zoom levels, only long distance trains will be shown
         while on high zoom levels, also metros, buses and trams will be returned.
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: zoom
           in: query
           required: true
@@ -3827,6 +3885,35 @@ paths:
         Returns the full data for a single route, including all stops and
         polyline segments.
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all datasets that are not hidden.
+            Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: routeIdx
           in: query
           required: true

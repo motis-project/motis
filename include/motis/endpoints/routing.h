@@ -79,6 +79,7 @@ struct routing {
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&,
+      nigiri::routing::blocked_feeds const&,
       stats_map_t& stats,
       one_to_many_side* = nullptr) const;
 

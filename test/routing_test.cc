@@ -1121,7 +1121,7 @@ S,20190501,1
         d.rt_->rtt_.get(), pos, dir, {api::ModeEnum::RENTAL},
         rental_options{.ignore_return_constraints_ = true}, {},
         api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE, 3600s,
-        250.0, gbfs_rd, stats, &otm[n::special_station::kStart]);
+        250.0, gbfs_rd, {}, stats, &otm[n::special_station::kStart]);
     auto const offset =
         std::find_if(begin(offsets), end(offsets), [&](auto const& o) {
           return o.target() == stop &&

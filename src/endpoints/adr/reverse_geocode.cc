@@ -4,10 +4,12 @@
 
 #include "adr/guess_context.h"
 #include "adr/reverse.h"
+#include "adr/typeahead.h"
 
 #include "motis/config.h"
 #include "motis/endpoints/adr/filter_conv.h"
 #include "motis/endpoints/adr/suggestions_to_response.h"
+#include "motis/feed_labels.h"
 #include "motis/parse_location.h"
 
 namespace a = adr;
@@ -25,11 +27,28 @@ api::reverseGeocode_response reverse_geocode::operator()(
       std::min(params.numResults_.value_or(kDefaultResults), config_limit);
   utl::verify<net::bad_request_exception>(requested_limit >= 1,
                                           "limit must be >= 1");
-  return suggestions_to_response(
-      t_, f_, ae_, tt_, tags_, w_, pl_, matches_, {}, {},
-      r_.lookup(t_, parse_location((params.place_))->pos_,
-                static_cast<std::size_t>(requested_limit),
-                to_filter_type(params.type_)));
+  auto suggestions = r_.lookup(t_, parse_location((params.place_))->pos_,
+                               static_cast<std::size_t>(requested_limit),
+                               to_filter_type(params.type_));
+
+  auto const active =
+      labels_.active(params.includeLabels_, params.excludeLabels_);
+  if ((~active).any()) {
+    std::erase_if(suggestions, [&](a::suggestion const& s) {
+      auto const* place = std::get_if<a::place_idx_t>(&s.location_);
+      if (place == nullptr ||
+          t_.place_type_[*place] != a::amenity_category::kExtra) {
+        return false;
+      }
+      return !labels_.is_active(
+          active,
+          adr_extra_place_idx_t{static_cast<adr_extra_place_idx_t::value_t>(
+              *place - t_.ext_start_)});
+    });
+  }
+
+  return suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_, {},
+                                 {}, suggestions);
 }
 
 }  // namespace motis::ep

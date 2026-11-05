@@ -184,7 +184,7 @@ struct motis_instance {
     qr_.route("GET", "/metrics",
               ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
     qr_.route("GET", "/gtfsrt",
-              ep::gtfsrt{c, d.tt_.get(), d.tags_.get(), d.rt_});
+              ep::gtfsrt{c, d.tt_.get(), d.tags_.get(), d.labels_, d.rt_});
     qr_.serve_files(c.server_.value_or(config::server{}).web_folder_);
     qr_.enable_cors();
   }

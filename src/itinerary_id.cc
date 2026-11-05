@@ -765,7 +765,7 @@ api::Itinerary reconstruct_itinerary(
         is_start ? flm.pre_transit_ : flm.post_transit_, flm.osr_params_,
         flm.pedestrian_profile_, flm.elevation_costs_,
         is_start ? flm.max_pre_transit_ : flm.max_post_transit_,
-        flm.max_matching_distance_, gbfs_rd, stats,
+        flm.max_matching_distance_, gbfs_rd, blocked_labels, stats,
         is_start ? &otm_searches[n::special_station::kStart]
                  : &otm_searches[n::special_station::kEnd]);
   };

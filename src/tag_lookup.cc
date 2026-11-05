@@ -154,9 +154,11 @@ std::pair<n::rt::run, n::trip_idx_t> tag_lookup::get_trip(
   return n::rt::gtfsrt_resolve_run({}, tt, rtt, src, td);
 }
 
-n::location_idx_t tag_lookup::get_location(n::timetable const& tt,
-                                           std::string_view s) const {
-  if (auto const res = find_location(tt, s); res.has_value()) {
+n::location_idx_t tag_lookup::get_location(
+    n::timetable const& tt,
+    std::string_view s,
+    n::routing::blocked_feeds const& blocked) const {
+  if (auto const res = find_location(tt, s, blocked); res.has_value()) {
     return *res;
   }
   throw utl::fail<net::not_found_exception>(
@@ -164,14 +166,16 @@ n::location_idx_t tag_lookup::get_location(n::timetable const& tt,
 }
 
 std::optional<n::location_idx_t> tag_lookup::find_location(
-    n::timetable const& tt, std::string_view s) const {
+    n::timetable const& tt,
+    std::string_view s,
+    n::routing::blocked_feeds const& blocked) const {
   auto const [tag, id] = split_tag_id(s);
 
   auto const src = get_src(tag);
   utl::verify<net::not_found_exception>(src != n::source_idx_t::invalid(),
                                         "unknown feed id {:?}", tag);
 
-  return tt.find({id, src});
+  return blocked.srcs_.test(src) ? std::nullopt : tt.find({id, src});
 }
 
 void tag_lookup::write(std::filesystem::path const& p) const {
