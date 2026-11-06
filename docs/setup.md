@@ -141,6 +141,12 @@ geocoding: true                   # enable geocoding for place/stop name autocom
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses
 ```
 
+## Hidden Datasets
+
+A dataset with `hidden: true` is only used by requests that name it (its tag or one of its labels) in `includeLabels`. Other requests don't see its trips, routes or stops.
+
+Labels select data, they are not access control: anyone who can reach MOTIS can send `includeLabels`. If a hidden dataset should only be available to some users, run MOTIS behind a reverse proxy that decides which labels a caller may use.
+
 # Scenario with Elevators
 
 This is an example configuration for Germany which enables the real-time update of elevators from Deutsche Bahn's FaSta (Facility Status) JSON API. You need to register and obtain an API key.
