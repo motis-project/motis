@@ -64,7 +64,7 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
   auto [_, direct_duration] = r.route_direct(
       rtt, e, gbfs, {}, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt,
       std::nullopt, std::nullopt, std::nullopt, false, intvl.from_, false,
-      get_osr_parameters(query), query.pedestrianProfile_,
+      get_osr_parameters(query), {}, query.pedestrianProfile_,
       query.elevationCosts_, kODMMaxDuration, max_matching_distance,
       kODMDirectFactor, query.detailedLegs_, api_version);
 
@@ -119,10 +119,12 @@ void init_pt(std::vector<n::routing::offset>& offsets,
   auto const max_matching_distance =
       std::min(query.maxMatchingDistance_,
                r.config_.get_limits().max_max_matching_distance_);
-  offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::CAR}, rental_options{},
-                          get_osr_parameters(query), query.pedestrianProfile_,
-                          query.elevationCosts_, max, max_matching_distance,
-                          gbfs_rd, stats);
+  offsets = r.get_offsets(
+      rtt, l, dir, {api::ModeEnum::CAR}, rental_options{},
+      get_osr_parameters(query), query.pedestrianProfile_,
+      query.elevationCosts_, max, max_matching_distance, gbfs_rd,
+      r.labels_.blocked(tt, rtt, query.includeLabels_, query.excludeLabels_),
+      stats);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
     return r.ride_sharing_bounds_ != nullptr &&

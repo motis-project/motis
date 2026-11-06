@@ -168,12 +168,16 @@ flex_routings_t get_flex_routings(
     geo::latlng const& pos,
     osr::direction const dir,
     std::chrono::seconds const max,
-    osr_parameters const& osr_params) {
+    osr_parameters const& osr_params,
+    n::routing::blocked_feeds const& blocked) {
   auto routings = flex_routings_t{};
 
   // Traffic days helpers.
   auto const day_idx_iv = get_relevant_days(tt, start_time);
   auto const is_active = [&](n::flex_transport_idx_t const t) {
+    if (blocked.srcs_.test(tt.trip_id_src_[tt.flex_transport_trip_[t]])) {
+      return false;
+    }
     auto const& bitfield = tt.bitfields_[tt.flex_transport_traffic_days_[t]];
     return utl::any_of(day_idx_iv, [&](n::day_idx_t const i) {
       return bitfield.test(to_idx(i));
@@ -283,6 +287,7 @@ void add_flex_td_offsets(osr::ways const& w,
                          std::chrono::seconds const max,
                          double const max_matching_distance,
                          osr_parameters const& osr_params,
+                         n::routing::blocked_feeds const& blocked,
                          flex_routing_data& frd,
                          n::routing::td_offsets_t& ret,
                          std::map<std::string, std::uint64_t>& stats,
@@ -307,7 +312,7 @@ void add_flex_td_offsets(osr::ways const& w,
       near_stop_locations, dir, max_matching_distance);
 
   auto const routings = get_flex_routings(tt, loc_rtree, start_time, pos.pos_,
-                                          dir, max, osr_params);
+                                          dir, max, osr_params, blocked);
 
   stats.emplace(fmt::format("prepare_{}_FLEX_lookup", to_str(dir)),
                 UTL_GET_TIMING_MS(flex_lookup_timer));

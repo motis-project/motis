@@ -12,6 +12,7 @@ struct gtfsrt {
   config const& config_;
   nigiri::timetable const* tt_;
   tag_lookup const* tags_;
+  feed_labels const& labels_;
   std::shared_ptr<rt> const& rt_;
 };
 

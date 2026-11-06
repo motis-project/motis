@@ -2063,6 +2063,21 @@ export type OneToManyIntermodalParams = {
      */
     transitModes?: Array<Mode>;
     /**
+     * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+     * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+     * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+     * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+     *
+     */
+    includeLabels?: Array<(string)>;
+    /**
+     * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+     * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+     * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+     *
+     */
+    excludeLabels?: Array<(string)>;
+    /**
      * Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
      *
      * A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: `WALK,BIKE_SHARING`.
@@ -2390,6 +2405,13 @@ export type PlanData = {
          */
         elevationCosts?: ElevationCosts;
         /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
          * Optional. Experimental. Default is `10`.
          * Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
          * Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
@@ -2445,6 +2467,14 @@ export type PlanData = {
          *
          */
         ignorePreTransitRentalReturnConstraints?: boolean;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
         /**
          * Optional. Default is `true`.
          *
@@ -3119,6 +3149,21 @@ export type OneToManyIntermodalData = {
          */
         elevationCosts?: ElevationCosts;
         /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
+        /**
          * geo locations as latitude;longitude,latitude;longitude,...
          *
          * The number of accepted locations is limited by server config variable `onetomany_max_many`.
@@ -3354,6 +3399,21 @@ export type OneToAllData = {
          */
         elevationCosts?: ElevationCosts;
         /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
+        /**
          * Optional. Default is 250 meters.
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
@@ -3536,6 +3596,21 @@ export type OneToAllError = (Error);
 export type ReverseGeocodeData = {
     query: {
         /**
+         * Optional. Excludes stops of the specified datasets from the suggestions, unless they are also part of a used dataset.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits stop suggestions to stops from the specified datasets. A stop is suggested if at least one of its datasets is used.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
+        /**
          * Optional. Number of results to return.
          *
          * If omitted, 5 results are returned by default.
@@ -3564,6 +3639,21 @@ export type ReverseGeocodeError = (Error);
 
 export type GeocodeData = {
     query: {
+        /**
+         * Optional. Excludes stops of the specified datasets from the suggestions, unless they are also part of a used dataset.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits stop suggestions to stops from the specified datasets. A stop is suggested if at least one of its datasets is used.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
         /**
          * language tags as used in OpenStreetMap
          * (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
@@ -3632,6 +3722,21 @@ export type TripData = {
          */
         detailedLegs?: boolean;
         /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
+        /**
          * Optional. Default is `true`.
          *
          * Controls if a trip with stay-seated transfers is returned:
@@ -3675,6 +3780,13 @@ export type RefreshItineraryData = {
          */
         elevationCosts?: ElevationCosts;
         /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
          * Ignore rental return constraints on the last (egress) leg.
          */
         ignorePostTransitRentalReturnConstraints?: boolean;
@@ -3682,6 +3794,14 @@ export type RefreshItineraryData = {
          * Ignore rental return constraints on the first (access) leg.
          */
         ignorePreTransitRentalReturnConstraints?: boolean;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
         itineraryId: string;
         joinInterlinedLegs?: boolean;
         language?: Array<(string)>;
@@ -3824,6 +3944,13 @@ export type StoptimesData = {
          */
         exactRadius?: boolean;
         /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
          * Experimental. Expect unannounced breaking changes (without version bumps).
          *
          * Optional. Default is `false`. If set to `true`, the following stops are returned
@@ -3831,6 +3958,14 @@ export type StoptimesData = {
          *
          */
         fetchStops?: boolean;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
         /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
@@ -3941,6 +4076,21 @@ export type TripsData = {
          */
         endTime: string;
         /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
+        /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
@@ -3994,9 +4144,24 @@ export type InitialError = (Error);
 export type StopsData = {
     query: {
         /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
          * Optional. Return grouped stops
          */
         grouped?: boolean;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
         /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
@@ -4039,6 +4204,21 @@ export type StopInfoData = {
          *
          */
         exactRadius?: boolean;
+        /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
         /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
@@ -4096,6 +4276,21 @@ export type LevelsError = (Error);
 export type RoutesData = {
     query: {
         /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
+        /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
@@ -4132,6 +4327,21 @@ export type RoutesError = (Error);
 
 export type RouteDetailsData = {
     query: {
+        /**
+         * Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+         *
+         */
+        excludeLabels?: Array<(string)>;
+        /**
+         * Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+         * Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+         * If this is empty (the default), MOTIS uses all datasets that are not hidden.
+         * Hidden datasets (`hidden: true` in the config) are only used if they are listed here. They are added to the other datasets instead of limiting the request to them.
+         *
+         */
+        includeLabels?: Array<(string)>;
         /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)

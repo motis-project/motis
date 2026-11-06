@@ -43,7 +43,8 @@ flex_routings_t get_flex_routings(nigiri::timetable const&,
                                   geo::latlng const&,
                                   osr::direction,
                                   std::chrono::seconds max,
-                                  osr_parameters const&);
+                                  osr_parameters const&,
+                                  nigiri::routing::blocked_feeds const&);
 
 void add_flex_td_offsets(osr::ways const&,
                          osr::lookup const&,
@@ -59,6 +60,7 @@ void add_flex_td_offsets(osr::ways const&,
                          std::chrono::seconds max,
                          double const max_matching_distance,
                          osr_parameters const&,
+                         nigiri::routing::blocked_feeds const&,
                          flex_routing_data&,
                          nigiri::routing::td_offsets_t&,
                          std::map<std::string, std::uint64_t>& stats,

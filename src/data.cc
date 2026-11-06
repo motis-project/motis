@@ -290,6 +290,10 @@ data::data(std::filesystem::path p, config const& c)
   throw_if_failed("elevators", elevators);
   throw_if_failed("tiles", tiles);
 
+  if (tt_ != nullptr && adr_ext_ != nullptr) {
+    labels_.add_places(*tt_, *adr_ext_);
+  }
+
   utl_verify(
       shapes_ == nullptr || tt_ == nullptr ||
           (tt_->n_routes() == shapes_->route_bboxes_.size() &&
@@ -343,6 +347,9 @@ void data::load_osr() {
 
 void data::load_tt(fs::path const& p) {
   tags_ = tag_lookup::read(path_ / "tags.bin");
+  if (config_.timetable_.has_value()) {
+    labels_ = feed_labels{*config_.timetable_, *tags_};
+  }
   tt_ = n::timetable::read(path_ / p);
   tt_->resolve();
   location_rtree_ = std::make_unique<point_rtree<n::location_idx_t>>(

@@ -6,6 +6,7 @@
 
 #include "cista/memory_holder.h"
 
+#include "nigiri/routing/query.h"
 #include "nigiri/types.h"
 
 #include "motis/fwd.h"
@@ -40,10 +41,14 @@ struct tag_lookup {
                                     nigiri::rt::run_stop,
                                     nigiri::event_type const) const;
 
-  nigiri::location_idx_t get_location(nigiri::timetable const&,
-                                      std::string_view) const;
-  std::optional<nigiri::location_idx_t> find_location(nigiri::timetable const&,
-                                                      std::string_view) const;
+  nigiri::location_idx_t get_location(
+      nigiri::timetable const&,
+      std::string_view,
+      nigiri::routing::blocked_feeds const& = {}) const;
+  std::optional<nigiri::location_idx_t> find_location(
+      nigiri::timetable const&,
+      std::string_view,
+      nigiri::routing::blocked_feeds const& = {}) const;
   std::pair<nigiri::rt::run, nigiri::trip_idx_t> get_trip(
       nigiri::timetable const&,
       nigiri::rt_timetable const*,

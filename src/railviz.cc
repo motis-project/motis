@@ -340,6 +340,7 @@ void add_static_transports(n::timetable const& tt,
 }
 
 api::trips_response get_trains(tag_lookup const& tags,
+                               feed_labels const& labels,
                                n::timetable const& tt,
                                n::rt_timetable const* rtt,
                                n::shapes_storage const* shapes,
@@ -364,6 +365,8 @@ api::trips_response get_trains(tag_lookup const& tags,
       std::chrono::time_point_cast<n::unixtime_t::duration>(*query.endTime_);
   auto const time_interval = n::interval{start_time, end_time};
   auto const area = geo::make_box({min->pos_, max->pos_});
+  auto const blocked =
+      labels.blocked(tt, rtt, query.includeLabels_, query.excludeLabels_);
 
   // Collect runs within time+location window.
   auto runs = std::vector<stop_pair>{};
@@ -377,14 +380,16 @@ api::trips_response get_trains(tag_lookup const& tags,
     if (rtt != nullptr) {
       for (auto const& rt_t :
            rt_index.rt_geo_indices_[c].get_rt_transports(*rtt, area)) {
-        if (should_display(cl, zoom_level, rt_index.rt_distances_[rt_t])) {
+        if (should_display(cl, zoom_level, rt_index.rt_distances_[rt_t]) &&
+            !blocked.rt_transports_.test(rt_t)) {
           add_rt_transports(tt, *rtt, rt_t, time_interval, area, runs);
         }
       }
     }
 
     for (auto const& r : static_index.static_geo_indices_[c].get_routes(area)) {
-      if (should_display(cl, zoom_level, static_index.static_distances_[r])) {
+      if (should_display(cl, zoom_level, static_index.static_distances_[r]) &&
+          !blocked.routes_.test(r)) {
         add_static_transports(tt, rtt, r, time_interval, area, shapes, runs);
       }
     }
@@ -646,6 +651,7 @@ Response build_routes_response(
 }
 
 api::routes_response get_routes(tag_lookup const& tags,
+                                feed_labels const& labels,
                                 n::timetable const& tt,
                                 n::rt_timetable const*,
                                 n::shapes_storage const* shapes,
@@ -664,6 +670,8 @@ api::routes_response get_routes(tag_lookup const& tags,
   utl::verify(min.has_value(), "min not a coordinate: {}", query.min_);
   utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
   auto const area = geo::make_box({min->pos_, max->pos_});
+  auto const blocked =
+      labels.blocked(tt, nullptr, query.includeLabels_, query.excludeLabels_);
   auto route_indexes = std::vector<n::route_idx_t>{};
   auto zoom_filtered = false;
 
@@ -677,6 +685,9 @@ api::routes_response get_routes(tag_lookup const& tags,
     }
 
     for (auto const& r : static_index.static_geo_indices_[c].get_routes(area)) {
+      if (blocked.routes_.test(r)) {
+        continue;
+      }
       if (should_display(cl, zoom_level, static_index.static_distances_[r])) {
         route_indexes.emplace_back(r);
       } else {
@@ -693,6 +704,7 @@ api::routes_response get_routes(tag_lookup const& tags,
 
 api::routeDetails_response get_route_details(
     tag_lookup const& tags,
+    feed_labels const& labels,
     n::timetable const& tt,
     n::rt_timetable const*,
     n::shapes_storage const* shapes,
@@ -712,6 +724,11 @@ api::routeDetails_response get_route_details(
 
   auto const route =
       n::route_idx_t{static_cast<n::route_idx_t::value_t>(query.routeIdx_)};
+
+  utl::verify<net::not_found_exception>(
+      !labels.blocked(tt, nullptr, query.includeLabels_, query.excludeLabels_)
+           .routes_.test(route),
+      "route not found: {}", query.routeIdx_);
 
   auto res = build_routes_response<api::routeDetails_response>(
       tags, tt, shapes, w, pl, matches, {route}, std::nullopt, query.language_);

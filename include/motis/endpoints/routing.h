@@ -10,6 +10,7 @@
 #include "osr/types.h"
 
 #include "nigiri/routing/clasz_mask.h"
+#include "nigiri/routing/query.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
 
@@ -78,6 +79,7 @@ struct routing {
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&,
+      nigiri::routing::blocked_feeds const&,
       stats_map_t& stats,
       one_to_many_side* = nullptr) const;
 
@@ -94,6 +96,7 @@ struct routing {
                  double max_matching_distance,
                  std::chrono::seconds max,
                  nigiri::routing::start_time_t const&,
+                 nigiri::routing::blocked_feeds const&,
                  stats_map_t& stats,
                  one_to_many_side* = nullptr) const;
 
@@ -113,6 +116,7 @@ struct routing {
       nigiri::unixtime_t time,
       bool arrive_by,
       osr_parameters const&,
+      nigiri::routing::blocked_feeds const&,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
       std::chrono::seconds max,
@@ -129,6 +133,7 @@ struct routing {
   nigiri::timetable const* tt_;
   nigiri::routing::tb::tb_data const* tbd_;
   tag_lookup const* tags_;
+  feed_labels const& labels_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;
   flex::flex_areas const* fa_;
   platform_matches_t const* matches_;
@@ -158,6 +163,7 @@ struct routing_post {
   nigiri::timetable const* tt_;
   nigiri::routing::tb::tb_data const* tbd_;
   tag_lookup const* tags_;
+  feed_labels const& labels_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;
   flex::flex_areas const* fa_;
   platform_matches_t const* matches_;

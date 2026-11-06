@@ -18,6 +18,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/routing.h"
+#include "motis/feed_labels.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/metrics_registry.h"
 #include "motis/place.h"
@@ -75,7 +76,15 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
   auto const max_travel_time = n::duration_t{query.maxTravelTime_};
-  auto const one = get_place(&tt_, &tags_, query.one_);
+  auto const rt = std::atomic_load(&rt_);
+  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::REALTIME
+                       ? rt->rtt_.get()
+                       : nullptr;
+  auto const e = rt->e_.get();
+
+  auto const blocked_labels =
+      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_);
+  auto const one = get_place(&tt_, &tags_, query.one_, blocked_labels);
   auto const one_modes = deduplicate(query.arriveBy_ ? query.postTransitModes_
                                                      : query.preTransitModes_);
   auto const one_max_time = std::min(
@@ -89,16 +98,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
-  auto const rt = std::atomic_load(&rt_);
-  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::REALTIME
-                       ? rt->rtt_.get()
-                       : nullptr;
-  auto const e = rt->e_.get();
-
-  auto const r = routing{
-      config_, w_,        l_,      pl_,      elevations_,  &tt_,    nullptr,
-      &tags_,  loc_tree_, fa_,     matches_, way_matches_, rt_,     nullptr,
-      gbfs_,   nullptr,   nullptr, nullptr,  nullptr,      metrics_};
+  auto const r =
+      routing{config_,      w_,      l_,      pl_,       elevations_, &tt_,
+              nullptr,      &tags_,  labels_, loc_tree_, fa_,         matches_,
+              way_matches_, rt_,     nullptr, gbfs_,     nullptr,     nullptr,
+              nullptr,      nullptr, metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, std::atomic_load(&gbfs_)};
 
   auto const osr_params = get_osr_parameters(query);
@@ -108,14 +112,14 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .start_match_mode_ = r.is_osr_loaded()
                                ? n::routing::location_match_mode::kIntermodal
                                : n::routing::location_match_mode::kEquivalent,
-      .start_ = r.get_offsets(rtt, one, one_dir, one_modes, rental_options{},
-                              osr_params, query.pedestrianProfile_,
-                              query.elevationCosts_, one_max_time,
-                              max_matching_distance, gbfs_rd, prepare_stats),
+      .start_ = r.get_offsets(
+          rtt, one, one_dir, one_modes, rental_options{}, osr_params,
+          query.pedestrianProfile_, query.elevationCosts_, one_max_time,
+          max_matching_distance, gbfs_rd, blocked_labels, prepare_stats),
       .td_start_ = r.get_td_offsets(
           rtt, e, one, one_dir, one_modes, osr_params, query.pedestrianProfile_,
           query.elevationCosts_, max_matching_distance, one_max_time, time,
-          prepare_stats),
+          blocked_labels, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,
@@ -127,6 +131,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
                      : 1U)
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
+      .blocked_ = blocked_labels,
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .no_compulsory_reservation_ = query.noCompulsoryReservation_,
@@ -151,7 +156,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto reachable = nigiri::bitvec{tt_.n_locations()};
   for (auto i = 0U; i != tt_.n_locations(); ++i) {
-    if (state.template get_best<0>()[i][0] != unreachable) {
+    if (state.template get_best<0>()[i][0] != unreachable &&
+        !blocked_labels.srcs_.test(tt_.locations_.src_[n::location_idx_t{i}])) {
       reachable.set(i);
     }
   }

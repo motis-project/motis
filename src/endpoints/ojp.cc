@@ -15,6 +15,7 @@
 #include "nigiri/timetable.h"
 
 #include "motis/adr_extend_tt.h"
+#include "motis/feed_labels.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 
@@ -1051,7 +1052,8 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
                stop_id && strlen(stop_id) != 0U) {
       auto const& tt = *geocoding_ep_->tt_;
       auto const& tags = geocoding_ep_->tags_;
-      auto const stop = tags->get_location(tt, stop_id);
+      auto const stop = tags->get_location(
+          tt, stop_id, geocoding_ep_->labels_.blocked(tt, nullptr, {}, {}));
       auto const pos = tt.locations_.coordinates_.at(stop);
       response = build_geocode_response(
           language, std::vector<api::Match>{api::Match{

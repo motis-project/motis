@@ -25,6 +25,7 @@ struct railviz_rt_index {
 };
 
 api::trips_response get_trains(tag_lookup const&,
+                               feed_labels const&,
                                nigiri::timetable const&,
                                nigiri::rt_timetable const*,
                                nigiri::shapes_storage const*,
@@ -39,6 +40,7 @@ api::trips_response get_trains(tag_lookup const&,
                                unsigned api_version);
 
 api::routes_response get_routes(tag_lookup const&,
+                                feed_labels const&,
                                 nigiri::timetable const&,
                                 nigiri::rt_timetable const*,
                                 nigiri::shapes_storage const*,
@@ -53,6 +55,7 @@ api::routes_response get_routes(tag_lookup const&,
                                 unsigned api_version);
 
 api::routeDetails_response get_route_details(tag_lookup const&,
+                                             feed_labels const&,
                                              nigiri::timetable const&,
                                              nigiri::rt_timetable const*,
                                              nigiri::shapes_storage const*,

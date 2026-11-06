@@ -223,6 +223,7 @@ std::vector<n::rt::run> get_events(
     std::size_t const min_count,
     std::size_t const max_count,
     n::routing::clasz_mask_t const allowed_clasz,
+    n::routing::blocked_feeds const& blocked,
     bool const with_scheduled_skipped_stops,
     std::optional<n::duration_t> const max_time_diff) {
   auto iterators = std::vector<std::unique_ptr<ev_iterator>>{};
@@ -230,6 +231,9 @@ std::vector<n::rt::run> get_events(
   if (rtt != nullptr) {
     for (auto const x : locations) {
       for (auto const rt_t : rtt->location_rt_transports_[x]) {
+        if (blocked.rt_transports_.test(rt_t)) {
+          continue;
+        }
         auto const location_seq = rtt->rt_transport_location_seq_[rt_t];
         for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
           if (n::stop{s}.location_idx() == x &&
@@ -274,7 +278,8 @@ std::vector<n::rt::run> get_events(
   auto seen = n::hash_set<std::pair<n::route_idx_t, n::stop_idx_t>>{};
   for (auto const x : locations) {
     for (auto const r : tt.location_routes_[x]) {
-      if (!n::routing::is_allowed(allowed_clasz, tt.route_clasz_[r])) {
+      if (blocked.routes_.test(r) ||
+          !n::routing::is_allowed(allowed_clasz, tt.route_clasz_[r])) {
         continue;
       }
       auto const location_seq = tt.route_location_seq_[r];
@@ -387,6 +392,7 @@ std::vector<n::rt::run> stop_times::get_runs(
     std::optional<nigiri::event_type> const& ev_type,
     std::optional<nigiri::location_idx_t> const& query_stop,
     std::optional<osr::location> const& query_center,
+    n::routing::blocked_feeds const& blocked,
     bool const disable_stoptimes_max_limit) const {
   auto const max_results = disable_stoptimes_max_limit
                                ? 999888777U
@@ -460,7 +466,7 @@ std::vector<n::rt::run> stop_times::get_runs(
   auto events = get_events(locations, tt_, rtt, time, ev_type, dir,
                            static_cast<std::size_t>(query.n_.value_or(0)),
                            static_cast<std::size_t>(max_results), allowed_clasz,
-                           query.withScheduledSkippedStops_, window);
+                           blocked, query.withScheduledSkippedStops_, window);
 
   auto const to_tuple = [&](n::rt::run const& x) {
     auto const fr_a = n::rt::frun{tt_, rtt, x};
@@ -487,12 +493,15 @@ std::vector<nigiri::rt::run> stop_times::get_runs(
     api::stoptimes_params const& query, nigiri::rt_timetable const* rtt) const {
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const blocked =
+      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_);
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    return tags_.find_location(tt_, x, blocked);
+  });
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
-  return this->get_runs(query, rtt, ev_type, query_stop, query_center);
+  return this->get_runs(query, rtt, ev_type, query_stop, query_center, blocked);
 }
 
 api::stoptimes_response stop_times::operator()(
@@ -515,14 +524,17 @@ api::stoptimes_response stop_times::operator()(
   auto const base_ev_type = is_arr ? n::event_type::kArr : n::event_type::kDep;
   auto const api_version = get_api_version(url);
   auto const& lang = query.language_;
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const blocked =
+      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_);
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    return tags_.find_location(tt_, x, blocked);
+  });
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
   auto const events = this->get_runs(
       query, rtt, is_both ? std::nullopt : std::optional{base_ev_type},
-      query_stop, query_center);
+      query_stop, query_center, blocked);
 
   auto const get_time = [&](n::rt::run const& r) {
     auto const fr = n::rt::frun{tt_, rtt, r};

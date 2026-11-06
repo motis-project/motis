@@ -18,6 +18,7 @@
 #include "nigiri/types.h"
 
 #include "motis/data.h"
+#include "motis/feed_labels.h"
 #include "motis/tag_lookup.h"
 
 namespace n = nigiri;
@@ -155,9 +156,13 @@ void add_trip_updates(n::timetable const& tt,
 void add_rt_transports(n::timetable const& tt,
                        tag_lookup const& tags,
                        n::rt_timetable const& rtt,
+                       n::routing::blocked_feeds const& blocked,
                        transit_realtime::FeedMessage& fm) {
   for (auto rt_t = nigiri::rt_transport_idx_t{0}; rt_t < rtt.n_rt_transports();
        ++rt_t) {
+    if (blocked.rt_transports_.test(rt_t)) {
+      continue;
+    }
     auto const fr = n::rt::frun::from_rt(tt, &rtt, rt_t);
     add_trip_updates(tt, tags, fr, fm);
   }
@@ -166,6 +171,7 @@ void add_rt_transports(n::timetable const& tt,
 void add_cancelled_transports(n::timetable const& tt,
                               tag_lookup const& tags,
                               n::rt_timetable const& rtt,
+                              n::routing::blocked_feeds const& blocked,
                               transit_realtime::FeedMessage& fm) {
   auto const start_time = std::max(
       std::chrono::time_point_cast<n::unixtime_t::duration>(
@@ -181,6 +187,9 @@ void add_cancelled_transports(n::timetable const& tt,
   auto const [end_day, _1] = tt.day_idx_mam(end_time);
 
   for (auto r = nigiri::route_idx_t{0}; r < tt.n_routes(); ++r) {
+    if (blocked.routes_.test(r)) {
+      continue;
+    }
     for (auto const [i, t_idx] :
          utl::enumerate(tt.route_transport_ranges_[r])) {
       for (auto day = start_day; day <= end_day; ++day) {
@@ -223,8 +232,9 @@ net::reply gtfsrt::operator()(net::route_request const& req, bool) const {
   fh->set_timestamp(static_cast<double>(time));
 
   if (rtt != nullptr) {
-    add_rt_transports(*tt_, *tags_, *rtt, fm);
-    add_cancelled_transports(*tt_, *tags_, *rtt, fm);
+    auto const blocked = labels_.blocked(*tt_, rtt, {}, {});
+    add_rt_transports(*tt_, *tags_, *rtt, blocked, fm);
+    add_cancelled_transports(*tt_, *tags_, *rtt, blocked, fm);
   }
 
   auto res = net::web_server::string_res_t{boost::beast::http::status::ok,

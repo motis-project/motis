@@ -1,0 +1,125 @@
+#include "motis/feed_labels.h"
+
+#include <utility>
+#include <vector>
+
+#include "utl/enumerate.h"
+#include "utl/erase_duplicates.h"
+#include "utl/helpers/algorithm.h"
+#include "utl/verify.h"
+
+#include "net/bad_request_exception.h"
+
+#include "nigiri/timetable.h"
+
+#include "motis/tag_lookup.h"
+
+namespace n = nigiri;
+
+namespace motis {
+
+feed_labels::feed_labels(config::timetable const& c, tag_lookup const& tags) {
+  n_srcs_ =
+      static_cast<cista::base_t<n::source_idx_t>>(tags.src_to_tag_.size());
+  hidden_.resize(n_srcs_);
+
+  auto const add = [&](std::string const& name, n::source_idx_t const src) {
+    auto& b = by_name_[name];
+    b.resize(n_srcs_);
+    b.set(src);
+  };
+
+  for (auto const& [tag, dataset] : c.datasets_) {
+    auto const src = tags.get_src(tag);
+    utl::verify(src != n::source_idx_t::invalid(),
+                "dataset \"{}\" is not imported, please re-run the import",
+                tag);
+    add(tag, src);
+    if (dataset.hidden_) {
+      hidden_.set(src);
+    }
+  }
+
+  for (auto const& [tag, dataset] : c.datasets_) {
+    if (!dataset.labels_.has_value()) {
+      continue;
+    }
+    for (auto const& label : *dataset.labels_) {
+      utl::verify(!c.datasets_.contains(label),
+                  "label \"{}\" of dataset \"{}\" is the same as the tag of "
+                  "dataset \"{}\"",
+                  label, tag, label);
+      add(label, tags.get_src(tag));
+    }
+  }
+}
+
+feed_labels::src_set feed_labels::resolve(
+    std::vector<std::string> const& names) const {
+  auto b = src_set{};
+  b.resize(n_srcs_);
+  for (auto const& name : names) {
+    auto const it = by_name_.find(name);
+    utl::verify<net::bad_request_exception>(it != end(by_name_),
+                                            "unknown label \"{}\"", name);
+    b |= it->second;
+  }
+  return b;
+}
+
+void feed_labels::add_places(n::timetable const& tt, adr_ext const& ae) {
+  auto place_srcs =
+      std::vector<std::pair<adr_extra_place_idx_t, n::source_idx_t>>{};
+  for (auto const [l, p] : utl::enumerate(ae.location_place_)) {
+    if (p != adr_extra_place_idx_t::invalid()) {
+      place_srcs.emplace_back(p, tt.locations_.src_[n::location_idx_t{l}]);
+    }
+  }
+  utl::erase_duplicates(place_srcs);
+
+  auto it = begin(place_srcs);
+  auto srcs = std::vector<n::source_idx_t>{};
+  for (auto p = adr_extra_place_idx_t{0U}; p != ae.place_clasz_.size(); ++p) {
+    srcs.clear();
+    for (; it != end(place_srcs) && it->first == p; ++it) {
+      srcs.push_back(it->second);
+    }
+    place_srcs_.emplace_back(srcs);
+  }
+}
+
+feed_labels::src_set feed_labels::active(
+    std::vector<std::string> const& include,
+    std::vector<std::string> const& exclude) const {
+  // Named visible datasets limit the request to them. Named hidden datasets
+  // are added on top.
+  auto const named = resolve(include);
+  auto active = named & ~hidden_;
+  if (!active.any()) {
+    active.one_out();
+    active &= ~hidden_;
+  }
+  active |= named & hidden_;
+  active &= ~resolve(exclude);
+  return active;
+}
+
+n::routing::blocked_feeds feed_labels::blocked(
+    n::timetable const& tt,
+    n::rt_timetable const* rtt,
+    std::vector<std::string> const& include,
+    std::vector<std::string> const& exclude) const {
+  if (include.empty() && exclude.empty() && !hidden_.any()) {
+    return {};
+  }
+  return n::routing::make_blocked_feeds(tt, rtt, ~active(include, exclude));
+}
+
+bool feed_labels::is_active(src_set const& active,
+                            adr_extra_place_idx_t const p) const {
+  return utl::any_of(place_srcs_[p], [&](n::source_idx_t const src) {
+    return active.test(src);
+  });
+}
+
+}  // namespace motis
