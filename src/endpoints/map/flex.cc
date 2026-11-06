@@ -9,6 +9,7 @@
 #include "nigiri/timetable.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/feed_labels.h"
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
 
@@ -54,10 +55,16 @@ boost::json::value flex_locations::operator()(
   utl::verify<net::bad_request_exception>(
       max.has_value(), "max not a coordinate: {}", query.max_);
 
+  auto const blocked =
+      labels_.blocked(tt_, nullptr, query.includeLabels_, query.excludeLabels_);
+
   auto features = json::array{};
   tt_.flex_area_rtree_.search(
       min->pos_.lnglat_float(), max->pos_.lnglat_float(),
       [&](auto&&, auto&&, n::flex_area_idx_t const a) {
+        if (blocked.srcs_.test(tt_.flex_area_src_[a])) {
+          return true;
+        }
         features.emplace_back(json::value{
             {"type", "Feature"},
             {"id", tt_.strings_.get(tt_.flex_area_id_[a])},

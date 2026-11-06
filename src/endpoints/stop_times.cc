@@ -493,14 +493,15 @@ std::vector<nigiri::rt::run> stop_times::get_runs(
     api::stoptimes_params const& query, nigiri::rt_timetable const* rtt) const {
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const blocked =
+      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_);
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    return tags_.find_location(tt_, x, blocked);
+  });
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
-  return this->get_runs(
-      query, rtt, ev_type, query_stop, query_center,
-      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_));
+  return this->get_runs(query, rtt, ev_type, query_stop, query_center, blocked);
 }
 
 api::stoptimes_response stop_times::operator()(
@@ -523,15 +524,17 @@ api::stoptimes_response stop_times::operator()(
   auto const base_ev_type = is_arr ? n::event_type::kArr : n::event_type::kDep;
   auto const api_version = get_api_version(url);
   auto const& lang = query.language_;
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const blocked =
+      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_);
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    return tags_.find_location(tt_, x, blocked);
+  });
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
   auto const events = this->get_runs(
       query, rtt, is_both ? std::nullopt : std::optional{base_ev_type},
-      query_stop, query_center,
-      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_));
+      query_stop, query_center, blocked);
 
   auto const get_time = [&](n::rt::run const& r) {
     auto const fr = n::rt::frun{tt_, rtt, r};

@@ -26,8 +26,11 @@ api::stopInfo_response stop::operator()(
   auto const query = api::stopInfo_params{url.params()};
   auto const& lang = query.language_;
 
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const blocked =
+      labels_.blocked(tt_, nullptr, query.includeLabels_, query.excludeLabels_);
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    return tags_.find_location(tt_, x, blocked);
+  });
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
@@ -61,8 +64,6 @@ api::stopInfo_response stop::operator()(
   auto seen = n::hash_set<std::string>{};
   auto const first_day = tt_.day_idx(tt_.date_range_.from_);
 
-  auto const blocked =
-      labels_.blocked(tt_, nullptr, query.includeLabels_, query.excludeLabels_);
   for (auto const loc_idx : locations) {
     for (auto const r : tt_.location_routes_[loc_idx]) {
       auto const& range = tt_.route_transport_ranges_[r];

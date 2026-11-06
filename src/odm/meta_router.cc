@@ -395,7 +395,7 @@ api::plan_response meta_router::run() {
                          start_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? post_transit_time : pre_transit_time,
-          max_matching_distance_, gbfs_rd_, prepare_stats,
+          max_matching_distance_, gbfs_rd_, blocked_labels_, prepare_stats,
           &otm_searches[n::special_station::kStart]),
       .dest_walk_ = r_.get_offsets(
           rtt_, dest_,
@@ -407,7 +407,7 @@ api::plan_response meta_router::run() {
                          dest_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? pre_transit_time : post_transit_time,
-          max_matching_distance_, gbfs_rd_, prepare_stats,
+          max_matching_distance_, gbfs_rd_, blocked_labels_, prepare_stats,
           &otm_searches[n::special_station::kEnd]),
       .td_start_walk_ = r_.get_td_offsets(
           rtt_, e_, start_,

@@ -19,6 +19,7 @@ struct transfers {
 
   config const& c_;
   tag_lookup const& tags_;
+  feed_labels const& labels_;
   nigiri::timetable const& tt_;
   osr::ways const& w_;
   osr::lookup const& l_;

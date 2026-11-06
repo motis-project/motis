@@ -5,6 +5,7 @@
 #include "osr/geojson.h"
 
 #include "motis/config.h"
+#include "motis/feed_labels.h"
 #include "motis/location_routes.h"
 #include "motis/match_platforms.h"
 #include "motis/tag_lookup.h"
@@ -61,9 +62,14 @@ json::value matches::operator()(json::value const& query) const {
         {"geometry", osr::to_point(osr::point::from_latlng(*center))}});
   });
 
+  auto const blocked = labels_.blocked(tt_, nullptr, {}, {});
   loc_rtree_.find({min, max}, [&](n::location_idx_t const l) {
     utl::verify<net::too_many_exception>(matches.size() < kLimit,
                                          "too many items");
+
+    if (blocked.srcs_.test(tt_.locations_.src_[l])) {
+      return;
+    }
 
     auto const pos = tt_.locations_.coordinates_[l];
     auto const match = get_match(tt_, pl_, w_, l_, l,

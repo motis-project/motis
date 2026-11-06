@@ -246,13 +246,14 @@ api::Place to_place(n::timetable const* tt,
 
 place_t get_place(n::timetable const* tt,
                   tag_lookup const* tags,
-                  std::string_view input) {
+                  std::string_view input,
+                  n::routing::blocked_feeds const& blocked) {
   if (auto const location = parse_location(input); location.has_value()) {
     return *location;
   }
   utl::verify(tt != nullptr && tags != nullptr,
               R"(could not parse location (no timetable loaded): "{}")", input);
-  return tt_location{tags->get_location(*tt, input)};
+  return tt_location{tags->get_location(*tt, input, blocked)};
 }
 
 api::Place bwd_compat_lvl_adjust(api::Place&& pl, unsigned const api_version) {

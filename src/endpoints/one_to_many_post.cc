@@ -17,10 +17,12 @@ api::oneToManyPost_response one_to_many_post::operator()(
 
 api::OneToManyIntermodalResponse one_to_many_intermodal_post::operator()(
     api::OneToManyIntermodalParams const& query) const {
-  auto const one = get_place(&tt_, &tags_, query.one_);
+  auto const blocked =
+      labels_.blocked(tt_, nullptr, query.includeLabels_, query.excludeLabels_);
+  auto const one = get_place(&tt_, &tags_, query.one_, blocked);
   auto const many =
       utl::to_vec(query.many_, [&](std::string_view place) -> place_t {
-        return get_place(&tt_, &tags_, place);
+        return get_place(&tt_, &tags_, place, blocked);
       });
   return run_one_to_many_intermodal(*this, query, one, many);
 }

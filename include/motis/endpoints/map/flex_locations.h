@@ -14,6 +14,7 @@ struct flex_locations {
   boost::json::value operator()(boost::urls::url_view const&) const;
 
   tag_lookup const& tags_;
+  feed_labels const& labels_;
   nigiri::timetable const& tt_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
 };

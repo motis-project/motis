@@ -4,6 +4,7 @@
 
 #include "osr/location.h"
 
+#include "nigiri/routing/query.h"
 #include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
@@ -83,7 +84,8 @@ osr::location get_location(nigiri::timetable const*,
 
 place_t get_place(nigiri::timetable const*,
                   tag_lookup const*,
-                  std::string_view user_input);
+                  std::string_view user_input,
+                  nigiri::routing::blocked_feeds const& = {});
 
 api::Place bwd_compat_lvl_adjust(api::Place&& pl, unsigned api_version);
 

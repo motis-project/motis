@@ -15,6 +15,7 @@ struct matches {
   config const& config_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   tag_lookup const& tags_;
+  feed_labels const& labels_;
   nigiri::timetable const& tt_;
   osr::ways const& w_;
   osr::lookup const& l_;
