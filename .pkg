@@ -65,7 +65,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=89184bed3a6940665bd6a87e8f08e07b9b4fe57d
+  commit=01bf2d7d809a2aab937a079930512bb0d350b8c2
 [unordered_dense]
   url=git@github.com:motis-project/unordered_dense.git
   branch=main
