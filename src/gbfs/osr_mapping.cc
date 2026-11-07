@@ -234,7 +234,7 @@ struct osr_mapping {
       for (auto const& [id, st] : provider_.stations_) {
         auto is_renting =
             st.status_.is_renting_ && st.status_.num_vehicles_available_ > 0;
-        auto is_returning = st.status_.is_returning_;
+        auto const is_returning = station_allows_return(st, prod);
 
         // if the station lists vehicles available by type, at least one of
         // the vehicle types included in the product segment must be available
@@ -245,21 +245,12 @@ struct osr_mapping {
               });
         }
 
-        // same for returning vehicles
-        if (is_returning && !st.status_.vehicle_docks_available_.empty()) {
-          is_returning = utl::any_of(
-              st.status_.vehicle_docks_available_, [&](auto const& vt) {
-                return vt.second != 0 && prod.includes_vehicle_type(vt.first);
-              });
-        } else if (is_returning && st.status_.num_docks_available_ &&
-                   st.info_.capacity_.value_or(0U) > 0U) {
-          // no counts per vehicle type: fall back to the published total,
-          // but only for stations that declare physical docks
-          is_returning = *st.status_.num_docks_available_ != 0;
-        }
-
         if (!is_renting && !is_returning) {
           continue;
+        }
+
+        if (is_returning && st.info_.station_area_) {
+          map_station_area(rd, st.info_.station_area_.get());
         }
 
         auto const matches = get_node_matches(
@@ -275,21 +266,6 @@ struct osr_mapping {
         }
         if (is_returning) {
           rd.end_allowed_.set(additional_node_id, true);
-          if (st.info_.station_area_) {
-            auto const* geom = st.info_.station_area_.get();
-            auto const rect = tg_geom_rect(geom);
-            auto const bb = geo::box{geo::latlng{rect.min.y, rect.min.x},
-                                     geo::latlng{rect.max.y, rect.max.x}};
-            auto const* osr_r = w_.r_.get();
-            l_.find(bb, [&](osr::way_idx_t const way) {
-              for (auto const n : osr_r->way_nodes_[way]) {
-                if (multipoly_contains_point(geom,
-                                             w_.get_node_pos(n).as_latlng())) {
-                  rd.end_allowed_.set(n, true);
-                }
-              }
-            });
-          }
         }
         for (auto const& m : matches) {
           auto const& node = m.node_;
@@ -310,6 +286,20 @@ struct osr_mapping {
         }
       }
     }
+  }
+
+  void map_station_area(routing_data& rd, tg_geom const* geom) const {
+    auto const rect = tg_geom_rect(geom);
+    auto const bb = geo::box{geo::latlng{rect.min.y, rect.min.x},
+                             geo::latlng{rect.max.y, rect.max.x}};
+    auto const* osr_r = w_.r_.get();
+    l_.find(bb, [&](osr::way_idx_t const way) {
+      for (auto const n : osr_r->way_nodes_[way]) {
+        if (multipoly_contains_point(geom, w_.get_node_pos(n).as_latlng())) {
+          rd.end_allowed_.set(n, true);
+        }
+      }
+    });
   }
 
   void map_vehicles() {

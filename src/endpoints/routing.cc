@@ -447,8 +447,7 @@ std::vector<n::routing::offset> get_offsets(
             } else {
               vehicle_return_allowed = [&provider = *provider,
                                         &prod](geo::latlng const& x) {
-                return gbfs::allows_free_floating_return_at(provider, prod, x,
-                                                            false);
+                return gbfs::allows_return_at(provider, prod, x, false);
               };
             }
           }
