@@ -1,5 +1,8 @@
 #pragma once
 
+#include <utility>
+#include <vector>
+
 #include "osr/location.h"
 #include "osr/routing/profile.h"
 #include "osr/types.h"
@@ -44,6 +47,15 @@ flex_routings_t get_flex_routings(nigiri::timetable const&,
                                   osr::direction,
                                   std::chrono::seconds max,
                                   osr_parameters const&);
+
+// The transport of `ids` whose window at `stop` started last before `t` and
+// the traffic day of that window. nigiri stores a flex trip as one transport
+// per UTC offset (e.g. CET and CEST), so `ids` can contain several variants.
+std::pair<nigiri::flex_transport_idx_t, nigiri::unixtime_t> get_flex_transport(
+    nigiri::timetable const&,
+    std::vector<mode_payload> const& ids,
+    nigiri::stop_idx_t stop,
+    nigiri::unixtime_t t);
 
 void add_flex_td_offsets(osr::ways const&,
                          osr::lookup const&,
