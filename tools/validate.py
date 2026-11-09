@@ -14,6 +14,12 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import check_journeys  # journeys vs. GTFS feeds (tools/check_journeys.py)
+except ImportError:
+    check_journeys = None
+
 ALL_MODES = ["AIRPLANE", "HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH",
              "NIGHT_RAIL", "RIDE_SHARING", "REGIONAL_RAIL", "SUBURBAN",
              "SUBWAY", "TRAM", "BUS", "FERRY", "ODM", "FUNICULAR",
@@ -201,6 +207,29 @@ def dummy_legs(lines, routed_q=()):
                 if routed or not transfer:
                     out.append((idx, leg.get("mode", "?")))
     return out
+
+
+def gtfs_check(data, lines, rt_flags):
+    """The reference binary's journeys against the GTFS feeds the data was
+    imported from ('motis compare' makes the other binaries equal to it).
+    Returns (ok, detail), or (None, reason) when the check cannot run."""
+    cfg = os.path.join(data, "config.yml")
+    if check_journeys is None:
+        return None, "tools/check_journeys.py not found"
+    if not os.path.exists(cfg):
+        return None, "no config.yml in " + data
+    feeds, merge_dupes = check_journeys.feeds_from_config(cfg)
+    missing = sorted(p for p in feeds.values() if not os.path.exists(p))
+    if not feeds or missing:
+        return None, ("feeds not found: " + ", ".join(missing) if missing
+                      else "no datasets in " + cfg)
+    print("checking the %s journeys against %d GTFS feed(s)..."
+          % ("reference", len(feeds)))
+    rep = check_journeys.check(lines, feeds, rt_flags=rt_flags, max_report=20,
+                               merge_dupes=merge_dupes)
+    detail = "%d transit legs, %d errors, %d warnings" % (
+        rep.counts["transit legs checked"], len(rep.errors), len(rep.warnings))
+    return not rep.errors, detail
 
 
 def exec_times(lines):
@@ -415,6 +444,10 @@ def main():
     ap.add_argument("--launcher",
                     help="command prefixing 'motis batch' (e.g. "
                          "'compute-sanitizer --tool memcheck --error-exitcode 1')")
+    ap.add_argument("--no-gtfs-check", action="store_true",
+                    help="skip checking the reference binary's journeys "
+                         "against the GTFS feeds of the data's config.yml "
+                         "(tools/check_journeys.py)")
     ap.add_argument("--n", type=int, default=100)
     ap.add_argument("--n_threads", type=int,
                     help="'motis batch' worker threads (default: hardware "
@@ -448,6 +481,7 @@ def main():
 
     print("== %s ==" % a.name)
 
+    orig_data = data  # the import's config.yml names the feeds
     if a.elevators:
         fasta = os.path.join(work, "fasta.json")
         random_outages(os.path.abspath(a.elevators), a.date, a.elevator_seed,
@@ -487,6 +521,7 @@ def main():
     wall = [0.0] * len(bins)  # total batch wall time per binary
     n_queries = 0  # total queries run per binary (same file for all)
     fails = 0
+    ref_lines, ref_rt = [], []  # reference responses for the GTFS check
     for rt, rental in ((False, False), (False, True), (True, False),
                        (True, True)):
         # FILTER CASES
@@ -522,6 +557,9 @@ def main():
                   (rt, rental, labels[i], wall[i]))
             with open(o) as f:
                 outs.append(f.read().splitlines())
+            if i == 0:
+                ref_lines += outs[0]
+                ref_rt += [rt] * len(outs[0])
 
             # Check GPU -> CPU fallbacks
             # CUDA code throws error, e.g. cudaMalloc failed
@@ -581,6 +619,18 @@ def main():
 
     if not results:
         sys.exit("validate: no cases ran -- nothing validated")
+
+    # SANITY CHECK VS. GTFS: every transit leg of the reference binary's
+    # journeys exists in the feeds with these stops and times.
+    if not a.no_gtfs_check:
+        ok, detail = gtfs_check(orig_data, ref_lines, ref_rt)
+        if ok is None:
+            print("gtfs check skipped: %s" % detail)
+        else:
+            results.append(("gtfs-check", ok, detail))
+            fails += 0 if ok else 1
+            print("%s %-34s %s" % ("PASS" if ok else "FAIL", "gtfs-check",
+                                   detail))
 
     print("%s: %d passed, %d failed" % (a.name, len(results) - fails, fails))
 
