@@ -123,7 +123,7 @@ TEST(motis, trip_stop_naming) {
 
   auto const trip_ep = utl::init_from<ep::trip>(d).value();
 
-  auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
+  auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1&language=en");
   ASSERT_EQ(1, res.legs_.size());
   auto const& leg = res.legs_[0];
   EXPECT_GT(leg.legGeometry_.length_, 0);
