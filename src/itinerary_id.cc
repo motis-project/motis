@@ -314,7 +314,7 @@ std::vector<st_candidate> get_st_candidates_in_radius(
     int const radius_m,
     bool const arrive_by,
     n::lang_t const& lang,
-    n::routing::blocked_feeds const& blocked) {
+    n::routing::blocked_routes const& blocked) {
   auto query = api::stoptimes_params{};
   query.center_ = fmt::format("{},{}", center.lat_, center.lng_);
   query.time_ = openapi::date_time_t{
@@ -566,7 +566,7 @@ std::expected<n::routing::journey::leg, std::string> reconstruct_pt_leg(
     n::rt_timetable const* rtt,
     n::lang_t const& lang,
     bool const require_display_name_match,
-    n::routing::blocked_feeds const& blocked) {
+    n::routing::blocked_routes const& blocked) {
   auto const fail = [](std::string_view const msg) {
     return std::unexpected{std::string{msg}};
   };
@@ -688,7 +688,7 @@ api::Itinerary reconstruct_itinerary(
     n::lang_t const& lang,
     std::size_t const num_leg_alternatives,
     n::routing::clasz_mask_t const allowed_claszes,
-    n::routing::blocked_feeds const& blocked_labels,
+    n::routing::blocked_routes const& blocked_labels,
     bool const require_bike_transport,
     bool const require_car_transport,
     bool const no_compulsory_reservation,

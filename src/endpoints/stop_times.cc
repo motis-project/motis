@@ -223,7 +223,7 @@ std::vector<n::rt::run> get_events(
     std::size_t const min_count,
     std::size_t const max_count,
     n::routing::clasz_mask_t const allowed_clasz,
-    n::routing::blocked_feeds const& blocked,
+    n::routing::blocked_routes const& blocked,
     bool const with_scheduled_skipped_stops,
     std::optional<n::duration_t> const max_time_diff) {
   auto iterators = std::vector<std::unique_ptr<ev_iterator>>{};
@@ -392,7 +392,7 @@ std::vector<n::rt::run> stop_times::get_runs(
     std::optional<nigiri::event_type> const& ev_type,
     std::optional<nigiri::location_idx_t> const& query_stop,
     std::optional<osr::location> const& query_center,
-    n::routing::blocked_feeds const& blocked,
+    n::routing::blocked_routes const& blocked,
     bool const disable_stoptimes_max_limit) const {
   auto const max_results = disable_stoptimes_max_limit
                                ? 999888777U

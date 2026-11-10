@@ -169,7 +169,7 @@ flex_routings_t get_flex_routings(
     osr::direction const dir,
     std::chrono::seconds const max,
     osr_parameters const& osr_params,
-    n::routing::blocked_feeds const& blocked) {
+    n::routing::blocked_routes const& blocked) {
   auto routings = flex_routings_t{};
 
   // Traffic days helpers.
@@ -287,7 +287,7 @@ void add_flex_td_offsets(osr::ways const& w,
                          std::chrono::seconds const max,
                          double const max_matching_distance,
                          osr_parameters const& osr_params,
-                         n::routing::blocked_feeds const& blocked,
+                         n::routing::blocked_routes const& blocked,
                          flex_routing_data& frd,
                          n::routing::td_offsets_t& ret,
                          std::map<std::string, std::uint64_t>& stats,

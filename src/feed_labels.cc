@@ -104,7 +104,7 @@ feed_labels::src_set feed_labels::active(
   return active;
 }
 
-n::routing::blocked_feeds feed_labels::blocked(
+n::routing::blocked_routes feed_labels::blocked(
     n::timetable const& tt,
     n::rt_timetable const* rtt,
     std::vector<std::string> const& include,
@@ -112,7 +112,7 @@ n::routing::blocked_feeds feed_labels::blocked(
   if (include.empty() && exclude.empty() && !hidden_.any()) {
     return {};
   }
-  return n::routing::make_blocked_feeds(tt, rtt, ~active(include, exclude));
+  return n::routing::make_blocked_routes(tt, rtt, ~active(include, exclude));
 }
 
 bool feed_labels::is_active(src_set const& active,

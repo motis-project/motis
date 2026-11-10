@@ -157,7 +157,7 @@ std::pair<n::rt::run, n::trip_idx_t> tag_lookup::get_trip(
 n::location_idx_t tag_lookup::get_location(
     n::timetable const& tt,
     std::string_view s,
-    n::routing::blocked_feeds const& blocked) const {
+    n::routing::blocked_routes const& blocked) const {
   if (auto const res = find_location(tt, s, blocked); res.has_value()) {
     return *res;
   }
@@ -168,7 +168,7 @@ n::location_idx_t tag_lookup::get_location(
 std::optional<n::location_idx_t> tag_lookup::find_location(
     n::timetable const& tt,
     std::string_view s,
-    n::routing::blocked_feeds const& blocked) const {
+    n::routing::blocked_routes const& blocked) const {
   auto const [tag, id] = split_tag_id(s);
 
   auto const src = get_src(tag);

@@ -247,7 +247,7 @@ api::Place to_place(n::timetable const* tt,
 place_t get_place(n::timetable const* tt,
                   tag_lookup const* tags,
                   std::string_view input,
-                  n::routing::blocked_feeds const& blocked) {
+                  n::routing::blocked_routes const& blocked) {
   if (auto const location = parse_location(input); location.has_value()) {
     return *location;
   }

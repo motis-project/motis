@@ -24,7 +24,7 @@ struct feed_labels {
   src_set active(std::vector<std::string> const& include,
                  std::vector<std::string> const& exclude) const;
 
-  nigiri::routing::blocked_feeds blocked(
+  nigiri::routing::blocked_routes blocked(
       nigiri::timetable const&,
       nigiri::rt_timetable const*,
       std::vector<std::string> const& include,

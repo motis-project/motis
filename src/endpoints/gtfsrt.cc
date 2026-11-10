@@ -156,7 +156,7 @@ void add_trip_updates(n::timetable const& tt,
 void add_rt_transports(n::timetable const& tt,
                        tag_lookup const& tags,
                        n::rt_timetable const& rtt,
-                       n::routing::blocked_feeds const& blocked,
+                       n::routing::blocked_routes const& blocked,
                        transit_realtime::FeedMessage& fm) {
   for (auto rt_t = nigiri::rt_transport_idx_t{0}; rt_t < rtt.n_rt_transports();
        ++rt_t) {
@@ -171,7 +171,7 @@ void add_rt_transports(n::timetable const& tt,
 void add_cancelled_transports(n::timetable const& tt,
                               tag_lookup const& tags,
                               n::rt_timetable const& rtt,
-                              n::routing::blocked_feeds const& blocked,
+                              n::routing::blocked_routes const& blocked,
                               transit_realtime::FeedMessage& fm) {
   auto const start_time = std::max(
       std::chrono::time_point_cast<n::unixtime_t::duration>(

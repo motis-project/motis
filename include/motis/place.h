@@ -85,7 +85,7 @@ osr::location get_location(nigiri::timetable const*,
 place_t get_place(nigiri::timetable const*,
                   tag_lookup const*,
                   std::string_view user_input,
-                  nigiri::routing::blocked_feeds const& = {});
+                  nigiri::routing::blocked_routes const& = {});
 
 api::Place bwd_compat_lvl_adjust(api::Place&& pl, unsigned api_version);
 

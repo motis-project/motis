@@ -79,7 +79,7 @@ struct routing {
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&,
-      nigiri::routing::blocked_feeds const&,
+      nigiri::routing::blocked_routes const&,
       stats_map_t& stats,
       one_to_many_side* = nullptr) const;
 
@@ -96,7 +96,7 @@ struct routing {
                  double max_matching_distance,
                  std::chrono::seconds max,
                  nigiri::routing::start_time_t const&,
-                 nigiri::routing::blocked_feeds const&,
+                 nigiri::routing::blocked_routes const&,
                  stats_map_t& stats,
                  one_to_many_side* = nullptr) const;
 
@@ -116,7 +116,7 @@ struct routing {
       nigiri::unixtime_t time,
       bool arrive_by,
       osr_parameters const&,
-      nigiri::routing::blocked_feeds const&,
+      nigiri::routing::blocked_routes const&,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
       std::chrono::seconds max,

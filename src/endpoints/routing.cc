@@ -94,7 +94,7 @@ std::vector<n::routing::offset> radius_offsets(
     point_rtree<n::location_idx_t> const& loc_tree,
     geo::latlng const& pos,
     double const radius_meters,
-    n::routing::blocked_feeds const& blocked_labels) {
+    n::routing::blocked_routes const& blocked_labels) {
   auto offsets = std::vector<n::routing::offset>{};
   loc_tree.find(geo::box{pos, radius_meters}, [&](geo::latlng const& stop_pos,
                                                   n::location_idx_t const l) {
@@ -116,7 +116,7 @@ std::vector<n::routing::offset> client_offsets(
     std::vector<api::PlanOffset> const& offsets,
     tag_lookup const& tags,
     n::timetable const& tt,
-    n::routing::blocked_feeds const& blocked_labels) {
+    n::routing::blocked_routes const& blocked_labels) {
   auto ret = std::vector<n::routing::offset>{};
   for (auto const& x : offsets) {
     utl::verify<net::bad_request_exception>(
@@ -162,7 +162,7 @@ n::routing::td_offsets_t get_td_offsets(
     double const max_matching_distance,
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
-    n::routing::blocked_feeds const& blocked_labels,
+    n::routing::blocked_routes const& blocked_labels,
     stats_map_t& stats,
     one_to_many_side* const states) {
   if (!r.is_osr_loaded()) {
@@ -237,7 +237,7 @@ n::routing::td_offsets_t routing::get_td_offsets(
     double const max_matching_distance,
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
-    n::routing::blocked_feeds const& blocked_labels,
+    n::routing::blocked_routes const& blocked_labels,
     stats_map_t& stats,
     one_to_many_side* const states) const {
   return std::visit(
@@ -293,7 +293,7 @@ std::vector<n::routing::offset> get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
-    n::routing::blocked_feeds const& blocked_labels,
+    n::routing::blocked_routes const& blocked_labels,
     stats_map_t& stats,
     one_to_many_side* const states) {
   if (!r.is_osr_loaded()) {
@@ -572,7 +572,7 @@ std::vector<n::routing::offset> routing::get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
-    n::routing::blocked_feeds const& blocked_labels,
+    n::routing::blocked_routes const& blocked_labels,
     stats_map_t& stats,
     one_to_many_side* const states) const {
   auto const do_get_offsets = [&](osr::location const pos) {
@@ -646,7 +646,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     n::unixtime_t const time,
     bool const arrive_by,
     osr_parameters const& osr_params,
-    n::routing::blocked_feeds const& blocked_labels,
+    n::routing::blocked_routes const& blocked_labels,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     std::chrono::seconds max,
@@ -874,7 +874,7 @@ api::plan_response routing::route(api::plan_params const& query,
                                   ? nullptr
                                   : rt->rtt_.get();
   auto const blocked_labels =
-      tt_ == nullptr ? n::routing::blocked_feeds{}
+      tt_ == nullptr ? n::routing::blocked_routes{}
                      : labels_.blocked(*tt_, rtt, query.includeLabels_,
                                        query.excludeLabels_);
   auto const e = rt->e_.get();
