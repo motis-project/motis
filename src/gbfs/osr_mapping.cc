@@ -34,7 +34,7 @@
 namespace motis::gbfs {
 
 struct node_match {
-  osr::way_idx_t way_{osr::way_idx_t::invalid()};
+  std::uint64_t component_{};
   osr::candidate_node node_{};
 };
 
@@ -187,13 +187,16 @@ struct osr_mapping {
                          kMaxGbfsMatchingDistance, nullptr, std::nullopt, {},
                          result);
     auto const m = result[osr::match_idx_t{0U}];
+    auto const& components = w_.r_->get_class_components(component_class);
     auto node_matches = std::vector<node_match>{};
     for (auto j = std::size_t{0U}; j != m.size(); ++j) {
+      auto const component = components.key(
+          m.way_[j], osr::candidate_edge(w_, m.way_[j], m.nodes_[j]));
       for (auto const& nc : {m.left(j), m.right(j)}) {
         if (nc.valid() && nc.dist_to_node_ <= kMaxGbfsMatchingDistance &&
             P::node_cost(params, w_.r_->node_properties_[nc.node_]).cost_ !=
                 osr::kInfeasible) {
-          node_matches.emplace_back(node_match{m.way_[j], nc});
+          node_matches.emplace_back(node_match{component, nc});
         }
       }
     }
@@ -201,17 +204,10 @@ struct osr_mapping {
       return a.node_.dist_to_node_ < b.node_.dist_to_node_;
     });
 
-    // Keep only the closest node per component. Single-way components have no
-    // id; the way itself identifies them.
-    auto const& components = w_.r_->get_class_components(component_class);
-    auto seen_components = hash_set<std::uint32_t>{};
-    auto seen_ways = hash_set<osr::way_idx_t>{};
+    // Keep only the closest node per component.
+    auto seen_components = hash_set<std::uint64_t>{};
     for (auto it = node_matches.begin(); it != node_matches.end();) {
-      auto const component = components.get(it->way_);
-      auto const is_new = component.has_value()
-                              ? seen_components.insert(*component).second
-                              : seen_ways.insert(it->way_).second;
-      if (!is_new) {
+      if (!seen_components.insert(it->component_).second) {
         it = node_matches.erase(it);
       } else {
         ++it;
