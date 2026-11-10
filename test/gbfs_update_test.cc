@@ -144,32 +144,31 @@ void write_station_information(fs::path const& dir,
              }));
 }
 
-void write_station_information_with_area(fs::path const& dir) {
-  write_file(dir / "station_information.json", R"({
-    "last_updated": 30,
-    "ttl": 0,
-    "version": "2.3",
-    "data": {
-      "stations": [
-        {
-          "station_id": "station-1",
-          "name": "Main Station",
-          "lat": 49.871651,
-          "lon": 8.631084,
-          "station_area": {
-            "type": "MultiPolygon",
-            "coordinates": [[[
-              [8.626, 49.870],
-              [8.634, 49.870],
-              [8.634, 49.877],
-              [8.626, 49.877],
-              [8.626, 49.870]
-            ]]]
-          }
-        }
-      ]
-    }
-  })");
+void write_station_information_with_area(fs::path const& dir,
+                                         double const lat = 49.871651,
+                                         double const lon = 8.631084) {
+  auto const ring = json::array{{8.626, 49.870},
+                                {8.634, 49.870},
+                                {8.634, 49.877},
+                                {8.626, 49.877},
+                                {8.626, 49.870}};
+  write_file(
+      dir / "station_information.json",
+      json::serialize(json::value{
+          {"last_updated", 30},
+          {"ttl", 0},
+          {"version", "2.3"},
+          {"data",
+           {{"stations",
+             json::array{{{"station_id", "station-1"},
+                          {"name", "Main Station"},
+                          {"lat", lat},
+                          {"lon", lon},
+                          {"station_area",
+                           {{"type", "MultiPolygon"},
+                            {"coordinates",
+                             json::array(1U, json::array(1U, ring))}}}}}}}},
+      }));
 }
 
 void write_station_status(fs::path const& dir,
@@ -592,6 +591,18 @@ std::size_t count_additional_vehicle_nodes(provider_routing_data const& prd) {
       }));
 }
 
+bool has_base_return_node(gbfs_data& gbfs, gbfs_provider const& p) {
+  auto const prod_rd = gbfs.get_products_routing_data(
+      *street_data().w_, *street_data().l_,
+      gbfs_products_ref{p.idx_, gbfs_products_idx_t{0}});
+  for (auto i = 0U; i != street_data().w_->n_nodes(); ++i) {
+    if (prod_rd->end_allowed_.test(osr::node_idx_t{i})) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 TEST(motis, gbfs_update_initial_file_feed_creates_provider_state) {
@@ -1008,15 +1019,24 @@ TEST(motis, gbfs_update_station_area_marks_base_nodes_return_allowed) {
   run_update(make_gbfs_config(dir), gbfs);
 
   auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
-  auto const prod_rd = gbfs->get_products_routing_data(
-      *street_data().w_, *street_data().l_,
-      gbfs_products_ref{p.idx_, gbfs_products_idx_t{0}});
-  auto has_base_return_node = false;
-  for (auto i = 0U; i != street_data().w_->n_nodes(); ++i) {
-    has_base_return_node =
-        has_base_return_node || prod_rd->end_allowed_.test(osr::node_idx_t{i});
-  }
-  EXPECT_TRUE(has_base_return_node);
+  EXPECT_TRUE(has_base_return_node(*gbfs, p));
+}
+
+TEST(motis, gbfs_update_station_area_without_matched_station_position) {
+  auto const dir = make_temp_dir("station-area-unmatched");
+  write_discovery(dir, "");
+  write_system_information(dir);
+  write_vehicle_types(dir, false, "any_station");
+  write_station_information_with_area(dir, 0.0, 0.0);
+  write_station_status(dir, 3U);
+  write_empty_geofencing(dir);
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(make_gbfs_config(dir), gbfs);
+
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  EXPECT_EQ(0U, additional_node_count(*gbfs, p));
+  EXPECT_TRUE(has_base_return_node(*gbfs, p));
 }
 
 TEST(motis, gbfs_update_supports_local_gbfs_manifest_provider_dirs) {
