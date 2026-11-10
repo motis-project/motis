@@ -106,11 +106,8 @@ std::optional<std::vector<api::Alert>> get_alerts(
     return to_alert(rtt->alerts_, x, language);
   };
 
-  auto const x =
-      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs_ev) {
-         auto const& [rs, ev_type] = rs_ev;
-         return std::optional{rs.get_trip_idx(ev_type)};
-       }).value_or(fr.trip_idx());
+  auto const x = s ? s->first.get_trip_idx(s->second)
+                   : fr[0].get_trip_idx(n::event_type::kDep);
   auto const stop_idx = s ? std::optional{s->first.stop_idx_} : std::nullopt;
 
   auto alerts = std::vector<api::Alert>{};
