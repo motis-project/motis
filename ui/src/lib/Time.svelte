@@ -9,7 +9,6 @@
 		scheduledTimestamp,
 		isRealtime,
 		variant,
-		queriedTime,
 		timeZone,
 		arriveBy
 	}: {
@@ -18,7 +17,6 @@
 		scheduledTimestamp: string;
 		isRealtime: boolean;
 		variant: 'schedule' | 'realtime' | 'realtime-show-always';
-		queriedTime?: string | undefined;
 		timeZone: string | undefined;
 		arriveBy?: boolean | undefined;
 	} = $props();
@@ -48,32 +46,17 @@
 				.find((part) => part.type === 'timeZoneName')!.value == timeZoneOffset
 		);
 	});
-
-	function weekday(time: Date) {
-		if (variant === 'realtime') {
-			return '';
-		}
-		if (queriedTime === undefined) {
-			return time.toLocaleDateString(language, { timeZone });
-		}
-		const base = new Date(queriedTime);
-		return base.toLocaleDateString() === time.toLocaleDateString()
-			? ''
-			: `(${time.toLocaleString(language, { weekday: 'short', timeZone })})`;
-	}
 </script>
 
 <div class={cn('text-nowrap flex flex-col', className)} title={timeZoneOffset}>
 	{#if variant == 'schedule'}
 		<div>
 			{formatTime(scheduled, timeZone)}
-			{weekday(scheduled)}
 		</div>
 		<div class="text-xs font-normal">{isSameAsBrowserTimezone() ? '' : timeZoneOffset}</div>
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
 		<span class:text-destructive={notOnTime} class:text-green-600={roughlyOnTime}>
 			{formatTime(t, timeZone)}
-			{weekday(t)}
 		</span>
 		{#if variant === 'realtime-show-always' && !isSameAsBrowserTimezone()}
 			<div class="text-xs font-normal">
