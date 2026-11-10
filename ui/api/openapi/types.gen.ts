@@ -553,6 +553,10 @@ export type Place = {
      */
     name: string;
     /**
+     * name of the transit stop / PoI / address in the local language
+     */
+    localName: string;
+    /**
      * The ID of the stop. This is often something that users don't care about.
      */
     stopId?: string;
