@@ -675,7 +675,13 @@ api::Itinerary journey_to_response(
                         [](auto&& x) { return x.transfer_idx_; }),
                     .effectiveFareLegIndex_ = fare_indices.transform(
                         [](auto&& x) { return x.effective_fare_leg_idx_; }),
-                    .alerts_ = get_alerts(fr, std::nullopt, false, lang),
+                    .alerts_ =
+                        get_alerts(n::rt::frun{tt,
+                                               rtt,
+                                               {.t_ = fr.t_,
+                                                .stop_range_ = common_stops,
+                                                .rt_ = fr.rt_}},
+                                   std::nullopt, false, lang),
                     .loopedCalendarSince_ =
                         enter_stop.looped_calendar_since(n::event_type::kDep),
                     .bikesAllowed_ =

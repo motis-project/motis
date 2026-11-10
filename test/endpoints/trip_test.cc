@@ -479,6 +479,59 @@ TEST(motis, trip_ticketing_rt_added) {
   EXPECT_FALSE(res.legs_[0].ticketUrls_.has_value());
 }
 
+// T1 runs S1 10:00 -> S5 10:40, the leg is S3 10:20 -> S4 10:30 (08:20 -
+// 08:30 UTC). A trip alert counts for the leg only if it is active in that
+// time, not at any other point of the run.
+TEST(motis, leg_alerts_leg_time) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto msg =
+      to_feed_msg({alert{.header_ = "before boarding",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}},
+                   alert{.header_ = "on board",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}}},
+                  date::sys_days{2019_y / May / 1} + 6h);
+  auto const set_period = [&](int const entity, int const h, int const m) {
+    auto const start =
+        date::sys_seconds{date::sys_days{2019_y / May / 1} +
+                          std::chrono::hours{h} + std::chrono::minutes{m}};
+    auto const p =
+        msg.mutable_entity(entity)->mutable_alert()->add_active_period();
+    p->set_start(static_cast<std::uint64_t>(start.time_since_epoch().count()));
+    p->set_end(
+        static_cast<std::uint64_t>((start + 5min).time_since_epoch().count()));
+  };
+  set_period(0, 8, 0);
+  set_period(1, 8, 22);
+  n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+                           msg);
+
+  auto const routing_ep = utl::init_from<ep::routing>(d).value();
+  auto const res =
+      routing_ep("?fromPlace=test_S3&toPlace=test_S4&time=2019-05-01T08:00Z");
+  ASSERT_EQ(1, res.itineraries_.size());
+
+  auto const& legs = res.itineraries_.front().legs_;
+  ASSERT_EQ(1, legs.size());
+  ASSERT_TRUE(legs[0].alerts_.has_value());
+  ASSERT_EQ(1U, legs[0].alerts_->size());
+  EXPECT_EQ("on board", legs[0].alerts_->front().headerText_);
+}
+
 constexpr auto kNetex = R"(
 # netex.xml
 <?xml version="1.0" encoding="UTF-8"?>
