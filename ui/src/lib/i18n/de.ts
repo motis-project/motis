@@ -37,8 +37,10 @@ const translations: Translations = {
 	departure: 'Abfahrt',
 	duration: 'Dauer',
 	arrivals: 'Ankünfte',
+	arrivalsAt: (stop) => `Ankünfte in ${stop}`,
 	connections: 'Verbindungen',
 	departures: 'Abfahrten',
+	departuresAt: (stop) => `Abfahrten in ${stop}`,
 	later: 'später',
 	earlier: 'früher',
 	track: 'Gleis',
@@ -51,11 +53,11 @@ const translations: Translations = {
 	tripIntermediateStops: (n: number) => {
 		switch (n) {
 			case 0:
-				return 'Fahrt ohne Zwischenhalt';
+				return 'Ohne Zwischenhalt';
 			case 1:
-				return 'Fahrt eine Station';
+				return 'Ein Zwischenhalt';
 			default:
-				return `Fahrt ${n} Stationen`;
+				return `${n} Zwischenhalte`;
 		}
 	},
 	sharingProvider: 'Anbieter',
@@ -207,12 +209,12 @@ const translations: Translations = {
 	pageTitle: {
 		default: 'MOTIS',
 		fromTo: (from, to) => `${from} nach ${to}`,
-		departuresAt: (stop) => `Abfahrten in ${stop}`,
-		arrivalsAt: (stop) => `Ankünfte in ${stop}`,
 		isochronesFrom: (place) => `Isochronen von ${place}`
 	},
 	tickets: 'Tickets',
-	routeInformation: 'Mehr Informationen'
+	routeInformation: 'Mehr Informationen',
+	history: 'Verlauf',
+	clearHistory: 'Verlauf löschen'
 };
 
 export default translations;

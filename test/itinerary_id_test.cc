@@ -833,6 +833,69 @@ TEST(motis, itinerary_id_reconstruct_flex_location_group_first_mile) {
   run_flex_first_mile_test("flex_group", "2019-05-02");
 }
 
+// Booking rule and route alert of the flex first mile survive the refresh.
+TEST(motis, refresh_itinerary_flex_first_mile_booking_rule_and_alert) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id/flex_alerts"};
+  fs::remove_all(path, ec);
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 3,
+              .datasets_ = {{"test", {.path_ = std::string{kFlexGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const rt_base_day =
+      date::sys_days{date::year{2019} / date::May / date::day{1}};
+  d.init_rtt(rt_base_day);
+  n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      test::to_feed_msg({test::alert{.header_ = "Booking required",
+                                     .description_ = "Book via the app.",
+                                     .entities_ = {{.route_id_ = "FLEXA"}}}},
+                        rt_base_day + std::chrono::hours{4}));
+
+  // DA_FLEX is next to the platform, so start further away to get a flex ride.
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87000,8.62500"
+      "&toPlace=50.10593,8.66118"
+      "&time=2019-05-01T05:00Z"
+      "&timetableView=true"
+      "&searchWindow=10800"
+      "&preTransitModes=FLEX"
+      "&postTransitModes=WALK"
+      "&detailedLegs=true");
+  ASSERT_FALSE(res.itineraries_.empty());
+  auto const& original = res.itineraries_.front();
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.preTransitModes_ = {api::ModeEnum::FLEX};
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+
+  auto const is_flex = [](api::Leg const& l) {
+    return l.mode_ == api::ModeEnum::FLEX;
+  };
+  auto const original_flex = utl::find_if(original.legs_, is_flex);
+  auto const refreshed_flex = utl::find_if(refreshed.legs_, is_flex);
+  ASSERT_NE(end(original.legs_), original_flex);
+  ASSERT_NE(end(refreshed.legs_), refreshed_flex);
+  ASSERT_TRUE(original_flex->from_.pickupBookingRule_.has_value());
+  ASSERT_TRUE(original_flex->alerts_.has_value());
+  EXPECT_EQ("Booking required", original_flex->alerts_->front().headerText_);
+  EXPECT_EQ(*original_flex, *refreshed_flex);
+}
+
 constexpr auto kMultiHopGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -1154,6 +1217,219 @@ TEST(motis, itinerary_id_reconstruct_rental_first_mile) {
       routing, stop_times, *d.rt_, original.id_, true, true, true);
   EXPECT_TRUE(has_rental(reconstructed))
       << "reconstruction must re-route the RENTAL access (WALK/RENTAL/WALK)";
+  EXPECT_EQ(original, reconstructed);
+}
+
+// Imports `kMultiHopGtfs` with street routing. Planned journeys from
+// `kMultiHopFrom` to `kMultiHopTo` are WALK, (TRANSIT, WALK) x 3; the id
+// encodes one leg per rendered leg.
+constexpr auto kMultiHopFrom = "49.87420,8.62940";
+constexpr auto kMultiHopTo = "50.11450,8.67900";
+
+data import_multi_hop_street_routing(std::string_view const sub_dir) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / sub_dir;
+  fs::remove_all(path, ec);
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kMultiHopGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  return data{path, cfg};
+}
+
+api::Itinerary plan_multi_hop_walk(data& d) {
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(fmt::format(
+      "/api/v6/plan?fromPlace={}&toPlace={}&time=2019-05-01T02:00Z"
+      "&timetableView=true&preTransitModes=WALK&postTransitModes=WALK"
+      "&detailedLegs=true",
+      kMultiHopFrom, kMultiHopTo));
+  utl::verify(!res.itineraries_.empty(), "no itinerary found");
+  return res.itineraries_.front();
+}
+
+motis::ItineraryId parse_id(std::string const& id) {
+  auto proto = motis::ItineraryId{};
+  utl::verify(proto.ParseFromString(net::decode_base64(id)),
+              "invalid itinerary id");
+  return proto;
+}
+
+std::string to_id(std::vector<motis::LegId> const& legs) {
+  auto proto = motis::ItineraryId{};
+  for (auto const& l : legs) {
+    *proto.add_legs() = l;
+  }
+  auto data = std::string{};
+  utl::verify(proto.SerializeToString(&data), "serialize itinerary id");
+  return net::encode_base64(data);
+}
+
+api::Itinerary refresh_id(data& d, std::string const& id) {
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = id;
+  return utl::init_from<ep::refresh_itinerary>(d).value()(query.to_url("?"));
+}
+
+// The refreshed leg is exactly what the id encodes (not re-routed / dummy).
+void expect_as_encoded(motis::LegId const& expected, api::Leg const& l) {
+  EXPECT_EQ(expected.mode(), boost::json::value_from(l.mode_).as_string());
+  EXPECT_FALSE(l.cancelled_.value_or(false));
+  EXPECT_FALSE(l.alerts_.has_value());
+  EXPECT_FALSE(l.tripId_.has_value());
+  EXPECT_EQ(expected.from_lat(), l.from_.lat_);
+  EXPECT_EQ(expected.from_lon(), l.from_.lon_);
+  EXPECT_EQ(expected.to_lat(), l.to_.lat_);
+  EXPECT_EQ(expected.to_lon(), l.to_.lon_);
+  EXPECT_EQ(expected.from_id(), l.from_.stopId_.value_or(""));
+  EXPECT_EQ(expected.to_id(), l.to_.stopId_.value_or(""));
+  EXPECT_EQ(expected.sched_start(), l.startTime_.get_unixtime_seconds());
+  EXPECT_EQ(expected.sched_end(), l.endTime_.get_unixtime_seconds());
+  EXPECT_EQ(expected.sched_start(),
+            l.scheduledStartTime_.get_unixtime_seconds());
+  EXPECT_EQ(expected.sched_end(), l.scheduledEndTime_.get_unixtime_seconds());
+}
+
+// ODM / RIDE_SHARING first/last mile legs are booked with an external service
+// and can't be re-routed locally. Refreshing must keep them as encoded in the
+// id (mode, endpoints, times) instead of searching a new car access or
+// replacing them with a dummy.
+// The id is derived from a WALK itinerary with the access modes swapped, as
+// planning real ODM / ride sharing journeys requires the external service.
+TEST(motis, itinerary_id_refresh_keeps_odm_and_ride_sharing_legs) {
+  auto d = import_multi_hop_street_routing("odm_ride_sharing");
+  auto const original = plan_multi_hop_walk(d);
+
+  auto proto = parse_id(original.id_);
+  auto legs =
+      std::vector<motis::LegId>{proto.legs().begin(), proto.legs().end()};
+  ASSERT_EQ(original.legs_.size(), legs.size());
+  ASSERT_TRUE(legs.front().trip_id().empty());
+  ASSERT_TRUE(legs.back().trip_id().empty());
+  legs.front().set_mode("ODM");
+  legs.back().set_mode("RIDE_SHARING");
+  auto const id = to_id(legs);
+
+  auto const refreshed = refresh_id(d, id);
+  ASSERT_EQ(original.legs_.size(), refreshed.legs_.size());
+
+  auto const& odm = refreshed.legs_.front();
+  auto const& ride_sharing = refreshed.legs_.back();
+  expect_as_encoded(legs.front(), odm);
+  expect_as_encoded(legs.back(), ride_sharing);
+  EXPECT_TRUE(odm.legGeometry_.points_.empty());
+  EXPECT_TRUE(ride_sharing.legGeometry_.points_.empty());
+
+  // Transit legs and transfers in between are reconstructed as usual.
+  for (auto i = std::size_t{1U}; i + 1U < original.legs_.size(); ++i) {
+    EXPECT_EQ(original.legs_[i], refreshed.legs_[i]) << "leg " << i;
+  }
+  EXPECT_EQ(original.startTime_, refreshed.startTime_);
+  EXPECT_EQ(original.endTime_, refreshed.endTime_);
+}
+
+// After whitelisting, the ODM / ride sharing duration is fixed to the booked
+// pickup/dropoff times and the gap to the transit leg is filled with a
+// footpath from the stop to itself (see `fix_first_mile_duration`). The id
+// then encodes [ODM, WALK, TRANSIT, ..., TRANSIT, WALK, RIDE_SHARING].
+TEST(motis, itinerary_id_refresh_keeps_odm_wait_at_stop) {
+  auto d = import_multi_hop_street_routing("odm_wait_at_stop");
+  auto const original = plan_multi_hop_walk(d);
+
+  auto const proto = parse_id(original.id_);
+  auto const& first = proto.legs(0);
+  auto const& last = proto.legs(proto.legs_size() - 1);
+
+  constexpr auto kWait = std::int64_t{120};
+  auto const wait_at = [&](std::string const& stop_id, double const lat,
+                           double const lon, std::int64_t const from,
+                           std::int64_t const to) {
+    auto wait = motis::LegId{};
+    wait.set_from_id(stop_id);
+    wait.set_from_lat(lat);
+    wait.set_from_lon(lon);
+    wait.set_to_id(stop_id);
+    wait.set_to_lat(lat);
+    wait.set_to_lon(lon);
+    wait.set_sched_start(from);
+    wait.set_sched_end(to);
+    wait.set_mode("WALK");
+    wait.set_scheduled(true);
+    return wait;
+  };
+
+  auto odm = first;
+  odm.set_mode("ODM");
+  odm.set_sched_end(first.sched_end() - kWait);
+  auto const first_wait = wait_at(first.to_id(), first.to_lat(), first.to_lon(),
+                                  odm.sched_end(), first.sched_end());
+
+  auto ride_sharing = last;
+  ride_sharing.set_mode("RIDE_SHARING");
+  ride_sharing.set_sched_start(last.sched_start() + kWait);
+  auto const last_wait =
+      wait_at(last.from_id(), last.from_lat(), last.from_lon(),
+              last.sched_start(), ride_sharing.sched_start());
+
+  auto legs = std::vector<motis::LegId>{odm, first_wait};
+  legs.insert(end(legs), std::next(proto.legs().begin()),
+              std::prev(proto.legs().end()));
+  legs.push_back(last_wait);
+  legs.push_back(ride_sharing);
+
+  auto const refreshed = refresh_id(d, to_id(legs));
+  ASSERT_EQ(legs.size(), refreshed.legs_.size());
+  auto const n_legs = refreshed.legs_.size();
+  expect_as_encoded(odm, refreshed.legs_[0]);
+  expect_as_encoded(first_wait, refreshed.legs_[1]);
+  expect_as_encoded(last_wait, refreshed.legs_[n_legs - 2U]);
+  expect_as_encoded(ride_sharing, refreshed.legs_[n_legs - 1U]);
+  for (auto i = std::size_t{1U}; i + 1U < original.legs_.size(); ++i) {
+    EXPECT_EQ(original.legs_[i], refreshed.legs_[i + 1U]) << "leg " << i;
+  }
+}
+
+// Direct ODM / ride sharing itineraries (a single booked leg from the start to
+// the destination, no transit) are refreshed as encoded.
+TEST(motis, itinerary_id_refresh_direct_odm_and_ride_sharing) {
+  auto d = import_multi_hop_street_routing("direct_odm");
+  auto const original = plan_multi_hop_walk(d);
+  auto const& from = original.legs_.front().from_;
+  auto const& to = original.legs_.back().to_;
+
+  for (auto const mode : {"ODM", "RIDE_SHARING"}) {
+    SCOPED_TRACE(mode);
+    auto direct = motis::LegId{};
+    direct.set_from_lat(from.lat_);
+    direct.set_from_lon(from.lon_);
+    direct.set_to_lat(to.lat_);
+    direct.set_to_lon(to.lon_);
+    direct.set_sched_start(original.startTime_.get_unixtime_seconds());
+    direct.set_sched_end(original.startTime_.get_unixtime_seconds() + 1200);
+    direct.set_mode(mode);
+    direct.set_scheduled(true);
+
+    auto const id = to_id({direct});
+    auto const refreshed = refresh_id(d, id);
+    ASSERT_EQ(1U, refreshed.legs_.size());
+    expect_as_encoded(direct, refreshed.legs_.front());
+    EXPECT_FALSE(refreshed.legs_.front().from_.stopId_.has_value());
+    EXPECT_FALSE(refreshed.legs_.front().to_.stopId_.has_value());
+    EXPECT_EQ(direct.sched_start(),
+              refreshed.startTime_.get_unixtime_seconds());
+    EXPECT_EQ(direct.sched_end(), refreshed.endTime_.get_unixtime_seconds());
+    EXPECT_EQ(1200, refreshed.duration_);
+    EXPECT_EQ(0, refreshed.transfers_);
+    EXPECT_EQ(id, refreshed.id_);
+  }
 }
 
 TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
@@ -1597,6 +1873,56 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermodal_offsets) {
   // Compare the alternative trips: the surrounding access-walk legs may differ
   // by sub-minute rounding, but the set of alternative transit trips must not.
   EXPECT_EQ(alt_transit_trip_ids(plan_leg), alt_transit_trip_ids(refresh_leg));
+}
+
+// A booked ODM first mile drops off at the boarding stop: leg alternatives for
+// the first transit leg are searched from that stop, not from the ODM pickup
+// (here too far away to walk to any stop).
+TEST(motis, itinerary_id_refresh_leg_alternatives_after_odm_first_mile) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "leg_alt_after_odm";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test",
+                             {.path_ = std::string{kLegAltIntermodalGtfs}}}},
+          },
+      .street_routing_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=49.87298,8.63006&toPlace=50.10666,8.66225"
+      "&time=2019-05-01T05:00Z&searchWindow=14400&detailedLegs=true"
+      "&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+
+  auto const proto = parse_id(plan_itin.id_);
+  auto legs =
+      std::vector<motis::LegId>{proto.legs().begin(), proto.legs().end()};
+  ASSERT_TRUE(legs.front().trip_id().empty());
+  legs.front().set_mode("ODM");
+  legs.front().set_from_lat(49.95);
+  legs.front().set_from_lon(8.75);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = to_id(legs);
+  query.numLegAlternatives_ = 5;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+
+  expect_as_encoded(legs.front(), refreshed.legs_.front());
+  auto const& refresh_leg = first_transit_leg(refreshed);
+  ASSERT_TRUE(refresh_leg.alternatives_.has_value());
+  EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "BD"));
 }
 
 constexpr auto kLegAltFirstAccessGtfs = R"(
@@ -2191,7 +2517,7 @@ TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
          "FFM-HBF Gleis 101/102 elevator is out of service";
 }
 
-TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
+TEST(motis, itinerary_id_refresh_access_before_elevator_outage) {
   auto& d = get_elevator_test_case();
   d.rt_->e_ = std::make_unique<elevators>(
       *d.w_, nullptr, *d.elevator_nodes_,
@@ -2241,15 +2567,19 @@ TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
   EXPECT_EQ(api::ModeEnum::WALK, access.mode_);
   EXPECT_NE(true, access.cancelled_.value_or(false))
       << "access should remain feasible while the elevator is only briefly out";
-  EXPECT_GT(access.duration_, original_access_dur)
-      << "the elevator outage should extend the access by the platform wait";
   EXPECT_LT(access.startTime_.get_unixtime_seconds(), original_access_start)
       << "the access should start earlier to beat the outage";
-  EXPECT_EQ(original_access_end, access.endTime_.get_unixtime_seconds())
+  EXPECT_EQ(original_access_dur, access.duration_)
+      << "the access only covers the walk, the wait is spent on the platform";
+  EXPECT_LE(access.endTime_.get_unixtime_seconds(), original_access_end)
+      << "the access should end before the train departs";
+  ASSERT_GT(refreshed.legs_.size(), 1U);
+  ASSERT_GT(original.legs_.size(), 1U);
+  EXPECT_EQ(original.legs_[1].startTime_, refreshed.legs_[1].startTime_)
       << "the access should still board the same train";
 }
 
-TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
+TEST(motis, itinerary_id_refresh_transfer_after_elevator_outage) {
   auto& d = get_elevator_test_case();
   d.rt_->e_ = std::make_unique<elevators>(
       *d.w_, nullptr, *d.elevator_nodes_,
@@ -2277,7 +2607,6 @@ TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
   ASSERT_NE(transfer_it, end(original.legs_));
   auto const idx =
       static_cast<std::size_t>(transfer_it - begin(original.legs_));
-  auto const original_duration = transfer_it->duration_;
 
   // Take the FFM elevator out only for [22:30, 23:00) UTC (covers the 22:45
   // FFM_10 arrival, reopens before the 23:15 S3 departure).
@@ -2303,11 +2632,12 @@ TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
   EXPECT_NE(true, transfer.cancelled_.value_or(false))
       << "transfer should remain feasible while the elevator is only briefly "
          "out of service";
-  EXPECT_GT(transfer.duration_, original_duration)
-      << "the elevator outage should extend the transfer by the platform wait";
+  // 2019-04-30T23:00:00Z: the elevator is back in service.
+  EXPECT_GE(transfer.startTime_.get_unixtime_seconds(), 1556665200)
+      << "the transfer should wait on the platform until the elevator works";
   EXPECT_LE(transfer.endTime_.get_unixtime_seconds(),
             next_pt.startTime_.get_unixtime_seconds())
-      << "the extended transfer must still make the next PT departure";
+      << "the transfer must still make the next PT departure";
 }
 
 TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
@@ -2736,10 +3066,11 @@ TEST(motis, itinerary_id_refresh_first_mile_td_anchor) {
   auto const refreshed = refresh(query.to_url("?"));
   auto const& refresh_leg = first_transit_leg(refreshed);
 
-  // Sanity: the temporary outage inflated the first-mile access well beyond the
-  // ~2 min active-elevator walk.
-  EXPECT_GT(refreshed.legs_.front().duration_, 600)
-      << "DA elevator outage should inflate the first-mile access";
+  // Sanity: the temporary outage makes the first-mile access start earlier
+  // (before the outage); the wait for the train is spent on the platform.
+  EXPECT_LT(refreshed.legs_.front().startTime_.get_unixtime_seconds(),
+            original.legs_.front().startTime_.get_unixtime_seconds())
+      << "DA elevator outage should make the first-mile access start earlier";
 
   // The same-time alternative is only found when the alternatives search
   // anchors at the journey's CURRENT (inflated) origin departure - looked up

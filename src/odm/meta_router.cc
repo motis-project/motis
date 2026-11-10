@@ -6,6 +6,7 @@
 #include "motis/odm/meta_router.h"
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 #include "boost/asio/io_context.hpp"
@@ -41,6 +42,7 @@
 #include "motis/odm/prima.h"
 #include "motis/odm/shorten.h"
 #include "motis/odm/td_offsets.h"
+#include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/parameters.h"
 #include "motis/osr/street_routing.h"
 #include "motis/place.h"
@@ -107,7 +109,7 @@ meta_router::meta_router(ep::routing const& r,
       ride_sharing_direct_{ride_sharing_direct},
       api_version_{api_version},
       tt_{r_.tt_},
-      rt_{r.rt_},
+      rt_{std::atomic_load(&r.rt_)},
       rtt_{(query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
             query.realtimeMode_ ==
                 api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
@@ -117,7 +119,7 @@ meta_router::meta_router(ep::routing const& r,
                           ? nullptr
                           : rt_->rtt_.get()},
       e_{rt_->e_.get()},
-      gbfs_rd_{r.w_, r.l_, r.gbfs_},
+      gbfs_rd_{r.w_, r.l_, std::atomic_load(&r.gbfs_)},
       start_{query_.arriveBy_ ? to_ : from_},
       dest_{query_.arriveBy_ ? from_ : to_},
       start_modes_{query_.arriveBy_ ? post_transit_modes_ : pre_transit_modes_},
@@ -374,6 +376,10 @@ api::plan_response meta_router::run() {
       std::chrono::seconds{query_.maxPostTransitTime_},
       std::chrono::seconds{
           r_.config_.get_limits().street_routing_max_prepost_transit_seconds_});
+  // The walk/bike/car/rental offsets are one-to-many searches; keeping them
+  // lets the response reconstruct those legs from the search that produced
+  // them instead of routing again with a duration-derived budget.
+  auto otm_searches = one_to_many_searches{};
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
       .start_walk_ = r_.get_offsets(
@@ -386,7 +392,8 @@ api::plan_response meta_router::run() {
                          start_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? post_transit_time : pre_transit_time,
-          max_matching_distance_, gbfs_rd_, prepare_stats),
+          max_matching_distance_, gbfs_rd_, prepare_stats,
+          &otm_searches[n::special_station::kStart]),
       .dest_walk_ = r_.get_offsets(
           rtt_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
@@ -397,7 +404,8 @@ api::plan_response meta_router::run() {
                          dest_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? pre_transit_time : post_transit_time,
-          max_matching_distance_, gbfs_rd_, prepare_stats),
+          max_matching_distance_, gbfs_rd_, prepare_stats,
+          &otm_searches[n::special_station::kEnd]),
       .td_start_walk_ = r_.get_td_offsets(
           rtt_, e_, start_,
           query_.arriveBy_ ? osr::direction::kBackward
@@ -535,7 +543,8 @@ api::plan_response meta_router::run() {
                 max_matching_distance_, api_version_,
                 query_.ignorePreTransitRentalReturnConstraints_,
                 query_.ignorePostTransitRentalReturnConstraints_,
-                query_.language_);
+                query_.language_, /*set_itinerary_id_field=*/true, {}, nullptr,
+                one_to_many_view{&otm_searches});
 
             if (response.legs_.front().mode_ == api::ModeEnum::RIDE_SHARING &&
                 response.legs_.size() == 1) {

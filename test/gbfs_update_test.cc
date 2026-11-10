@@ -20,6 +20,12 @@
 
 #include "fmt/format.h"
 
+#include "utl/helpers/algorithm.h"
+
+#include "osr/routing/additional_edge.h"
+#include "osr/types.h"
+#include "osr/ways.h"
+
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/gbfs/data.h"
@@ -98,10 +104,12 @@ void write_system_information(fs::path const& dir,
 void write_vehicle_types(
     fs::path const& dir,
     bool const include_scooter = false,
-    std::string_view const bike_return_constraint = "hybrid") {
+    std::string_view const bike_return_constraint = "hybrid",
+    std::string_view const type_id = kBikeType,
+    std::string_view const form_factor = "bicycle") {
   auto types = json::array{};
-  types.push_back({{"vehicle_type_id", "bike"},
-                   {"form_factor", "bicycle"},
+  types.push_back({{"vehicle_type_id", type_id},
+                   {"form_factor", form_factor},
                    {"propulsion_type", "human"},
                    {"return_constraint", bike_return_constraint}});
   if (include_scooter) {
@@ -480,10 +488,11 @@ config make_gbfs_config_without_ttl_overwrite(fs::path const& dir,
   return c;
 }
 
-void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
+void run_update(config const& c,
+                std::shared_ptr<gbfs_data>& gbfs,
+                metrics_registry& metrics) {
   auto& d = street_data();
   auto ioc = boost::asio::io_context{};
-  auto metrics = metrics_registry{};
   boost::asio::co_spawn(
       ioc,
       [&]() -> boost::asio::awaitable<void> {
@@ -491,6 +500,55 @@ void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
       },
       boost::asio::detached);
   ioc.run();
+}
+
+void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
+  auto metrics = metrics_registry{};
+  run_update(c, gbfs, metrics);
+}
+
+bool has_feed_timestamp(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_feed_timestamp_seconds_.Has({{"provider_id", id}});
+}
+
+bool has_last_update(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_last_update_timestamp_seconds_.Has({{"provider_id", id}});
+}
+
+prometheus::Gauge& last_update(metrics_registry& m, std::string const& id) {
+  return m.gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
+}
+
+bool has_last_attempted(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_last_attempted_update_timestamp_seconds_.Has(
+      {{"provider_id", id}});
+}
+
+bool has_last_successful(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_last_successful_update_timestamp_seconds_.Has(
+      {{"provider_id", id}});
+}
+
+prometheus::Gauge& last_attempted(metrics_registry& m, std::string const& id) {
+  return m.gbfs_last_attempted_update_timestamp_seconds_.Add(
+      {{"provider_id", id}});
+}
+
+prometheus::Gauge& last_successful(metrics_registry& m, std::string const& id) {
+  return m.gbfs_last_successful_update_timestamp_seconds_.Add(
+      {{"provider_id", id}});
+}
+
+void reset_update_timestamps(metrics_registry& m, std::string const& id) {
+  last_update(m, id).Set(0.0);
+  last_attempted(m, id).Set(0.0);
+  last_successful(m, id).Set(0.0);
+}
+
+bool has_vehicle_count(metrics_registry const& m, std::string const& id) {
+  return m.gbfs_vehicle_count_.Has({{"provider_id", id},
+                                    {"provider_group_id", "Test Bikes"},
+                                    {"form_factor", "BICYCLE"}});
 }
 
 provider_routing_data const& routing_data_for(gbfs_data& gbfs,
@@ -878,6 +936,65 @@ TEST(motis, gbfs_update_global_geofencing_rules) {
   EXPECT_TRUE(prod_rd->through_allowed_.test(n));
 }
 
+std::vector<osr::additional_edge> station_edges(
+    geo::latlng const& pos,
+    std::string_view const type_id,
+    std::string_view const form_factor) {
+  auto const dir = make_temp_dir("station-matching");
+  write_discovery(dir, "");
+  write_system_information(dir);
+  write_vehicle_types(dir, false, "any_station", type_id, form_factor);
+  write_station_information(dir, pos.lat_, pos.lng_);
+  write_station_status(dir, 3U, false, type_id);
+  write_empty_geofencing(dir);
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(make_gbfs_config(dir), gbfs);
+
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  auto const& w = *street_data().w_;
+  auto const prod_rd = gbfs->get_products_routing_data(
+      w, *street_data().l_, gbfs_products_ref{p.idx_, gbfs_products_idx_t{0}});
+  auto const it =
+      prod_rd->compressed_.additional_edges_.find(osr::node_idx_t{w.n_nodes()});
+  if (it == end(prod_rd->compressed_.additional_edges_)) {
+    return {};
+  }
+  return {begin(it->second), end(it->second)};
+}
+
+bool has_way(osr::additional_edge const& e,
+             bool (osr::way_properties::*accessible)() const) {
+  auto const& r = *street_data().w_->r_;
+  return utl::any_of(r.node_ways_[e.to_], [&](osr::way_idx_t const way) {
+    return (r.way_properties_[way].*accessible)();
+  });
+}
+
+void expect_extra_vehicle_node(std::vector<osr::additional_edge> const& edges,
+                               bool (osr::way_properties::*accessible)() const,
+                               osr::distance_t const max_dist) {
+  ASSERT_FALSE(edges.empty());
+  auto const closest =
+      *std::ranges::min_element(edges, {}, &osr::additional_edge::distance_);
+  EXPECT_FALSE(has_way(closest, accessible));
+  EXPECT_TRUE(utl::any_of(edges, [&](osr::additional_edge const& e) {
+    return has_way(e, accessible) && e.distance_ <= max_dist;
+  }));
+}
+
+TEST(motis, gbfs_update_station_next_to_sidewalk_gets_bike_node) {
+  expect_extra_vehicle_node(
+      station_edges({50.1128788, 8.6797332}, kBikeType, "bicycle"),
+      &osr::way_properties::is_bike_accessible, 50U);
+}
+
+TEST(motis, gbfs_update_car_station_gets_car_node) {
+  expect_extra_vehicle_node(
+      station_edges({49.8726662, 8.6314312}, "car", "car"),
+      &osr::way_properties::is_car_accessible, 100U);
+}
+
 TEST(motis, gbfs_update_station_area_marks_base_nodes_return_allowed) {
   auto const dir = make_temp_dir("station-area");
   write_discovery(dir, "");
@@ -1045,4 +1162,258 @@ TEST(motis, gbfs_update_handles_v1_feed_without_vehicle_types) {
   EXPECT_FALSE(p.products_.empty());
   EXPECT_TRUE(p.has_vehicles_to_rent_);
   EXPECT_GT(additional_node_count(*gbfs, p), 0U);
+}
+
+TEST(motis, gbfs_update_metrics_for_aggregated_feed) {
+  auto const dir = make_temp_dir("manifest-metrics");
+  auto const c = make_gbfs_config(dir, "agg");
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  // initialization fails: update attempted, but never successful
+  run_update(c, gbfs, metrics);
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  ASSERT_TRUE(has_last_update(metrics, "agg"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
+  EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
+  EXPECT_FALSE(has_last_successful(metrics, "agg"));
+
+  write_default_feed(dir / "provider-a");
+  write_default_feed(dir / "provider-b");
+  write_manifest(dir, {"provider-a", "provider-b"});
+  run_update(c, gbfs, metrics);
+
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  EXPECT_GT(last_update(metrics, "agg").Value(), 0.0);
+  EXPECT_GT(last_successful(metrics, "agg").Value(), 0.0);
+  EXPECT_EQ(last_attempted(metrics, "agg").Value(),
+            last_successful(metrics, "agg").Value());
+  for (auto const id : {"agg:provider-a", "agg:provider-b"}) {
+    EXPECT_TRUE(has_feed_timestamp(metrics, id));
+    EXPECT_TRUE(has_last_update(metrics, id));
+    EXPECT_TRUE(has_last_attempted(metrics, id));
+    EXPECT_TRUE(has_last_successful(metrics, id));
+    EXPECT_TRUE(has_vehicle_count(metrics, id));
+  }
+
+  // provider removed from manifest: its metrics are removed
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs, metrics);
+
+  EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_last_update(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_last_attempted(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_last_successful(metrics, "agg:provider-b"));
+  EXPECT_FALSE(has_vehicle_count(metrics, "agg:provider-b"));
+
+  // manifest can't be loaded: keep previous provider feeds
+  write_file(dir / "manifest.json", "{");
+  reset_update_timestamps(metrics, "agg");
+  run_update(c, gbfs, metrics);
+
+  auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
+  EXPECT_NE(nullptr, gbfs->providers_.at(idx));
+  EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_TRUE(has_vehicle_count(metrics, "agg:provider-a"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
+  EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
+  EXPECT_EQ(0.0, last_successful(metrics, "agg").Value());
+
+  // valid json, but not a manifest: keep previous provider feeds
+  write_file(dir / "manifest.json", R"({"error": "rate limited"})");
+  last_attempted(metrics, "agg").Set(0.0);
+  run_update(c, gbfs, metrics);
+
+  EXPECT_NE(nullptr,
+            gbfs->providers_.at(gbfs->provider_by_id_.at("agg:provider-a")));
+  EXPECT_TRUE(has_feed_timestamp(metrics, "agg:provider-a"));
+  EXPECT_EQ(0.0, last_update(metrics, "agg").Value());
+  EXPECT_GT(last_attempted(metrics, "agg").Value(), 0.0);
+  EXPECT_EQ(0.0, last_successful(metrics, "agg").Value());
+}
+
+TEST(motis, gbfs_update_metrics_of_aggregated_feed_with_valid_manifest) {
+  auto const dir = make_temp_dir("manifest-valid");
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+  auto c = make_gbfs_config(dir, "agg");
+  c.gbfs_->feeds_.at("agg").ttl_->overwrite_->at("manifest") = 3600U;
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(c, gbfs, metrics);
+
+  EXPECT_GT(last_successful(metrics, "agg").Value(), 0.0);
+
+  // manifest is not fetched again while valid
+  write_file(dir / "manifest.json", "{");
+  reset_update_timestamps(metrics, "agg");
+  run_update(c, gbfs, metrics);
+
+  EXPECT_GT(last_update(metrics, "agg").Value(), 0.0);
+  EXPECT_EQ(0.0, last_attempted(metrics, "agg").Value());
+  EXPECT_EQ(0.0, last_successful(metrics, "agg").Value());
+  EXPECT_GT(last_successful(metrics, "agg:provider-a").Value(), 0.0);
+  EXPECT_FALSE(metrics.gbfs_fetch_errors_total_.Has(
+      {{"provider_id", "agg"}, {"file", "manifest"}}));
+  auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
+  EXPECT_NE(nullptr, gbfs->providers_.at(idx));
+}
+
+TEST(motis, gbfs_update_aggregated_feed_without_providers) {
+  auto const dir = make_temp_dir("manifest-empty");
+  auto const c = make_gbfs_config(dir, "agg");
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  write_manifest(dir, {});
+  run_update(c, gbfs, metrics);
+  ASSERT_NE(nullptr, gbfs);
+
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs, metrics);
+  auto const idx = gbfs->provider_by_id_.at("agg:provider-a");
+  ASSERT_NE(nullptr, gbfs->providers_.at(idx));
+
+  auto const prev = gbfs;
+  write_manifest(dir, {});
+  run_update(c, gbfs, metrics);
+  ASSERT_NE(prev, gbfs);
+  EXPECT_EQ(nullptr, gbfs->providers_.at(idx));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "agg:provider-a"));
+}
+
+TEST(motis, gbfs_update_metrics_for_standalone_feed) {
+  auto const dir = make_temp_dir("standalone-metrics");
+  write_default_feed(dir);
+  auto const c = make_gbfs_config(dir);
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_successful(metrics, "test").Value(), 0.0);
+  EXPECT_EQ(last_attempted(metrics, "test").Value(),
+            last_successful(metrics, "test").Value());
+
+  // one file can't be loaded
+  write_file(dir / "station_status.json", "{");
+  reset_update_timestamps(metrics, "test");
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_update(metrics, "test").Value(), 0.0);
+  EXPECT_GT(last_attempted(metrics, "test").Value(), 0.0);
+  EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
+
+  // discovery can't be loaded
+  write_station_status(dir);
+  write_file(dir / "gbfs.json", "{");
+  reset_update_timestamps(metrics, "test");
+  run_update(c, gbfs, metrics);
+  EXPECT_EQ(0.0, last_update(metrics, "test").Value());
+  EXPECT_GT(last_attempted(metrics, "test").Value(), 0.0);
+  EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
+
+  write_discovery(dir);
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_successful(metrics, "test").Value(), 0.0);
+}
+
+TEST(motis, gbfs_update_metrics_while_files_are_valid) {
+  auto const dir = make_temp_dir("standalone-metrics-ttl");
+  write_default_feed(dir);
+  auto c = make_gbfs_config(dir);
+  for (auto& [_, ttl] : *c.gbfs_->feeds_.at("test").ttl_->overwrite_) {
+    ttl = 3600U;
+  }
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_successful(metrics, "test").Value(), 0.0);
+
+  reset_update_timestamps(metrics, "test");
+  run_update(c, gbfs, metrics);
+  EXPECT_GT(last_update(metrics, "test").Value(), 0.0);
+  EXPECT_EQ(0.0, last_attempted(metrics, "test").Value());
+  EXPECT_EQ(0.0, last_successful(metrics, "test").Value());
+}
+
+TEST(motis, gbfs_update_aggregated_feed_becomes_standalone) {
+  auto const dir = make_temp_dir("switch-to-standalone");
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  auto const c = make_gbfs_config(dir, "feed");
+  run_update(c, gbfs, metrics);
+  auto const child_idx = gbfs->provider_by_id_.at("feed:provider-a");
+
+  write_default_feed(dir);
+  fs::copy_file(dir / "gbfs.json", dir / "manifest.json",
+                fs::copy_options::overwrite_existing);
+  run_update(c, gbfs, metrics);
+
+  EXPECT_TRUE(gbfs->aggregated_feeds_->empty());
+  EXPECT_EQ(1U, gbfs->standalone_feeds_->size());
+  EXPECT_EQ(nullptr, gbfs->providers_.at(child_idx));
+  auto const& p = gbfs->providers_.at(gbfs->provider_by_id_.at("feed"));
+  ASSERT_NE(nullptr, p);
+  EXPECT_EQ(1U, p->stations_.size());
+  EXPECT_TRUE(has_feed_timestamp(metrics, "feed"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "feed:provider-a"));
+}
+
+TEST(motis, gbfs_update_standalone_feed_becomes_aggregated) {
+  auto const dir = make_temp_dir("switch-to-aggregated");
+  write_default_feed(dir);
+
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  auto const c = make_gbfs_config(dir, "feed");
+  run_update(c, gbfs, metrics);
+  auto const idx = gbfs->provider_by_id_.at("feed");
+
+  write_default_feed(dir / "provider-a");
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs, metrics);
+
+  EXPECT_TRUE(gbfs->standalone_feeds_->empty());
+  EXPECT_EQ(1U, gbfs->aggregated_feeds_->size());
+  EXPECT_EQ(nullptr, gbfs->providers_.at(idx));
+  auto const& p =
+      gbfs->providers_.at(gbfs->provider_by_id_.at("feed:provider-a"));
+  ASSERT_NE(nullptr, p);
+  EXPECT_EQ(1U, p->stations_.size());
+  EXPECT_TRUE(has_last_successful(metrics, "feed"));
+  EXPECT_FALSE(has_feed_timestamp(metrics, "feed"));
+  EXPECT_TRUE(has_feed_timestamp(metrics, "feed:provider-a"));
+}
+
+TEST(motis, gbfs_update_removed_provider_is_removed_from_rtree_and_cache) {
+  auto const dir = make_temp_dir("manifest-cleanup");
+  write_default_feed(dir / "provider-a");
+  write_default_feed(dir / "provider-b");
+  write_manifest(dir, {"provider-a", "provider-b"});
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  auto const c = make_gbfs_config(dir, "agg");
+  run_update(c, gbfs);
+  auto const& p =
+      *gbfs->providers_.at(gbfs->provider_by_id_.at("agg:provider-b"));
+  auto const idx = p.idx_;
+  auto const station_pos = p.stations_.begin()->second.info_.pos_;
+  auto const vehicle_pos = p.vehicle_status_.front().pos_;
+  ASSERT_TRUE(rtree_contains(*gbfs, station_pos, idx));
+  ASSERT_TRUE(rtree_contains(*gbfs, vehicle_pos, idx));
+  ASSERT_TRUE(gbfs->cache_.contains(idx));
+
+  write_manifest(dir, {"provider-a"});
+  run_update(c, gbfs);
+
+  EXPECT_EQ(nullptr, gbfs->providers_.at(idx));
+  EXPECT_FALSE(rtree_contains(*gbfs, station_pos, idx));
+  EXPECT_FALSE(rtree_contains(*gbfs, vehicle_pos, idx));
+  EXPECT_FALSE(gbfs->cache_.contains(idx));
 }

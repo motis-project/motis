@@ -37,31 +37,32 @@ ptr<elevators> update_elevators(config const& c,
   auto const old_map = to_map(old_e.elevators_);
   auto const new_map = to_map(new_e->elevators_);
 
-  auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
+  auto tasks = hash_set<n::location_idx_t>{};
   auto const add_tasks = [&](std::optional<geo::latlng> const& pos) {
     if (!pos.has_value()) {
       return;
     }
-    d.location_rtree_->in_radius(*pos, kElevatorUpdateRadius,
-                                 [&](n::location_idx_t const l) {
-                                   tasks.emplace(l, osr::direction::kForward);
-                                   tasks.emplace(l, osr::direction::kBackward);
-                                 });
+    d.location_rtree_->in_radius(
+        *pos, kElevatorUpdateRadius,
+        [&](n::location_idx_t const l) { tasks.emplace(l); });
+  };
+
+  // Not listed => always working (default).
+  auto const always_working = [](elevator const& x) {
+    return x.status_ && x.out_of_service_.empty();
   };
 
   for (auto const& [id, e_idx] : old_map) {
     auto const it = new_map.find(id);
     if (it == end(new_map)) {
-      // Elevator got removed.
-      // Not listed in new => default status = ACTIVE
-      // Update if INACTIVE before (= status changed)
-      if (old_e.elevators_[e_idx].status_ == false) {
+      // Elevator got removed. Update if it was not always working before.
+      if (!always_working(old_e.elevators_[e_idx])) {
         add_tasks(old_e.elevators_[e_idx].pos_);
       }
     } else {
-      // Elevator remained. Update if status changed.
-      if (new_e->elevators_[it->second].status_ !=
-          old_e.elevators_[e_idx].status_) {
+      // Elevator remained. Update if status or maintenance windows changed.
+      if (new_e->elevators_[it->second].get_state_changes() !=
+          old_e.elevators_[e_idx].get_state_changes()) {
         add_tasks(new_e->elevators_[it->second].pos_);
       }
     }
@@ -69,8 +70,8 @@ ptr<elevators> update_elevators(config const& c,
 
   for (auto const& [id, e_idx] : new_map) {
     auto const it = old_map.find(id);
-    if (it == end(old_map) && new_e->elevators_[e_idx].status_ == false) {
-      // New elevator not seen before, elevator is NOT working. Update.
+    if (it == end(old_map) && !always_working(new_e->elevators_[e_idx])) {
+      // New elevator not seen before, not always working. Update.
       add_tasks(new_e->elevators_[e_idx].pos_);
     }
   }

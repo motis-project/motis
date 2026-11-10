@@ -1,17 +1,11 @@
 <script lang="ts">
-	import maplibregl from 'maplibre-gl';
-	import { setContext, type Snippet } from 'svelte';
+	import * as maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
+	import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+	import { setContext, type Snippet } from 'svelte';
 	import { createShield } from './shield';
 	import { browser } from '$app/environment';
-	// pinned to 0.2.3 — 0.4.0's `exports` field blocks deep-importing the worker script
-	import rtlTextUrl from '@mapbox/mapbox-gl-rtl-text/mapbox-gl-rtl-text.min.js?url';
 
-	// required for correct rendering of RTL scripts (Arabic, Hebrew, ...);
-	// lazy: only loaded once RTL text is actually encountered
-	if (browser && maplibregl.getRTLTextPluginStatus() === 'unavailable') {
-		maplibregl.setRTLTextPlugin(rtlTextUrl, true);
-	}
 	let {
 		map = $bindable(),
 		zoom = $bindable(),
@@ -19,6 +13,8 @@
 		center = $bindable(),
 		bearing = $bindable(),
 		style,
+		shieldFill,
+		shieldStroke,
 		attribution,
 		transformRequest,
 		children,
@@ -26,6 +22,8 @@
 	}: {
 		map?: maplibregl.Map;
 		style: maplibregl.StyleSpecification | undefined;
+		shieldFill: string;
+		shieldStroke: string;
 		attribution: string | undefined | false;
 		transformRequest?: maplibregl.RequestTransformFunction;
 		center: maplibregl.LngLatLike;
@@ -39,8 +37,6 @@
 	let el: HTMLElement | null = null;
 	let currStyle: maplibregl.StyleSpecification | undefined = style;
 	let ctx = $state<{ map: maplibregl.Map | undefined }>({ map: undefined });
-	let touchStartTime = $state<number | null>(null);
-	let touchLocation = $state<{ x: number; y: number } | null>(null);
 	setContext('map', ctx);
 
 	const updateStyle = () => {
@@ -49,6 +45,7 @@
 				createMap(el);
 			} else if (ctx.map) {
 				ctx.map.setStyle(style || null);
+				ctx.map.updateImage('shield', createShield({ fill: shieldFill, stroke: shieldStroke })[0]);
 			}
 			currStyle = style;
 		}
@@ -59,6 +56,9 @@
 		}
 		let tmp: maplibregl.Map;
 		try {
+			// Set worker URL to get it bundled by Vite.
+			maplibregl.setWorkerUrl(workerUrl);
+
 			tmp = new maplibregl.Map({
 				hash: true,
 				container,
@@ -74,21 +74,7 @@
 						? attribution
 						: { customAttribution: attribution }
 			});
-			tmp.addImage(
-				'shield',
-				...createShield({
-					fill: 'hsl(0, 0%, 98%)',
-					stroke: 'hsl(0, 0%, 75%)'
-				})
-			);
-
-			tmp.addImage(
-				'shield-dark',
-				...createShield({
-					fill: 'hsl(0, 0%, 16%)',
-					stroke: 'hsl(0, 0%, 30%)'
-				})
-			);
+			tmp.addImage('shield', ...createShield({ fill: shieldFill, stroke: shieldStroke }));
 
 			const scale = new maplibregl.ScaleControl({
 				maxWidth: 100,
@@ -108,28 +94,6 @@
 				});
 				tmp.on('rotate', () => {
 					bearing = tmp.getBearing();
-				});
-				tmp.on('touchstart', (event) => {
-					touchStartTime = new Date().getTime();
-					touchLocation = { x: event.point.x, y: event.point.y };
-				});
-				tmp.on('touchend', (event) => {
-					const longTouchTimeMS = 500;
-					const acceptableMoveDistance = 20;
-
-					if (touchStartTime && touchLocation) {
-						const touchTime = new Date().getTime() - touchStartTime;
-						const didNotMoveMap =
-							Math.abs(event.point.x - touchLocation.x) < acceptableMoveDistance &&
-							Math.abs(event.point.y - touchLocation.y) < acceptableMoveDistance;
-
-						if (touchTime > longTouchTimeMS && didNotMoveMap) {
-							tmp.fire('contextmenu', { lngLat: event.lngLat });
-						}
-					}
-
-					touchStartTime = null;
-					touchLocation = null;
 				});
 			});
 		} catch (e) {

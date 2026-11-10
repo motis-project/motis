@@ -4,6 +4,7 @@
 
 #include "osr/geojson.h"
 
+#include "motis/config.h"
 #include "motis/location_routes.h"
 #include "motis/match_platforms.h"
 #include "motis/tag_lookup.h"
@@ -65,7 +66,8 @@ json::value matches::operator()(json::value const& query) const {
                                          "too many items");
 
     auto const pos = tt_.locations_.coordinates_[l];
-    auto const match = get_match(tt_, pl_, w_, l);
+    auto const match = get_match(tt_, pl_, w_, l_, l,
+                                 config_.timetable_->max_matching_distance_);
     auto props =
         json::value{
             {"name", tt_.get_default_translation(tt_.locations_.names_[l])},

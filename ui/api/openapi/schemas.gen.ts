@@ -548,6 +548,18 @@ export const PickupDropoffTypeSchema = {
     enum: ['NORMAL', 'NOT_ALLOWED']
 } as const;
 
+export const TimestampReasonSchema = {
+    type: 'string',
+    description: `Reason for an arrival/departure timestamp, i.e. what the time is based on.
+- \`NO_RT_DATA\` - no real-time data available, the time is the scheduled time
+- \`INCONSISTENT_RT\` - no consistent real-time data available for this event, the time was changed by MOTIS, e.g. to prevent the vehicle from arriving before departing at a previous stop, or because the real-time data could not be matched unambiguously
+- \`OBSERVED\` - the time is a real-time time that was observed/recorded by the real-time data source
+- \`PROPAGATED\` - the time is a real-time time that was computed by propagating the real-time delay of a preceding event
+- \`PREDICTED\` - the time is a real-time time that was predicted by the real-time data source
+`,
+    enum: ['NO_RT_DATA', 'INCONSISTENT_RT', 'OBSERVED', 'PROPAGATED', 'PREDICTED']
+} as const;
+
 export const WheelchairAccessibilitySchema = {
     type: 'string',
     enum: ['ACCESSIBLE', 'NOT_ACCESSIBLE']
@@ -556,6 +568,79 @@ export const WheelchairAccessibilitySchema = {
 export const ReservationSchema = {
     type: 'string',
     enum: ['NONE', 'COMPULSORY']
+} as const;
+
+export const BookingTypeSchema = {
+    description: `GTFS-Flex \`booking_type\`:
+  - \`REAL_TIME\`: real time booking
+  - \`UP_TO_SAME_DAY\`: up to same-day booking with advance notice
+  - \`UP_TO_PRIOR_DAYS\`: up to prior day(s) booking
+`,
+    type: 'string',
+    enum: ['REAL_TIME', 'UP_TO_SAME_DAY', 'UP_TO_PRIOR_DAYS']
+} as const;
+
+export const BookingRuleSchema = {
+    description: `GTFS-Flex booking rule (\`booking_rules.txt\`).
+Days before the day of travel are counted in the agency timezone (only days of \`prior_notice_service_id\` if set).
+\`prior_notice_start_time\` and \`prior_notice_last_time\` are local times in the agency timezone
+(see https://github.com/google/transit/issues/670).
+`,
+    type: 'object',
+    required: ['bookingType'],
+    properties: {
+        bookingType: {
+            '$ref': '#/components/schemas/BookingType'
+        },
+        priorNoticeDurationMin: {
+            description: 'Minimum number of minutes before travel to make the booking request (`UP_TO_SAME_DAY`).',
+            type: 'integer'
+        },
+        priorNoticeDurationMax: {
+            description: 'Maximum number of minutes before travel to make the booking request (`UP_TO_SAME_DAY`).',
+            type: 'integer'
+        },
+        earliestBookingTime: {
+            description: `Earliest time to make the booking request for this leg.
+  - \`UP_TO_SAME_DAY\`: \`startTime\` of the leg minus \`priorNoticeDurationMax\`
+  - \`UP_TO_PRIOR_DAYS\`: \`prior_notice_start_time\` on the day \`prior_notice_start_day\` days before the day of travel
+`,
+            type: 'string',
+            format: 'date-time'
+        },
+        latestBookingTime: {
+            description: `Latest time to make the booking request for this leg.
+  - \`UP_TO_SAME_DAY\`: \`startTime\` of the leg minus \`priorNoticeDurationMin\`
+  - \`UP_TO_PRIOR_DAYS\`: \`prior_notice_last_time\` on the day \`prior_notice_last_day\` days before the day of travel
+`,
+            type: 'string',
+            format: 'date-time'
+        },
+        message: {
+            description: 'Message to riders utilizing service at a stop when booking on-demand pickup and drop off.',
+            type: 'string'
+        },
+        pickupMessage: {
+            description: 'Message to riders utilizing service at a stop when booking on-demand pickup.',
+            type: 'string'
+        },
+        dropOffMessage: {
+            description: 'Message to riders utilizing service at a stop when booking on-demand drop off.',
+            type: 'string'
+        },
+        phoneNumber: {
+            description: 'Phone number to call to make the booking request.',
+            type: 'string'
+        },
+        infoUrl: {
+            description: 'URL providing information about the booking rule.',
+            type: 'string'
+        },
+        bookingUrl: {
+            description: 'URL to an online interface or app where the booking request can be made.',
+            type: 'string'
+        }
+    }
 } as const;
 
 export const PlaceSchema = {
@@ -655,6 +740,18 @@ Comes from the GTFS \`stop_code\` field.
             description: 'Whether this stop is cancelled due to the realtime situation.',
             type: 'boolean'
         },
+        arrivalTimestampReason: {
+            description: `Reason for the arrival timestamp, i.e. what the arrival time is based on.
+Only set for stops of transit trips with an arrival.
+`,
+            '$ref': '#/components/schemas/TimestampReason'
+        },
+        departureTimestampReason: {
+            description: `Reason for the departure timestamp, i.e. what the departure time is based on.
+Only set for stops of transit trips with a departure.
+`,
+            '$ref': '#/components/schemas/TimestampReason'
+        },
         alerts: {
             description: 'Alerts for this stop.',
             type: 'array',
@@ -679,6 +776,14 @@ Comes from the GTFS \`stop_code\` field.
             description: 'Time that on-demand service ends',
             type: 'string',
             format: 'date-time'
+        },
+        pickupBookingRule: {
+            description: 'for `FLEX` transports, the booking rule for boarding at this place (`from` of the leg)',
+            '$ref': '#/components/schemas/BookingRule'
+        },
+        dropOffBookingRule: {
+            description: 'for `FLEX` transports, the booking rule for alighting at this place (`to` of the leg)',
+            '$ref': '#/components/schemas/BookingRule'
         },
         modes: {
             description: 'available transport modes for stops',
@@ -749,7 +854,7 @@ export const StopTimeSchema = {
             description: 'Transport mode for this leg'
         },
         realTime: {
-            description: 'Whether there is real-time data about this leg',
+            description: 'Whether there is real-time data for this arrival/departure (i.e. `place.arrivalTimestampReason`/`place.departureTimestampReason` is neither `NO_RT_DATA` nor `INCONSISTENT_RT`)',
             type: 'boolean'
         },
         headsign: {
@@ -939,7 +1044,7 @@ export const TripSegmentSchema = {
             format: 'date-time'
         },
         realTime: {
-            description: 'Whether there is real-time data about this leg',
+            description: 'Whether there is real-time data for the departure or arrival of this leg',
             type: 'boolean'
         },
         polyline: {
@@ -1001,11 +1106,13 @@ export const StepInstructionSchema = {
         },
         fromOsmNode: {
             description: 'OpenStreetMap node ID where this segment starts',
-            type: 'integer'
+            type: 'integer',
+            format: 'int64'
         },
         toOsmNode: {
             description: 'OpenStreetMap node ID where this segment ends',
-            type: 'integer'
+            type: 'integer',
+            format: 'int64'
         },
         polyline: {
             '$ref': '#/components/schemas/EncodedPolyline'
@@ -1399,6 +1506,18 @@ export const RentalStationSchema = {
                 type: 'integer'
             }
         },
+        capacity: {
+            type: 'integer',
+            description: `Number of docks or parking spots at this station.
+`
+        },
+        numDocksAvailable: {
+            type: 'integer',
+            description: `Total number of free docks at this station, for feeds that publish
+the total instead of per vehicle type counts. Absent if the feed
+does not publish num_docks_available.
+`
+        },
         stationArea: {
             '$ref': '#/components/schemas/MultiPolygon'
         },
@@ -1612,7 +1731,7 @@ If leg is footpath:
             description: 'scheduled leg arrival time'
         },
         realTime: {
-            description: 'Whether there is real-time data about this leg',
+            description: 'Whether there is real-time data for the departure or arrival of this leg (i.e. `from.departureTimestampReason` or `to.arrivalTimestampReason` is neither `NO_RT_DATA` nor `INCONSISTENT_RT`)',
             type: 'boolean'
         },
         scheduled: {

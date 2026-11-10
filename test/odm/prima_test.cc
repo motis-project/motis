@@ -2,6 +2,7 @@
 
 #include "nigiri/loader/dir.h"
 #include "nigiri/loader/gtfs/load_timetable.h"
+#include "nigiri/loader/import_context.h"
 #include "nigiri/loader/init_finish.h"
 #include "nigiri/common/parse_time.h"
 #include "nigiri/routing/journey.h"
@@ -89,14 +90,15 @@ TEST(odm, prima_update) {
   n::timetable tt;
   tt.date_range_ = {date::sys_days{2017_y / January / 1},
                     date::sys_days{2017_y / January / 2}};
-  n::loader::register_special_stations(tt);
+  auto ctx = n::loader::import_context{tt};
+  n::loader::register_special_stations(tt, ctx);
   auto const src = n::source_idx_t{0};
   n::loader::gtfs::load_timetable({.default_tz_ = "Europe/Berlin"}, src,
-                                  tt_files(), tt);
-  n::loader::finalize(tt);
+                                  tt_files(), tt, ctx);
+  n::loader::finalize(tt, ctx);
 
   auto const get_loc_idx = [&](auto&& s) {
-    return tt.locations_.location_id_to_idx_.at({.id_ = s, .src_ = src});
+    return tt.find({.id_ = s, .src_ = src}).value();
   };
 
   auto const loc = osr::location{};

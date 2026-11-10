@@ -438,7 +438,8 @@ api::trips_response get_trains(tag_lookup const& tags,
           .arrival_ = to.time(n::event_type::kArr),
           .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
           .scheduledArrival_ = to.scheduled_time(n::event_type::kArr),
-          .realTime_ = fr.is_rt(),
+          .realTime_ = from.has_rt_data(n::event_type::kDep) ||
+                       to.has_rt_data(n::event_type::kArr),
           .polyline_ = std::move(enc.buf_)};
     });
   });
@@ -578,7 +579,7 @@ Response build_routes_response(
               enc.push(p);
               ++n_points;
             });
-        if (fr.is_scheduled()) {
+        if (shapes != nullptr && fr.is_scheduled()) {
           auto const trp_idx = fr.trip_idx();
           auto const shp_idx = shapes->get_shape_idx(trp_idx);
           if (shp_idx != n::scoped_shape_idx_t::invalid()) {

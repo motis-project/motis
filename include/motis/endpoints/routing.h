@@ -98,6 +98,7 @@ struct routing {
                  one_to_many_side* = nullptr) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
+      nigiri::rt_timetable const*,
       elevators const*,
       gbfs::gbfs_routing_data&,
       nigiri::lang_t const&,

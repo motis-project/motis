@@ -162,8 +162,8 @@ elevator_footpath_map_t compute_footpaths(
                     }
                     return s.neighbor_candidates_;
                   }(),
-                  static_cast<osr::cost_t>(mode.max_duration_.count()),
-                  osr::direction::kForward, nullptr, nullptr, elevations,
+                  mode.max_duration_, osr::direction::kForward, nullptr,
+                  nullptr, elevations,
                   [](osr::path const& p) { return p.uses_elevator_; })
                   ->results();
 
@@ -173,7 +173,7 @@ elevator_footpath_map_t compute_footpaths(
             }
 
             auto const duration = n::duration_t{
-                static_cast<unsigned>(std::ceil(r->cost_ / 60.0))};
+                static_cast<unsigned>(std::ceil(r->duration_.count() / 60.0))};
             transfers[l].emplace_back(n::footpath{n, duration});
 
             if (mode.profile_ == osr::search_profile::kWheelchair) {

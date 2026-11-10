@@ -98,11 +98,6 @@ static_assert(
         osr::bike<osr::bike_costing::kFast, osr::kElevationNoCost>::parameters{
             7.2F},
         std::chrono::seconds(2)) == 14.4F);
-static_assert(get_max_distance(
-                  osr::bike_sharing::parameters{
-                      osr::bike_sharing::bikep::parameters{8.0F},
-                      osr::bike_sharing::footp::parameters{1.6F}},
-                  std::chrono::seconds(5)) == 40.0);
 static_assert(get_max_distance(osr::car::parameters{},
                                std::chrono::seconds(3)) ==
               3 * osr_parameters::kCarSpeed);

@@ -19,6 +19,9 @@
 #include "motis/import.h"
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
+#include "motis/tag_lookup.h"
+
+#include "test_case.h"
 
 using namespace std::string_view_literals;
 using namespace osr;
@@ -231,4 +234,20 @@ TEST(motis, get_way_candidates) {
                 without[osr::match_idx_t{0U}].size());
     }
   }
+}
+
+TEST(motis, platform_level_needs_walkable_way) {
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
+  auto const level = [&](std::string_view const id) {
+    return d.pl_->get_level(*d.w_,
+                            (*d.matches_)[d.tags_->get_location(*d.tt_, id)]);
+  };
+
+  EXPECT_EQ(level_t{-1.F}, level("test_DA_3"));
+  EXPECT_EQ(level_t{-1.F}, level("test_DA_10"));
+  EXPECT_EQ(level_t{-1.F}, level("test_DA_Bus_1"));
+  EXPECT_EQ(level_t{0.F}, level("test_DA_Bus_2"));
+  EXPECT_EQ(level_t{0.F}, level("test_DA_Tram_1"));
+  EXPECT_EQ(level_t{0.F}, level("test_DA_Tram_2"));
+  EXPECT_EQ(kNoLevel, level("test_DA_Tram_3"));
 }

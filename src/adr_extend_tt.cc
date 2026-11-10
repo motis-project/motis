@@ -4,6 +4,7 @@
 
 #include "nigiri/special_stations.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -13,6 +14,7 @@
 #include "utl/parallel_for.h"
 #include "utl/timer.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "nigiri/timetable.h"
 #include "nigiri/translations_view.h"
@@ -82,15 +84,16 @@ void normalize(std::string& x) {
   }
 }
 
-adr::score_t get_diff(std::string str1,
-                      std::string str2,
+std::string normalize_name(std::string_view s) {
+  auto x = std::string{adr::normalize(s)};
+  normalize(x);
+  return x;
+}
+
+// str1, str2: normalize_name() applied
+adr::score_t get_diff(std::string const& str1,
+                      std::string const& str2,
                       std::vector<adr::sift_offset>& sift4_offset_arr) {
-  str1 = adr::normalize(str1);
-  str2 = adr::normalize(str2);
-
-  normalize(str1);
-  normalize(str2);
-
   if (str1.empty() && str2.empty()) {
     return 0;
   }
@@ -220,6 +223,15 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     // Map each location + its equivalents with the same name to one
     // place_idx.
     auto sift4_dist = std::vector<adr::sift_offset>{};
+    auto normalized = vector_map<n::location_idx_t, std::optional<std::string>>(
+        tt.n_locations());
+    auto const get_normalized =
+        [&](n::location_idx_t const x) -> std::string const& {
+      auto& norm = normalized[x];
+      return norm ? *norm
+                  : norm.emplace(normalize_name(
+                        tt.get_default_translation(tt.locations_.names_[x])));
+    };
     for (auto l = n::location_idx_t{nigiri::kNSpecialStations};
          l != tt.n_locations(); ++l) {
       if (ret.location_place_[l] != adr_extra_place_idx_t::invalid() ||
@@ -242,10 +254,8 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
         } else {
           auto const dist = geo::distance(tt.locations_.coordinates_[l],
                                           tt.locations_.coordinates_[eq]);
-          auto const eq_name =
-              tt.get_default_translation(tt.locations_.names_[eq]);
           auto const str_diff =
-              get_diff(std::string{name}, std::string{eq_name}, sift4_dist);
+              get_diff(get_normalized(l), get_normalized(eq), sift4_dist);
           auto const cutoff = (500.F - 1750.F * str_diff);
           auto const good = dist < cutoff;
 
@@ -300,6 +310,12 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   most_important.resize(place_location.size(), n::location_idx_t::invalid());
   {
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
+    auto route_days = vector_map<n::route_idx_t, unsigned>(tt.n_routes());
+    for (auto r = n::route_idx_t{0U}; r != tt.n_routes(); ++r) {
+      for (auto const tr : tt.route_transport_ranges_[r]) {
+        route_days[r] += tt.bitfields_[tt.transport_traffic_days_[tr]].count();
+      }
+    }
     for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
 
@@ -307,10 +323,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
       for (auto const& r : tt.location_routes_[l]) {
         auto const clasz =
             static_cast<std::underlying_type_t<n::clasz>>(tt.route_clasz_[r]);
-        for (auto const tr : tt.route_transport_ranges_[r]) {
-          transport_counts[clasz] +=
-              tt.bitfields_[tt.transport_traffic_days_[tr]].count();
-        }
+        transport_counts[clasz] += route_days[r];
       }
 
       constexpr auto const prio =
@@ -449,32 +462,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
         }
       }
     }
-
-    auto const get_modes = [&](n::location_idx_t const l) {
-      auto modes = n::routing::clasz_mask_t{};
-      if (l != n::location_idx_t::invalid()) {
-        for (auto const r : tt.location_routes_[l]) {
-          modes |= n::routing::to_mask(tt.route_clasz_[r]);
-        }
-      }
-      return modes;
-    };
-    fmt::println(
-        std::clog, "representative={}, modes={}, names: {}, stops={}, prio={}",
-        n::loc{tt, representative},
-        to_modes(get_modes(representative), 5) |
-            std::views::transform(
-                [](auto const& x) { return fmt::streamed(x); }),
-        names | std::views::transform(
-                    [&](auto&& n) { return t.strings_[n.first].view(); }),
-        locations | std::views::transform([&](auto&& l) {
-          return std::pair{n::loc{tt, l},
-                           to_modes(get_modes(l), 5) |
-                               std::views::transform([](auto const& x) {
-                                 return fmt::streamed(x);
-                               })};
-        }),
-        prio);
 
     auto const pos_loc = representative != n::location_idx_t::invalid()
                              ? representative

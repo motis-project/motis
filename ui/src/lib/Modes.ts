@@ -43,7 +43,7 @@ export const prePostModesToModes = (modes: PrePostDirectMode[]): Mode[] => {
 	return [...nonRentalModes, ...rentalMode].map((mode) => mode as Mode);
 };
 
-export const possibleTransitModes = [
+export const possibleTransitModes: Mode[] = [
 	'AIRPLANE',
 	'HIGHSPEED_RAIL',
 	'LONG_DISTANCE',

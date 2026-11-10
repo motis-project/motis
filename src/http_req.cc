@@ -71,22 +71,27 @@ asio::awaitable<http_response> req_tls(
   auto resolver = asio::ip::tcp::resolver{executor};
   auto stream = ssl::stream<beast::tcp_stream>{executor, ssl_ctx};
 
-  auto const host = proxy ? proxy->host_ : url.host();
-  auto const port =
-      proxy ? proxy->port_ : std::string{url.has_port() ? url.port() : "443"};
-
-  if (!SSL_set_tlsext_host_name(stream.native_handle(),
-                                const_cast<char*>(host.c_str()))) {
-    throw boost::system::system_error{
-        {static_cast<int>(::ERR_get_error()), asio::error::get_ssl_category()}};
-  }
+  auto const target_port = std::string{url.has_port() ? url.port() : "443"};
+  auto const target_host = url.host();
 
   auto const results = co_await resolver.async_resolve(
-      host, port, asio::cancel_after(timeout, asio::use_awaitable));
+      proxy ? proxy->host_ : target_host, proxy ? proxy->port_ : target_port,
+      asio::cancel_after(timeout, asio::use_awaitable));
 
   stream.next_layer().expires_after(timeout);
 
   co_await beast::get_lowest_layer(stream).async_connect(results);
+
+  if (proxy && proxy->use_connect_) {
+    co_await http_CONNECT(stream, url, proxy);
+  }
+
+  if (!SSL_set_tlsext_host_name(stream.native_handle(),
+                                const_cast<char*>(target_host.c_str()))) {
+    throw boost::system::system_error{
+        {static_cast<int>(::ERR_get_error()), asio::error::get_ssl_category()}};
+  }
+
   co_await stream.async_handshake(ssl::stream_base::client);
   co_return co_await req(std::move(stream), url, headers, body);
 }
@@ -134,9 +139,7 @@ asio::awaitable<http::response<http::dynamic_body>> http_GET(
   auto n_redirects = 0U;
   auto next_url = url;
   while (n_redirects < 3U) {
-    auto const use_tls =
-        proxy.has_value() ? proxy->use_tls_
-                          : next_url.scheme_id() == boost::urls::scheme::https;
+    auto const use_tls = next_url.scheme_id() == boost::urls::scheme::https;
     auto const res = co_await (
         use_tls ? req_tls(next_url, headers, std::nullopt, timeout, proxy)
                 : req_no_tls(next_url, headers, std::nullopt, timeout, proxy));
@@ -162,9 +165,7 @@ asio::awaitable<http::response<http::dynamic_body>> http_POST(
   auto n_redirects = 0U;
   auto next_url = url;
   while (n_redirects < 3U) {
-    auto const use_tls =
-        proxy.has_value() ? proxy->use_tls_
-                          : next_url.scheme_id() == boost::urls::scheme::https;
+    auto const use_tls = next_url.scheme_id() == boost::urls::scheme::https;
     auto const res = co_await (
         use_tls ? req_tls(next_url, headers, body, timeout, proxy)
                 : req_no_tls(next_url, headers, body, timeout, proxy));

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
 	import { LocateFixed } from '@lucide/svelte';
-	import maplibregl from 'maplibre-gl';
+	import type * as maplibregl from 'maplibre-gl';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';

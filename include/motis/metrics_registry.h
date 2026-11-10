@@ -36,6 +36,7 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>&
       current_trips_running_scheduled_with_realtime_count_;
   prometheus::Gauge& total_trips_with_realtime_count_;
+  prometheus::Family<prometheus::Gauge>& total_rt_events_count_;
   prometheus::Family<prometheus::Gauge>& timetable_first_day_timestamp_;
   prometheus::Family<prometheus::Gauge>& timetable_last_day_timestamp_;
   prometheus::Family<prometheus::Gauge>& timetable_locations_count_;
@@ -45,6 +46,10 @@ struct metrics_registry {
   prometheus::Gauge& last_update_rt_;
   prometheus::Gauge& last_update_gbfs_;
   prometheus::Family<prometheus::Gauge>& gbfs_last_update_timestamp_seconds_;
+  prometheus::Family<prometheus::Gauge>&
+      gbfs_last_attempted_update_timestamp_seconds_;
+  prometheus::Family<prometheus::Gauge>&
+      gbfs_last_successful_update_timestamp_seconds_;
   prometheus::Family<prometheus::Gauge>& gbfs_feed_timestamp_seconds_;
   prometheus::Family<prometheus::Gauge>& gbfs_vehicle_count_;
   prometheus::Family<prometheus::Counter>& gbfs_fetch_errors_total_;
