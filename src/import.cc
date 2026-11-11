@@ -13,6 +13,7 @@
 
 #include "adr/area_database.h"
 
+#include "osr/preprocessing/elevation/shared.h"
 #include "utl/erase_if.h"
 #include "utl/read_file.h"
 #include "utl/to_vec.h"
@@ -38,8 +39,7 @@
 #include "nigiri/timetable_metrics.h"
 
 #include "osr/extract/extract.h"
-#include "osr/lookup.h"
-#include "osr/ways.h"
+#include "osr/preprocessing/elevation/shared.h"
 
 #include "adr/adr.h"
 #include "adr/formatter.h"
@@ -302,16 +302,18 @@ void import(config const& c,
     fs::remove(shape_cache_lock_path, ec);
   }
 
-  auto osr =
-      task{"osr",
-           {},
-           c.use_street_routing(),
-           [&]() {
-             osr::extract(true, fs::path{*c.osm_}, data_path / "osr",
-                          elevation_dir, c.get_street_routing()->min_elevation_,
-                          c.get_street_routing()->max_incline_);
-           },
-           {osm_hash, osr_version(), elevation_dir_hash}};
+  auto osr = task{
+      "osr",
+      {},
+      c.use_street_routing(),
+      [&]() {
+        osr::extract(true, fs::path{*c.osm_}, data_path / "osr", elevation_dir,
+                     {osr::preprocessing::elevation::elevation_meters_t{
+                          c.get_street_routing()->min_elevation_},
+                      c.get_street_routing()->min_rel_elevation_,
+                      c.get_street_routing()->max_incline_});
+      },
+      {osm_hash, osr_version(), elevation_dir_hash}};
 
   auto adr = task{"adr",
                   {},

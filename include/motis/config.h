@@ -248,6 +248,7 @@ struct config {
     bool operator==(street_routing const&) const = default;
     std::optional<std::filesystem::path> elevation_data_dir_;
     std::uint32_t min_elevation_{1};
+    double min_rel_elevation_{0.1};  // unused
     double max_incline_{0.45};
   };
 
