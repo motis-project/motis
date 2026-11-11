@@ -137,7 +137,7 @@ api::stopInfo_response stop::operator()(
     result.place_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
                              tt_location{*query_stop});
   } else {
-    result.place_ = to_place(*query_center, "center", std::nullopt);
+    result.place_ = to_place(*query_center, "center", "center", std::nullopt);
   }
 
   return result;

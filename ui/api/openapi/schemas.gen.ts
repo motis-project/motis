@@ -645,10 +645,14 @@ Days before the day of travel are counted in the agency timezone (only days of \
 
 export const PlaceSchema = {
     type: 'object',
-    required: ['name', 'lat', 'lon'],
+    required: ['name', 'localName', 'lat', 'lon'],
     properties: {
         name: {
             description: 'name of the transit stop / PoI / address',
+            type: 'string'
+        },
+        localName: {
+            description: 'name of the transit stop / PoI / address in the local language',
             type: 'string'
         },
         stopId: {

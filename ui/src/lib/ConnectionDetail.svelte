@@ -166,7 +166,11 @@
 							variant="link"
 							onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
 						>
-							{p.name}
+							{#if p.name != p.localName}
+								{p.name} ({p.localName})
+							{:else}
+								{p.name}
+							{/if}
 						</Button>
 
 						<Alerts alerts={p.alerts} tz={p.tz} variant="icon" />
