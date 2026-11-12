@@ -99,6 +99,18 @@ metrics_registry::metrics_registry(
               .Help("The number of currently running transports that have RT "
                     "data")
               .Register(registry_)},
+      current_trips_running_added_count_{
+          prometheus::BuildGauge()
+              .Name("current_trips_running_added_count")
+              .Help("The number of currently running transports that were "
+                    "added by RT data")
+              .Register(registry_)},
+      current_trips_running_delay_minutes_{
+          prometheus::BuildHistogram()
+              .Name("current_trips_running_delay_minutes")
+              .Help("Current delay of currently running transports that have "
+                    "RT data")
+              .Register(registry_)},
       total_trips_with_realtime_count_{
           prometheus::BuildGauge()
               .Name("total_trips_with_realtime_count")
