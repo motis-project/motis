@@ -1,7 +1,9 @@
 #include "motis/endpoints/metrics.h"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <iostream>
 #include <mutex>
 #include <optional>
@@ -28,9 +30,17 @@ namespace n = nigiri;
 
 namespace motis::ep {
 
-// Whole minutes, le=N counts delays <= N.
-constexpr auto const kDelayBuckets = std::array<double, 18U>{
+constexpr auto const kDelayMinutesBuckets = std::array<double, 18U>{
     -10, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 60, 90};
+
+constexpr auto const kMaxDistanceToMultipleInHeadways = 1.0 / 6.0;
+constexpr auto const kDay = n::unixtime_t::duration{std::chrono::days{1}};
+
+bool is_close_to_nonzero_multiple(double const delay, double const period) {
+  auto const r = std::abs(delay / period);
+  return std::round(r) != 0.0 &&
+         std::abs(r - std::round(r)) <= kMaxDistanceToMultipleInHeadways;
+}
 
 std::optional<std::pair<n::rt::run_stop, n::event_type>> current_event(
     n::rt::frun const& fr, n::unixtime_t const now) {
@@ -55,6 +65,33 @@ std::optional<std::pair<n::rt::run_stop, n::event_type>> current_event(
   return event;
 }
 
+n::unixtime_t::duration headway(n::timetable const& tt,
+                                n::transport const t,
+                                n::stop_idx_t const stop,
+                                n::event_type const ev) {
+  auto const time = tt.event_time(t, stop, ev);
+  auto const days = static_cast<int>(tt.event_mam(t.t_idx_, stop, ev).days());
+  auto h = kDay;
+  for (auto const o :
+       tt.route_transport_ranges_[tt.transport_route_[t.t_idx_]]) {
+    auto const o_days = static_cast<int>(tt.event_mam(o, stop, ev).days());
+    for (auto const offset : {-1, 0, 1}) {
+      auto const day =
+          static_cast<int>(to_idx(t.day_)) + days - o_days + offset;
+      if (day < 0 || day >= n::kMaxDays ||
+          !tt.is_transport_active(o, n::day_idx_t{day})) {
+        continue;
+      }
+      auto const gap = std::chrono::abs(
+          tt.event_time({o, n::day_idx_t{day}}, stop, ev) - time);
+      if (gap != n::unixtime_t::duration{0}) {
+        h = std::min(h, gap);
+      }
+    }
+  }
+  return h;
+}
+
 void update_all_runs_metrics(nigiri::timetable const& tt,
                              nigiri::rt_timetable const* rtt,
                              tag_lookup const& tags,
@@ -75,8 +112,9 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
                  n::rt_data_state::kObserved, n::rt_data_state::kPropagated,
                  n::rt_data_state::kPredicted};
 
-  for (auto& [_, m] : metrics.running_trips_) {
-    for (auto* g : {&m.scheduled_, &m.realtime_, &m.cancelled_, &m.added_}) {
+  for (auto& [_, m] : metrics.running_trips_by_provider_clasz_) {
+    for (auto* g : {&m.scheduled_, &m.realtime_, &m.cancelled_, &m.added_,
+                    &m.headway_multiple_, &m.headway_other_}) {
       g->Set(0);
     }
     for (auto* g : m.rt_events_) {
@@ -95,8 +133,8 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
     auto const clasz = s.get_clasz(n::event_type::kDep);
     auto const key =
         std::pair{to_idx(provider_idx), static_cast<std::uint8_t>(clasz)};
-    if (auto const it = metrics.running_trips_.find(key);
-        it != end(metrics.running_trips_)) {
+    if (auto const it = metrics.running_trips_by_provider_clasz_.find(key);
+        it != end(metrics.running_trips_by_provider_clasz_)) {
       return &it->second;
     }
 
@@ -119,14 +157,16 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
     }
 
     auto& rt = metrics.current_trips_running_scheduled_with_realtime_count_;
-    auto const [it, _] = metrics.running_trips_.emplace(
+    auto& hw = metrics.current_trips_running_delay_headway_count_;
+    auto const [it, _] = metrics.running_trips_by_provider_clasz_.emplace(
         key,
         running_trips_metrics{
             labels, metrics.current_trips_running_scheduled_count_.Add(labels),
             rt.Add(with("cancelled", "false")),
             rt.Add(with("cancelled", "true")),
             metrics.current_trips_running_added_count_.Add(labels),
-            std::move(rt_events)});
+            std::move(rt_events), hw.Add(with("multiple", "true")),
+            hw.Add(with("multiple", "false"))});
     return &it->second;
   };
 
@@ -166,10 +206,21 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
         auto const delay = static_cast<double>(stp.delay(ev).count());
         if (m->delay_ == nullptr) {
           m->delay_ = &metrics.current_trips_running_delay_minutes_.Add(
-              m->labels_, prometheus::Histogram::BucketBoundaries{
-                              begin(kDelayBuckets), end(kDelayBuckets)});
+              m->labels_,
+              prometheus::Histogram::BucketBoundaries{
+                  begin(kDelayMinutesBuckets), end(kDelayMinutesBuckets)});
         }
         m->delay_->Observe(delay);
+        auto const h =
+            static_cast<double>(headway(tt, fr.t_, stp.stop_idx_, ev).count());
+        if (is_close_to_nonzero_multiple(delay, h) ||
+            is_close_to_nonzero_multiple(delay,
+                                         static_cast<double>(kDay.count()))) {
+          m->headway_multiple_.Increment();
+        } else if (std::abs(delay) >=
+                   h * (1.0 - kMaxDistanceToMultipleInHeadways)) {
+          m->headway_other_.Increment();
+        }
       }
     }
   }
@@ -198,8 +249,10 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
           auto fr = n::rt::frun::from_t(tt, nullptr, t);
           if (auto* const m = get(fr[0]); m != nullptr) {
             m->scheduled_.Increment();
-            if (rtt != nullptr && !rtt->is_transport_active(t.t_idx_, t.day_)) {
-              m->cancelled_.Increment();  // cancelled without RT transport
+            auto const is_cancelled_without_rt_transport =
+                rtt != nullptr && !rtt->is_transport_active(t.t_idx_, t.day_);
+            if (is_cancelled_without_rt_transport) {
+              m->cancelled_.Increment();
             }
           }
         }

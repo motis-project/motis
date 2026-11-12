@@ -111,6 +111,13 @@ metrics_registry::metrics_registry(
               .Help("Current delay of currently running transports that have "
                     "RT data")
               .Register(registry_)},
+      current_trips_running_delay_headway_count_{
+          prometheus::BuildGauge()
+              .Name("current_trips_running_delay_headway_count")
+              .Help("The number of currently running transports delayed by at "
+                    "least 5/6 of the route headway, multiple=true if close to "
+                    "a multiple of the headway or 24h")
+              .Register(registry_)},
       total_trips_with_realtime_count_{
           prometheus::BuildGauge()
               .Name("total_trips_with_realtime_count")

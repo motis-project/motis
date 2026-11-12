@@ -173,6 +173,7 @@ S,{4:%Y%m%d},1
   };
   auto const realtime = "current_trips_running_scheduled_with_realtime_count";
   auto const delay = std::string{"current_trips_running_delay_minutes"};
+  auto const headway = "current_trips_running_delay_headway_count";
 
   EXPECT_EQ(4, rail("current_trips_running_scheduled_count"));
   EXPECT_EQ(3, rail(realtime, {{"cancelled", "false"}}));
@@ -183,6 +184,9 @@ S,{4:%Y%m%d},1
   EXPECT_EQ(2, rail(delay + "_bucket", {{"le", "-4"}}));
   EXPECT_EQ(2, rail(delay + "_bucket", {{"le", "5"}}));
   EXPECT_EQ(3, rail(delay + "_bucket", {{"le", "10"}}));
+  // FUTURE: -130 min at 120 min headway
+  EXPECT_EQ(1, rail(headway, {{"multiple", "true"}}));
+  EXPECT_EQ(0, rail(headway, {{"multiple", "false"}}));
 
   EXPECT_EQ(1, bus("current_trips_running_scheduled_count"));
   EXPECT_EQ(0, bus(realtime, {{"cancelled", "false"}}));
@@ -196,6 +200,7 @@ S,{4:%Y%m%d},1
   EXPECT_EQ(3, rail("current_trips_running_scheduled_count"));
   EXPECT_EQ(0, rail(realtime, {{"cancelled", "false"}}));
   EXPECT_EQ(0, rail(delay + "_count"));
+  EXPECT_EQ(0, rail(headway, {{"multiple", "true"}}));
   EXPECT_EQ(1, bus("current_trips_running_scheduled_count"));
   EXPECT_EQ(0, bus(realtime, {{"cancelled", "true"}}));
   EXPECT_EQ(0, bus("current_trips_running_added_count"));
