@@ -11,6 +11,8 @@
 #include "geo/box.h"
 
 #include "osr/lookup.h"
+#include "osr/routing/profiles/bike_sharing.h"
+#include "osr/routing/profiles/car.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/types.h"
 #include "osr/ways.h"
@@ -27,6 +29,7 @@
 #include "motis/gbfs/compression.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/geofencing.h"
+#include "motis/gbfs/osr_profile.h"
 
 namespace motis::gbfs {
 
@@ -36,6 +39,9 @@ struct node_match {
 };
 
 struct osr_mapping {
+  using footp = osr::bike_sharing::footp;
+  using bikep = osr::bike_sharing::bikep;
+
   osr_mapping(osr::ways const& w,
               osr::lookup const& l,
               gbfs_provider const& provider)
@@ -155,51 +161,38 @@ struct osr_mapping {
     }
   }
 
-  std::vector<node_match> get_node_matches(osr::location const& loc) const {
-    using footp = osr::bike_sharing::footp;
-    using bikep = osr::bike_sharing::bikep;
-    static constexpr auto foot_params = osr::bike_sharing::footp::parameters{};
-    static constexpr auto bike_params = osr::bike_sharing::bikep::parameters{};
+  std::vector<node_match> get_node_matches(
+      osr::location const& loc, vehicle_form_factor const form_factor) const {
+    auto matches =
+        get_profile_node_matches<footp>(loc, osr::component_class::kFoot);
+    auto const vehicle_matches =
+        get_osr_profile(form_factor) == osr::search_profile::kCarSharing
+            ? get_profile_node_matches<osr::car>(loc,
+                                                 osr::component_class::kCar)
+            : get_profile_node_matches<bikep>(loc, osr::component_class::kBike);
+    if (matches.empty() || vehicle_matches.empty()) {
+      return {};
+    }
+    matches.insert(end(matches), begin(vehicle_matches), end(vehicle_matches));
+    return matches;
+  }
 
-    auto is_acceptable_node = [&](osr::candidate_node const& n) {
-      if (!n.valid() || n.dist_to_node_ > kMaxGbfsMatchingDistance) {
-        return false;
-      }
-      auto const& node_props = w_.r_->node_properties_[n.node_];
-      if (footp::node_cost(foot_params, node_props).cost_ == osr::kInfeasible ||
-          bikep::node_cost(bike_params, node_props).cost_ == osr::kInfeasible) {
-        return false;
-      }
-      // node needs to have at least one way accessible by foot and one by bike
-      return utl::any_of(w_.r_->node_ways_[n.node_],
-                         [&](auto const way_idx) {
-                           return footp::way_cost(
-                                      foot_params, *w_.r_, w_.timezones_,
-                                      way_idx, w_.r_->way_properties_[way_idx],
-                                      osr::direction::kForward, 0U,
-                                      std::nullopt, osr::duration_t{0},
-                                      osr::direction::kForward)
-                                      .cost_ != osr::kInfeasible;
-                         }) &&
-             utl::any_of(w_.r_->node_ways_[n.node_], [&](auto const way_idx) {
-               return bikep::way_cost(bike_params, *w_.r_, w_.timezones_,
-                                      way_idx, w_.r_->way_properties_[way_idx],
-                                      osr::direction::kForward, 0U,
-                                      std::nullopt, osr::duration_t{0},
-                                      osr::direction::kForward)
-                          .cost_ != osr::kInfeasible;
-             });
-    };
-
-    auto matches = osr::match_result{};
-    l_.complete_match<footp>(footp::parameters{}, loc, false,
-                             osr::direction::kForward, kMaxGbfsMatchingDistance,
-                             nullptr, std::nullopt, {}, matches);
-    auto const m = matches[osr::match_idx_t{0U}];
+  template <osr::Profile P>
+  std::vector<node_match> get_profile_node_matches(
+      osr::location const& loc,
+      osr::component_class const component_class) const {
+    auto const params = typename P::parameters{};
+    auto result = osr::match_result{};
+    l_.complete_match<P>(params, loc, false, osr::direction::kForward,
+                         kMaxGbfsMatchingDistance, nullptr, std::nullopt, {},
+                         result);
+    auto const m = result[osr::match_idx_t{0U}];
     auto node_matches = std::vector<node_match>{};
     for (auto j = std::size_t{0U}; j != m.size(); ++j) {
       for (auto const& nc : {m.left(j), m.right(j)}) {
-        if (is_acceptable_node(nc)) {
+        if (nc.valid() && nc.dist_to_node_ <= kMaxGbfsMatchingDistance &&
+            P::node_cost(params, w_.r_->node_properties_[nc.node_]).cost_ !=
+                osr::kInfeasible) {
           node_matches.emplace_back(node_match{m.way_[j], nc});
         }
       }
@@ -208,10 +201,9 @@ struct osr_mapping {
       return a.node_.dist_to_node_ < b.node_.dist_to_node_;
     });
 
-    // Keep only the closest node per foot component. Single-way components
-    // have no id; the way itself identifies them.
-    auto const& components =
-        w_.r_->get_class_components(osr::component_class::kFoot);
+    // Keep only the closest node per component. Single-way components have no
+    // id; the way itself identifies them.
+    auto const& components = w_.r_->get_class_components(component_class);
     auto seen_components = hash_set<std::uint32_t>{};
     auto seen_ways = hash_set<osr::way_idx_t>{};
     for (auto it = node_matches.begin(); it != node_matches.end();) {
@@ -226,6 +218,12 @@ struct osr_mapping {
       }
     }
 
+    // edge index = way position of the additional node during routing,
+    // foot and vehicle matches share the available positions
+    if (node_matches.size() > osr::kMaxWaysPerNode / 2U) {
+      node_matches.resize(osr::kMaxWaysPerNode / 2U);
+    }
+
     return node_matches;
   }
 
@@ -236,7 +234,7 @@ struct osr_mapping {
       for (auto const& [id, st] : provider_.stations_) {
         auto is_renting =
             st.status_.is_renting_ && st.status_.num_vehicles_available_ > 0;
-        auto is_returning = st.status_.is_returning_;
+        auto const is_returning = station_allows_return(st, prod);
 
         // if the station lists vehicles available by type, at least one of
         // the vehicle types included in the product segment must be available
@@ -247,25 +245,16 @@ struct osr_mapping {
               });
         }
 
-        // same for returning vehicles
-        if (is_returning && !st.status_.vehicle_docks_available_.empty()) {
-          is_returning = utl::any_of(
-              st.status_.vehicle_docks_available_, [&](auto const& vt) {
-                return vt.second != 0 && prod.includes_vehicle_type(vt.first);
-              });
-        } else if (is_returning && st.status_.num_docks_available_ &&
-                   st.info_.capacity_.value_or(0U) > 0U) {
-          // no counts per vehicle type: fall back to the published total,
-          // but only for stations that declare physical docks
-          is_returning = *st.status_.num_docks_available_ != 0;
-        }
-
         if (!is_renting && !is_returning) {
           continue;
         }
 
-        auto const matches =
-            get_node_matches(osr::location{st.info_.pos_, osr::level_t{}});
+        if (is_returning && st.info_.station_area_) {
+          map_station_area(rd, st.info_.station_area_.get());
+        }
+
+        auto const matches = get_node_matches(
+            osr::location{st.info_.pos_, osr::level_t{}}, prod.form_factor_);
         if (matches.empty()) {
           continue;
         }
@@ -277,21 +266,6 @@ struct osr_mapping {
         }
         if (is_returning) {
           rd.end_allowed_.set(additional_node_id, true);
-          if (st.info_.station_area_) {
-            auto const* geom = st.info_.station_area_.get();
-            auto const rect = tg_geom_rect(geom);
-            auto const bb = geo::box{geo::latlng{rect.min.y, rect.min.x},
-                                     geo::latlng{rect.max.y, rect.max.x}};
-            auto const* osr_r = w_.r_.get();
-            l_.find(bb, [&](osr::way_idx_t const way) {
-              for (auto const n : osr_r->way_nodes_[way]) {
-                if (multipoly_contains_point(geom,
-                                             w_.get_node_pos(n).as_latlng())) {
-                  rd.end_allowed_.set(n, true);
-                }
-              }
-            });
-          }
         }
         for (auto const& m : matches) {
           auto const& node = m.node_;
@@ -314,6 +288,20 @@ struct osr_mapping {
     }
   }
 
+  void map_station_area(routing_data& rd, tg_geom const* geom) const {
+    auto const rect = tg_geom_rect(geom);
+    auto const bb = geo::box{geo::latlng{rect.min.y, rect.min.x},
+                             geo::latlng{rect.max.y, rect.max.x}};
+    auto const* osr_r = w_.r_.get();
+    l_.find(bb, [&](osr::way_idx_t const way) {
+      for (auto const n : osr_r->way_nodes_[way]) {
+        if (multipoly_contains_point(geom, w_.get_node_pos(n).as_latlng())) {
+          rd.end_allowed_.set(n, true);
+        }
+      }
+    });
+  }
+
   void map_vehicles() {
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
       for (auto const [vehicle_idx, vs] :
@@ -322,8 +310,8 @@ struct osr_mapping {
           continue;
         }
 
-        auto const matches =
-            get_node_matches(osr::location{vs.pos_, osr::level_t{}});
+        auto const matches = get_node_matches(
+            osr::location{vs.pos_, osr::level_t{}}, prod.form_factor_);
         if (matches.empty()) {
           continue;
         }

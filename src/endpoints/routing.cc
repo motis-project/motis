@@ -4,6 +4,7 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <utility>
@@ -446,8 +447,7 @@ std::vector<n::routing::offset> get_offsets(
             } else {
               vehicle_return_allowed = [&provider = *provider,
                                         &prod](geo::latlng const& x) {
-                return gbfs::allows_free_floating_return_at(provider, prod, x,
-                                                            false);
+                return gbfs::allows_return_at(provider, prod, x, false);
               };
             }
           }
@@ -584,8 +584,10 @@ std::vector<n::routing::offset> routing::get_offsets(
 
 std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
     api::plan_params const& query, nigiri::timetable const* tt) {
+  auto const window = std::chrono::duration_cast<n::duration_t>(
+      std::chrono::seconds{query.searchWindow_});
   if (query.pageCursor_.has_value()) {
-    return {cursor_to_query(*query.pageCursor_), std::nullopt};
+    return {cursor_to_query(*query.pageCursor_, window), std::nullopt};
   } else {
     auto const t = std::chrono::time_point_cast<n::i32_minutes>(
         *query.time_.value_or(openapi::now()));
@@ -593,8 +595,6 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
         tt == nullptr || tt->external_interval().contains(t),
         "query time {} is outside of loaded timetable window {}", t,
         tt ? tt->external_interval() : n::interval<n::unixtime_t>{});
-    auto const window = std::chrono::duration_cast<n::duration_t>(
-        std::chrono::seconds{query.searchWindow_});
     return {{.start_time_ = query.timetableView_ && tt
                                 ? n::routing::start_time_t{n::interval{
                                       tt->external_interval().clamp(
@@ -853,7 +853,7 @@ api::plan_response routing::route(api::plan_params const& query,
                                   ? nullptr
                                   : rt->rtt_.get();
   auto const e = rt->e_.get();
-  auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
+  auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, std::atomic_load(&gbfs_)};
   auto otm_searches = one_to_many_searches{};
   auto* const otm_start = &otm_searches[n::special_station::kStart];
   auto* const otm_dest = &otm_searches[n::special_station::kEnd];

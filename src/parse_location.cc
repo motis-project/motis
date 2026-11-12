@@ -78,20 +78,19 @@ std::pair<n::direction, n::unixtime_t> parse_cursor(std::string_view s) {
   }
 }
 
-n::routing::query cursor_to_query(std::string_view s) {
+n::routing::query cursor_to_query(std::string_view s,
+                                  n::duration_t const window) {
   auto const [dir, t] = parse_cursor(s);
   switch (dir) {
     case n::direction::kBackward:
       return n::routing::query{
-          .start_time_ =
-              n::routing::start_time_t{n::interval{t - n::duration_t{120}, t}},
+          .start_time_ = n::routing::start_time_t{n::interval{t - window, t}},
           .extend_interval_earlier_ = true,
           .extend_interval_later_ = false};
 
     case n::direction::kForward:
       return n::routing::query{
-          .start_time_ =
-              n::routing::start_time_t{n::interval{t, t + n::duration_t{120}}},
+          .start_time_ = n::routing::start_time_t{n::interval{t, t + window}},
           .extend_interval_earlier_ = false,
           .extend_interval_later_ = true};
   }

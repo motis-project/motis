@@ -43,6 +43,7 @@ const translations: Translations = {
 	departuresAt: (stop) => `Abfahrten in ${stop}`,
 	later: 'später',
 	earlier: 'früher',
+	onDate: (date: string) => `am ${date}`,
 	track: 'Gleis',
 	platform: 'Steig',
 	trackAbr: 'Gl.',

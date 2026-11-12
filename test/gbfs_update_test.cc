@@ -20,6 +20,12 @@
 
 #include "fmt/format.h"
 
+#include "utl/helpers/algorithm.h"
+
+#include "osr/routing/additional_edge.h"
+#include "osr/types.h"
+#include "osr/ways.h"
+
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/gbfs/data.h"
@@ -98,10 +104,12 @@ void write_system_information(fs::path const& dir,
 void write_vehicle_types(
     fs::path const& dir,
     bool const include_scooter = false,
-    std::string_view const bike_return_constraint = "hybrid") {
+    std::string_view const bike_return_constraint = "hybrid",
+    std::string_view const type_id = kBikeType,
+    std::string_view const form_factor = "bicycle") {
   auto types = json::array{};
-  types.push_back({{"vehicle_type_id", "bike"},
-                   {"form_factor", "bicycle"},
+  types.push_back({{"vehicle_type_id", type_id},
+                   {"form_factor", form_factor},
                    {"propulsion_type", "human"},
                    {"return_constraint", bike_return_constraint}});
   if (include_scooter) {
@@ -136,32 +144,31 @@ void write_station_information(fs::path const& dir,
              }));
 }
 
-void write_station_information_with_area(fs::path const& dir) {
-  write_file(dir / "station_information.json", R"({
-    "last_updated": 30,
-    "ttl": 0,
-    "version": "2.3",
-    "data": {
-      "stations": [
-        {
-          "station_id": "station-1",
-          "name": "Main Station",
-          "lat": 49.871651,
-          "lon": 8.631084,
-          "station_area": {
-            "type": "MultiPolygon",
-            "coordinates": [[[
-              [8.626, 49.870],
-              [8.634, 49.870],
-              [8.634, 49.877],
-              [8.626, 49.877],
-              [8.626, 49.870]
-            ]]]
-          }
-        }
-      ]
-    }
-  })");
+void write_station_information_with_area(fs::path const& dir,
+                                         double const lat = 49.871651,
+                                         double const lon = 8.631084) {
+  auto const ring = json::array{{8.626, 49.870},
+                                {8.634, 49.870},
+                                {8.634, 49.877},
+                                {8.626, 49.877},
+                                {8.626, 49.870}};
+  write_file(
+      dir / "station_information.json",
+      json::serialize(json::value{
+          {"last_updated", 30},
+          {"ttl", 0},
+          {"version", "2.3"},
+          {"data",
+           {{"stations",
+             json::array{{{"station_id", "station-1"},
+                          {"name", "Main Station"},
+                          {"lat", lat},
+                          {"lon", lon},
+                          {"station_area",
+                           {{"type", "MultiPolygon"},
+                            {"coordinates",
+                             json::array(1U, json::array(1U, ring))}}}}}}}},
+      }));
 }
 
 void write_station_status(fs::path const& dir,
@@ -584,6 +591,18 @@ std::size_t count_additional_vehicle_nodes(provider_routing_data const& prd) {
       }));
 }
 
+bool has_base_return_node(gbfs_data& gbfs, gbfs_provider const& p) {
+  auto const prod_rd = gbfs.get_products_routing_data(
+      *street_data().w_, *street_data().l_,
+      gbfs_products_ref{p.idx_, gbfs_products_idx_t{0}});
+  for (auto i = 0U; i != street_data().w_->n_nodes(); ++i) {
+    if (prod_rd->end_allowed_.test(osr::node_idx_t{i})) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 TEST(motis, gbfs_update_initial_file_feed_creates_provider_state) {
@@ -928,6 +947,65 @@ TEST(motis, gbfs_update_global_geofencing_rules) {
   EXPECT_TRUE(prod_rd->through_allowed_.test(n));
 }
 
+std::vector<osr::additional_edge> station_edges(
+    geo::latlng const& pos,
+    std::string_view const type_id,
+    std::string_view const form_factor) {
+  auto const dir = make_temp_dir("station-matching");
+  write_discovery(dir, "");
+  write_system_information(dir);
+  write_vehicle_types(dir, false, "any_station", type_id, form_factor);
+  write_station_information(dir, pos.lat_, pos.lng_);
+  write_station_status(dir, 3U, false, type_id);
+  write_empty_geofencing(dir);
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(make_gbfs_config(dir), gbfs);
+
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  auto const& w = *street_data().w_;
+  auto const prod_rd = gbfs->get_products_routing_data(
+      w, *street_data().l_, gbfs_products_ref{p.idx_, gbfs_products_idx_t{0}});
+  auto const it =
+      prod_rd->compressed_.additional_edges_.find(osr::node_idx_t{w.n_nodes()});
+  if (it == end(prod_rd->compressed_.additional_edges_)) {
+    return {};
+  }
+  return {begin(it->second), end(it->second)};
+}
+
+bool has_way(osr::additional_edge const& e,
+             bool (osr::way_properties::*accessible)() const) {
+  auto const& r = *street_data().w_->r_;
+  return utl::any_of(r.node_ways_[e.to_], [&](osr::way_idx_t const way) {
+    return (r.way_properties_[way].*accessible)();
+  });
+}
+
+void expect_extra_vehicle_node(std::vector<osr::additional_edge> const& edges,
+                               bool (osr::way_properties::*accessible)() const,
+                               osr::distance_t const max_dist) {
+  ASSERT_FALSE(edges.empty());
+  auto const closest =
+      *std::ranges::min_element(edges, {}, &osr::additional_edge::distance_);
+  EXPECT_FALSE(has_way(closest, accessible));
+  EXPECT_TRUE(utl::any_of(edges, [&](osr::additional_edge const& e) {
+    return has_way(e, accessible) && e.distance_ <= max_dist;
+  }));
+}
+
+TEST(motis, gbfs_update_station_next_to_sidewalk_gets_bike_node) {
+  expect_extra_vehicle_node(
+      station_edges({50.1128788, 8.6797332}, kBikeType, "bicycle"),
+      &osr::way_properties::is_bike_accessible, 50U);
+}
+
+TEST(motis, gbfs_update_car_station_gets_car_node) {
+  expect_extra_vehicle_node(
+      station_edges({49.8726662, 8.6314312}, "car", "car"),
+      &osr::way_properties::is_car_accessible, 100U);
+}
+
 TEST(motis, gbfs_update_station_area_marks_base_nodes_return_allowed) {
   auto const dir = make_temp_dir("station-area");
   write_discovery(dir, "");
@@ -941,15 +1019,24 @@ TEST(motis, gbfs_update_station_area_marks_base_nodes_return_allowed) {
   run_update(make_gbfs_config(dir), gbfs);
 
   auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
-  auto const prod_rd = gbfs->get_products_routing_data(
-      *street_data().w_, *street_data().l_,
-      gbfs_products_ref{p.idx_, gbfs_products_idx_t{0}});
-  auto has_base_return_node = false;
-  for (auto i = 0U; i != street_data().w_->n_nodes(); ++i) {
-    has_base_return_node =
-        has_base_return_node || prod_rd->end_allowed_.test(osr::node_idx_t{i});
-  }
-  EXPECT_TRUE(has_base_return_node);
+  EXPECT_TRUE(has_base_return_node(*gbfs, p));
+}
+
+TEST(motis, gbfs_update_station_area_without_matched_station_position) {
+  auto const dir = make_temp_dir("station-area-unmatched");
+  write_discovery(dir, "");
+  write_system_information(dir);
+  write_vehicle_types(dir, false, "any_station");
+  write_station_information_with_area(dir, 0.0, 0.0);
+  write_station_status(dir, 3U);
+  write_empty_geofencing(dir);
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(make_gbfs_config(dir), gbfs);
+
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  EXPECT_EQ(0U, additional_node_count(*gbfs, p));
+  EXPECT_TRUE(has_base_return_node(*gbfs, p));
 }
 
 TEST(motis, gbfs_update_supports_local_gbfs_manifest_provider_dirs) {

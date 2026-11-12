@@ -36,9 +36,7 @@ struct output {
   virtual bool is_time_dependent() const = 0;
   virtual transport_mode_t get_cache_key() const = 0;
   virtual osr::sharing_data const* get_sharing_data() const = 0;
-  virtual bool allows_free_floating_return_at(geo::latlng const&) const {
-    return false;
-  }
+  virtual bool allows_return_at(geo::latlng const&) const { return false; }
   virtual void annotate_leg(nigiri::lang_t const&,
                             osr::node_idx_t from_node,
                             osr::node_idx_t to_node,
