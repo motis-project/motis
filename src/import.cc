@@ -6,16 +6,12 @@
 #include <tuple>
 #include <vector>
 
-#include "fmt/ranges.h"
-
 #include "cista/free_self_allocated.h"
 #include "cista/io.h"
 
 #include "adr/area_database.h"
 
-#include "osr/preprocessing/elevation/shared.h"
 #include "utl/erase_if.h"
-#include "utl/read_file.h"
 #include "utl/to_vec.h"
 
 #include "tiles/db/clear_database.h"
@@ -33,7 +29,6 @@
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
 #include "nigiri/routing/tb/preprocess.h"
-#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
 #include "nigiri/timetable_metrics.h"
@@ -53,7 +48,6 @@
 #include "motis/hashes.h"
 #include "motis/route_shapes.h"
 #include "motis/tag_lookup.h"
-#include "motis/tt_location_rtree.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -307,11 +301,14 @@ void import(config const& c,
       {},
       c.use_street_routing(),
       [&]() {
-        osr::extract(true, fs::path{*c.osm_}, data_path / "osr", elevation_dir,
-                     {osr::preprocessing::elevation::elevation_meters_t{
-                          c.get_street_routing()->min_elevation_},
-                      c.get_street_routing()->min_rel_elevation_,
-                      c.get_street_routing()->max_incline_});
+        osr::extract(
+            true, fs::path{*c.osm_}, data_path / "osr", elevation_dir,
+            {.stats_file_ = data_path / "osr" / "elevation_stats.txt",
+             .min_elevation =
+                 osr::preprocessing::elevation::elevation_meters_t{
+                     c.get_street_routing()->min_elevation_},
+             .min_rel_elevation = c.get_street_routing()->min_rel_elevation_,
+             .max_incline = c.get_street_routing()->max_incline_});
       },
       {osm_hash, osr_version(), elevation_dir_hash}};
 
