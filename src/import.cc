@@ -472,10 +472,11 @@ void import(config const& c,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_,
              .merge_stats_dir_ = data_path,
-             .walks_ = c.osr_footpath_
-                           ? decltype(n::loader::finalize_options::
-                                          walks_){add_routed_footpaths}
-                           : nullptr},
+             .compute_walks_ =
+                 c.osr_footpath_
+                     ? decltype(n::loader::finalize_options::
+                                    compute_walks_){add_routed_footpaths}
+                     : nullptr},
             interval, assistance.get(), shapes.get(), false))};
 
         tt->write(data_path / "tt.bin");

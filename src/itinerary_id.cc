@@ -950,12 +950,10 @@ api::Itinerary reconstruct_itinerary(
 
     auto const& original =
         std::get<n::routing::journey::run_enter_exit>(jl.uses_);
-    auto const prev = has_prev_transit
-                          ? n::routing::run_of(*legs[i - 2U].transit_)
-                          : std::nullopt;
-    auto const next = has_next_transit
-                          ? n::routing::run_of(*legs[i + 2U].transit_)
-                          : std::nullopt;
+    auto const prev =
+        has_prev_transit ? legs[i - 2U].transit_->get_run() : std::nullopt;
+    auto const next =
+        has_next_transit ? legs[i + 2U].transit_->get_run() : std::nullopt;
     auto const next_dep =
         has_next_transit ? legs[i + 2U].transit_->dep_time_ : jl.arr_time_;
 
