@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cstdint>
+#include <map>
+#include <mutex>
+#include <vector>
+
 #include "prometheus/counter.h"
 #include "prometheus/family.h"
 #include "prometheus/gauge.h"
@@ -7,6 +12,18 @@
 #include "prometheus/registry.h"
 
 namespace motis {
+
+struct running_trips_metrics {
+  prometheus::Labels labels_;
+  prometheus::Gauge& scheduled_;
+  prometheus::Gauge& realtime_;
+  prometheus::Gauge& cancelled_;
+  prometheus::Gauge& added_;
+  std::vector<prometheus::Gauge*> rt_events_;
+  prometheus::Gauge& headway_multiple_;
+  prometheus::Gauge& headway_other_;
+  prometheus::Histogram* delay_{nullptr};
+};
 
 struct metrics_registry {
   metrics_registry();
@@ -35,6 +52,11 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>& current_trips_running_scheduled_count_;
   prometheus::Family<prometheus::Gauge>&
       current_trips_running_scheduled_with_realtime_count_;
+  prometheus::Family<prometheus::Gauge>& current_trips_running_added_count_;
+  prometheus::Family<prometheus::Histogram>&
+      current_trips_running_delay_minutes_;
+  prometheus::Family<prometheus::Gauge>&
+      current_trips_running_delay_headway_count_;
   prometheus::Gauge& total_trips_with_realtime_count_;
   prometheus::Family<prometheus::Gauge>& total_rt_events_count_;
   prometheus::Family<prometheus::Gauge>& timetable_first_day_timestamp_;
@@ -55,6 +77,10 @@ struct metrics_registry {
   prometheus::Family<prometheus::Counter>& gbfs_fetch_errors_total_;
   prometheus::Family<prometheus::Counter>& gbfs_skipped_entries_total_;
   prometheus::Gauge& gpu_rt_timetable_;
+
+  std::mutex running_trips_mutex_;
+  std::map<std::pair<std::uint32_t, std::uint8_t>, running_trips_metrics>
+      running_trips_by_provider_clasz_;
 
 private:
   metrics_registry(prometheus::Histogram::BucketBoundaries event_boundaries,

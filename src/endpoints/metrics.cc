@@ -1,9 +1,12 @@
 #include "motis/endpoints/metrics.h"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
-#include <functional>
+#include <cmath>
 #include <iostream>
+#include <mutex>
+#include <optional>
 
 #include "fmt/ostream.h"
 
@@ -21,19 +24,78 @@
 #include "motis/data.h"
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
+#include "motis/timetable/clasz_to_mode.h"
 
 namespace n = nigiri;
 
 namespace motis::ep {
 
+constexpr auto const kDelayMinutesBuckets = std::array<double, 18U>{
+    -10, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 60, 90};
+
+constexpr auto const kMaxDistanceToMultipleInHeadways = 1.0 / 6.0;
+constexpr auto const kDay = n::unixtime_t::duration{std::chrono::days{1}};
+
+bool is_close_to_nonzero_multiple(double const delay, double const period) {
+  auto const r = std::abs(delay / period);
+  return std::round(r) != 0.0 &&
+         std::abs(r - std::round(r)) <= kMaxDistanceToMultipleInHeadways;
+}
+
+std::optional<std::pair<n::rt::run_stop, n::event_type>> current_event(
+    n::rt::frun const& fr, n::unixtime_t const now) {
+  auto event = std::optional<std::pair<n::rt::run_stop, n::event_type>>{};
+  for (auto const stp : fr) {
+    if (stp.is_cancelled()) {
+      continue;
+    }
+    for (auto const ev : {n::event_type::kArr, n::event_type::kDep}) {
+      if ((ev == n::event_type::kArr &&
+           stp.stop_idx_ == fr.stop_range_.from_) ||
+          (ev == n::event_type::kDep &&
+           stp.stop_idx_ + 1U == fr.stop_range_.to_)) {
+        continue;
+      }
+      event = {stp, ev};
+      if (stp.time(ev) >= now) {
+        return event;
+      }
+    }
+  }
+  return event;
+}
+
+n::unixtime_t::duration headway(n::timetable const& tt,
+                                n::transport const t,
+                                n::stop_idx_t const stop,
+                                n::event_type const ev) {
+  auto const r = tt.transport_route_[t.t_idx_];
+  auto const transports = tt.route_transport_ranges_[r];
+  auto const event_times = tt.event_times_at_stop(r, stop, ev);
+  auto const own = event_times[to_idx(t.t_idx_ - transports.from_)];
+  auto h = kDay;
+  for (auto const [i, o] : utl::enumerate(transports)) {
+    auto const gap_on_same_day =
+        n::unixtime_t::duration{event_times[i].count() - own.count()};
+    auto const closest_day_on_other_side =
+        gap_on_same_day > n::unixtime_t::duration{0} ? t.day_ - 1 : t.day_ + 1;
+    if (gap_on_same_day != n::unixtime_t::duration{0} &&
+        tt.is_transport_active(o, t.day_)) {
+      h = std::min(h, std::chrono::abs(gap_on_same_day));
+    }
+    if (tt.is_transport_active(o, closest_day_on_other_side)) {
+      h = std::min(h, kDay - std::chrono::abs(gap_on_same_day));
+    }
+  }
+  return h;
+}
+
 void update_all_runs_metrics(nigiri::timetable const& tt,
                              nigiri::rt_timetable const* rtt,
                              tag_lookup const& tags,
-                             metrics_registry& metrics) {
-  auto const start_time =
-      std::max(std::chrono::time_point_cast<n::unixtime_t::duration>(
-                   std::chrono::system_clock::now()),
-               tt.external_interval().from_);
+                             metrics_registry& metrics,
+                             n::unixtime_t const now) {
+  auto const start_time = std::max(now, tt.external_interval().from_);
   auto const end_time = std::min(
       std::chrono::time_point_cast<n::unixtime_t::duration>(
           start_time +
@@ -45,62 +107,115 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
       std::array{n::rt_data_state::kNoRtData, n::rt_data_state::kInconsistent,
                  n::rt_data_state::kObserved, n::rt_data_state::kPropagated,
                  n::rt_data_state::kPredicted};
-  auto rt_data_state_metric_by_agency =
-      std::vector<std::array<prometheus::Gauge*, kRtDataStates.size()>>{};
-  rt_data_state_metric_by_agency.reserve(tt.n_agencies());
 
-  auto metric_by_agency =
-      std::vector<std::pair<std::reference_wrapper<prometheus::Gauge>,
-                            std::reference_wrapper<prometheus::Gauge>>>{};
-  metric_by_agency.reserve(tt.n_agencies());
-  for (auto i = nigiri::provider_idx_t{0}; i < tt.n_agencies(); ++i) {
-    auto const& p = tt.providers_[i];
+  for (auto& [_, m] : metrics.running_trips_by_provider_clasz_) {
+    for (auto* g : {&m.scheduled_, &m.realtime_, &m.cancelled_, &m.added_,
+                    &m.headway_multiple_, &m.headway_other_}) {
+      g->Set(0);
+    }
+    for (auto* g : m.rt_events_) {
+      g->Set(0);
+    }
+    if (m.delay_ != nullptr) {
+      m.delay_->Reset();
+    }
+  }
+
+  auto const get = [&](n::rt::run_stop const& s) -> running_trips_metrics* {
+    auto const provider_idx = s.get_provider_idx(n::event_type::kDep);
+    if (provider_idx == n::provider_idx_t::invalid()) {
+      return nullptr;
+    }
+    auto const clasz = s.get_clasz(n::event_type::kDep);
+    auto const key =
+        std::pair{to_idx(provider_idx), static_cast<std::uint8_t>(clasz)};
+    if (auto const it = metrics.running_trips_by_provider_clasz_.find(key);
+        it != end(metrics.running_trips_by_provider_clasz_)) {
+      return &it->second;
+    }
+
+    auto const& p = tt.providers_[provider_idx];
     auto const labels = prometheus::Labels{
         {"tag", std::string{tags.get_tag(p.src_)}},
         {"agency_name", std::string{tt.get_default_translation(p.name_)}},
-        {"agency_id", std::string{tt.strings_.get(p.id_)}}};
-    auto& sched = metrics.current_trips_running_scheduled_count_.Add(labels);
-    auto& real =
-        metrics.current_trips_running_scheduled_with_realtime_count_.Add(
-            labels);
-    sched.Set(0);
-    real.Set(0);
-    metric_by_agency.emplace_back(std::ref(sched), std::ref(real));
+        {"agency_id", std::string{tt.strings_.get(p.id_)}},
+        {"mode", fmt::to_string(fmt::streamed(to_mode(clasz, 5U)))}};
+    auto const with = [&](std::string const& k, std::string const& v) {
+      auto l = labels;
+      l.emplace(k, v);
+      return l;
+    };
 
-    auto& rt_data_state_metrics = rt_data_state_metric_by_agency.emplace_back();
+    auto rt_events = std::vector<prometheus::Gauge*>{};
     for (auto const state : kRtDataStates) {
-      auto state_labels = labels;
-      state_labels.emplace("timestamp_reason",
-                           fmt::to_string(fmt::streamed(to_api(state))));
-      auto& g = metrics.total_rt_events_count_.Add(state_labels);
-      g.Set(0);
-      rt_data_state_metrics[static_cast<std::size_t>(state)] = &g;
+      rt_events.push_back(&metrics.total_rt_events_count_.Add(with(
+          "timestamp_reason", fmt::to_string(fmt::streamed(to_api(state))))));
     }
-  }
+
+    auto& rt = metrics.current_trips_running_scheduled_with_realtime_count_;
+    auto& hw = metrics.current_trips_running_delay_headway_count_;
+    auto const [it, _] = metrics.running_trips_by_provider_clasz_.emplace(
+        key,
+        running_trips_metrics{
+            labels, metrics.current_trips_running_scheduled_count_.Add(labels),
+            rt.Add(with("cancelled", "false")),
+            rt.Add(with("cancelled", "true")),
+            metrics.current_trips_running_added_count_.Add(labels),
+            std::move(rt_events), hw.Add(with("multiple", "true")),
+            hw.Add(with("multiple", "false"))});
+    return &it->second;
+  };
 
   if (rtt != nullptr) {
     for (auto rt_t = nigiri::rt_transport_idx_t{0};
          rt_t < rtt->n_rt_transports(); ++rt_t) {
       auto const fr = n::rt::frun::from_rt(tt, rtt, rt_t);
-      auto const provider_idx = fr[0].get_provider_idx(n::event_type::kDep);
-      if (provider_idx != n::provider_idx_t::invalid()) {
-        auto const& gauges = rt_data_state_metric_by_agency.at(provider_idx.v_);
-        for (auto const state : rtt->rt_transport_data_states_[rt_t]) {
-          gauges[static_cast<std::size_t>(state)]->Increment();
-        }
-      }
-      if (!fr.is_scheduled()) {
+      auto* const m = get(fr[0]);
+      if (m == nullptr) {
         continue;
+      }
+      for (auto const state : rtt->rt_transport_data_states_[rt_t]) {
+        m->rt_events_[static_cast<std::size_t>(state)]->Increment();
       }
       auto const active = n::interval{
           fr[0].time(n::event_type::kDep),
           fr[static_cast<n::stop_idx_t>(fr.stop_range_.size() - 1)].time(
               n::event_type::kArr) +
               n::unixtime_t::duration{1}};
-      if (active.overlaps(time_interval)) {
-        if (provider_idx != n::provider_idx_t::invalid()) {
-          metric_by_agency.at(provider_idx.v_).first.get().Increment();
-          metric_by_agency.at(provider_idx.v_).second.get().Increment();
+      if (!active.overlaps(time_interval)) {
+        continue;
+      }
+      if (!fr.is_scheduled()) {
+        if (!fr.is_cancelled()) {
+          m->added_.Increment();
+        }
+        continue;
+      }
+      m->scheduled_.Increment();
+      if (fr.is_cancelled()) {
+        m->cancelled_.Increment();
+        continue;
+      }
+      m->realtime_.Increment();
+      if (auto const e = current_event(fr, start_time); e.has_value()) {
+        auto const& [stp, ev] = *e;
+        auto const delay = static_cast<double>(stp.delay(ev).count());
+        if (m->delay_ == nullptr) {
+          m->delay_ = &metrics.current_trips_running_delay_minutes_.Add(
+              m->labels_,
+              prometheus::Histogram::BucketBoundaries{
+                  begin(kDelayMinutesBuckets), end(kDelayMinutesBuckets)});
+        }
+        m->delay_->Observe(delay);
+        auto const h =
+            static_cast<double>(headway(tt, fr.t_, stp.stop_idx_, ev).count());
+        if (is_close_to_nonzero_multiple(delay, h) ||
+            is_close_to_nonzero_multiple(delay,
+                                         static_cast<double>(kDay.count()))) {
+          m->headway_multiple_.Increment();
+        } else if (std::abs(delay) >=
+                   h * (1.0 - kMaxDistanceToMultipleInHeadways)) {
+          m->headway_other_.Increment();
         }
       }
     }
@@ -110,11 +225,6 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
   auto const [end_day, _1] = tt.day_idx_mam(time_interval.to_);
 
   for (auto r = nigiri::route_idx_t{0}; r < tt.n_routes(); ++r) {
-    auto const is_active = [&](n::transport const t) -> bool {
-      return rtt == nullptr ? tt.is_transport_active(t.t_idx_, t.day_)
-                            : rtt->is_transport_active(t.t_idx_, t.day_);
-    };
-
     auto const seq = tt.route_location_seq_[r];
     auto const from = n::stop_idx_t{0U};
     auto const to = static_cast<n::stop_idx_t>(seq.size() - 1);
@@ -126,14 +236,20 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
           static_cast<n::day_idx_t::value_t>(arr_times[i].days());
       for (auto day = start_day - day_offset; day <= end_day; ++day) {
         auto const t = n::transport{t_idx, day};
-        if (is_active(t) &&
+        if (tt.is_transport_active(t.t_idx_, t.day_) &&
+            (rtt == nullptr ||
+             rtt->resolve_rt(t) == n::rt_transport_idx_t::invalid()) &&
             time_interval.overlaps({tt.event_time(t, from, n::event_type::kDep),
                                     tt.event_time(t, to, n::event_type::kArr) +
                                         n::unixtime_t::duration{1}})) {
           auto fr = n::rt::frun::from_t(tt, nullptr, t);
-          auto const provider_idx = fr[0].get_provider_idx(n::event_type::kDep);
-          if (provider_idx != n::provider_idx_t::invalid()) {
-            metric_by_agency.at(provider_idx.v_).first.get().Increment();
+          if (auto* const m = get(fr[0]); m != nullptr) {
+            m->scheduled_.Increment();
+            auto const is_cancelled_without_rt_transport =
+                rtt != nullptr && !rtt->is_transport_active(t.t_idx_, t.day_);
+            if (is_cancelled_without_rt_transport) {
+              m->cancelled_.Increment();
+            }
           }
         }
       }
@@ -165,9 +281,13 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
 
 net::reply metrics::operator()(net::route_request const& req, bool) const {
   utl::verify(metrics_ != nullptr, "no metrics initialized");
+  auto const lock = std::scoped_lock{metrics_->running_trips_mutex_};
   auto const rt = std::atomic_load(&rt_);
   if (tt_ != nullptr && tags_ != nullptr) {
-    update_all_runs_metrics(*tt_, rt->rtt_.get(), *tags_, *metrics_);
+    update_all_runs_metrics(
+        *tt_, rt->rtt_.get(), *tags_, *metrics_,
+        std::chrono::time_point_cast<n::unixtime_t::duration>(
+            now_.value_or(std::chrono::system_clock::now())));
   }
   if (rt != nullptr && rt->rtt_ != nullptr) {
     metrics_->total_trips_with_realtime_count_.Set(
