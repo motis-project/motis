@@ -69,24 +69,22 @@ n::unixtime_t::duration headway(n::timetable const& tt,
                                 n::transport const t,
                                 n::stop_idx_t const stop,
                                 n::event_type const ev) {
-  auto const time = tt.event_time(t, stop, ev);
-  auto const days = static_cast<int>(tt.event_mam(t.t_idx_, stop, ev).days());
+  auto const r = tt.transport_route_[t.t_idx_];
+  auto const transports = tt.route_transport_ranges_[r];
+  auto const event_times = tt.event_times_at_stop(r, stop, ev);
+  auto const own = event_times[to_idx(t.t_idx_ - transports.from_)];
   auto h = kDay;
-  for (auto const o :
-       tt.route_transport_ranges_[tt.transport_route_[t.t_idx_]]) {
-    auto const o_days = static_cast<int>(tt.event_mam(o, stop, ev).days());
-    for (auto const offset : {-1, 0, 1}) {
-      auto const day =
-          static_cast<int>(to_idx(t.day_)) + days - o_days + offset;
-      if (day < 0 || day >= n::kMaxDays ||
-          !tt.is_transport_active(o, n::day_idx_t{day})) {
-        continue;
-      }
-      auto const gap = std::chrono::abs(
-          tt.event_time({o, n::day_idx_t{day}}, stop, ev) - time);
-      if (gap != n::unixtime_t::duration{0}) {
-        h = std::min(h, gap);
-      }
+  for (auto const [i, o] : utl::enumerate(transports)) {
+    auto const gap_on_same_day =
+        n::unixtime_t::duration{event_times[i].count() - own.count()};
+    auto const closest_day_on_other_side =
+        gap_on_same_day > n::unixtime_t::duration{0} ? t.day_ - 1 : t.day_ + 1;
+    if (gap_on_same_day != n::unixtime_t::duration{0} &&
+        tt.is_transport_active(o, t.day_)) {
+      h = std::min(h, std::chrono::abs(gap_on_same_day));
+    }
+    if (tt.is_transport_active(o, closest_day_on_other_side)) {
+      h = std::min(h, kDay - std::chrono::abs(gap_on_same_day));
     }
   }
   return h;
@@ -95,11 +93,9 @@ n::unixtime_t::duration headway(n::timetable const& tt,
 void update_all_runs_metrics(nigiri::timetable const& tt,
                              nigiri::rt_timetable const* rtt,
                              tag_lookup const& tags,
-                             metrics_registry& metrics) {
-  auto const start_time =
-      std::max(std::chrono::time_point_cast<n::unixtime_t::duration>(
-                   std::chrono::system_clock::now()),
-               tt.external_interval().from_);
+                             metrics_registry& metrics,
+                             n::unixtime_t const now) {
+  auto const start_time = std::max(now, tt.external_interval().from_);
   auto const end_time = std::min(
       std::chrono::time_point_cast<n::unixtime_t::duration>(
           start_time +
@@ -288,7 +284,10 @@ net::reply metrics::operator()(net::route_request const& req, bool) const {
   auto const lock = std::scoped_lock{metrics_->running_trips_mutex_};
   auto const rt = std::atomic_load(&rt_);
   if (tt_ != nullptr && tags_ != nullptr) {
-    update_all_runs_metrics(*tt_, rt->rtt_.get(), *tags_, *metrics_);
+    update_all_runs_metrics(
+        *tt_, rt->rtt_.get(), *tags_, *metrics_,
+        std::chrono::time_point_cast<n::unixtime_t::duration>(
+            now_.value_or(std::chrono::system_clock::now())));
   }
   if (rt != nullptr && rt->rtt_ != nullptr) {
     metrics_->total_trips_with_realtime_count_.Set(

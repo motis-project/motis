@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+#include <optional>
 #include <string_view>
 
 #include "net/web_server/query_router.h"
@@ -16,6 +18,7 @@ struct metrics {
   tag_lookup const* tags_;
   std::shared_ptr<rt> const& rt_;
   metrics_registry* metrics_;
+  std::optional<std::chrono::system_clock::time_point> now_{};
 };
 
 }  // namespace motis::ep
