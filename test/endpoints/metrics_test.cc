@@ -162,9 +162,9 @@ L2,{20:%Y%m%d},1
 )",
       t(-60min), t(60min), t(120min), t(180min), day, t(-100min), t(100min),
       t(-40min), t(160min), t(1430min), t(1450min), t(1437min), t(1457min),
-      t_on(long_day, -4 * 1440min), t_on(long_day, 710min),
-      t_on(long_day, 718min), t_on(long_next_day, -3 * 1440min - 710min),
-      t_on(long_next_day, 725min), t_on(long_next_day, 740min), long_day,
+      t_on(long_day, -4 * 1440min + 710min), t_on(long_day, 30min),
+      t_on(long_day, 60min), t_on(long_next_day, -3 * 1440min - 715min),
+      t_on(long_next_day, 1460min), t_on(long_next_day, 1490min), long_day,
       long_next_day);
 
   auto ec = std::error_code{};
@@ -198,6 +198,8 @@ L2,{20:%Y%m%d},1
        trip_update{
            .trip_ = {.trip_id_ = "DAY", .date_ = service_date},
            .stop_updates_ = {{.stop_id_ = "C", .delay_minutes_ = -1440}}},
+       trip_update{.trip_ = {.trip_id_ = "DAY_NEXT", .date_ = service_date},
+                   .stop_updates_ = {{.stop_id_ = "C", .delay_minutes_ = 7}}},
        trip_update{.trip_ = {.trip_id_ = "LONG",
                              .date_ = date::format("%Y%m%d", long_day)},
                    .stop_updates_ = {{.stop_id_ = "B",
@@ -214,7 +216,7 @@ L2,{20:%Y%m%d},1
       service_date);
   auto const stats = n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_,
                                               n::source_idx_t{0}, "test", msg);
-  EXPECT_EQ(9U, stats.total_entities_success_);
+  EXPECT_EQ(10U, stats.total_entities_success_);
 
   auto registry = metrics_registry{};
   auto m = scrape(d, registry, now);
@@ -233,7 +235,7 @@ L2,{20:%Y%m%d},1
   };
   auto const realtime = "current_trips_running_scheduled_with_realtime_count";
   auto const delay = std::string{"current_trips_running_delay_minutes"};
-  auto const headway = "current_trips_running_delay_headway_count";
+  auto const headway = "total_rt_events_delay_headway_count";
   auto const rt_events = "total_rt_events_count";
   auto const predicted = labels{{"timestamp_reason", "PREDICTED"}};
   auto const propagated = labels{{"timestamp_reason", "PROPAGATED"}};
@@ -247,8 +249,8 @@ L2,{20:%Y%m%d},1
   EXPECT_EQ(2, rail(delay + "_bucket", {{"le", "-4"}}));
   EXPECT_EQ(2, rail(delay + "_bucket", {{"le", "5"}}));
   EXPECT_EQ(3, rail(delay + "_bucket", {{"le", "10"}}));
-  // FUTURE: -130 min at 120 min headway
-  EXPECT_EQ(1, rail(headway, {{"multiple", "true"}}));
+  // FUTURE: -130 min at 180 min headway
+  EXPECT_EQ(0, rail(headway, {{"multiple", "true"}}));
   EXPECT_EQ(0, rail(headway, {{"multiple", "false"}}));
 
   EXPECT_EQ(1, bus("current_trips_running_scheduled_count"));
@@ -261,29 +263,28 @@ L2,{20:%Y%m%d},1
   EXPECT_EQ(2, tram(realtime, {{"cancelled", "false"}}));
   EXPECT_EQ(2, tram(delay + "_count"));
   EXPECT_EQ(-1360, tram(delay + "_sum"));
-  // DAY: -1440 min at 7 min headway
-  EXPECT_EQ(1, tram(headway, {{"multiple", "true"}}));
-  // T1: +80 min at 60 min headway
-  EXPECT_EQ(1, tram(headway, {{"multiple", "false"}}));
+  // DAY: -1440 min at 7 min headway, DAY_NEXT (not running): +7 min, 2 events
+  EXPECT_EQ(4, tram(headway, {{"multiple", "true"}}));
+  // T1: +80 min at 60 min headway, 2 events
+  EXPECT_EQ(2, tram(headway, {{"multiple", "false"}}));
 
-  // LONG (departed 4 days ago) passes B at 23:50, LONG_NEXT (departed 3 days
-  // ago) at 00:05 on the next day.
+  // LONG departed 4 days ago at 23:50, LONG_NEXT 3 days ago at 00:05.
   EXPECT_EQ(2, ferry("current_trips_running_scheduled_count"));
   EXPECT_EQ(2, ferry(realtime, {{"cancelled", "false"}}));
   EXPECT_EQ(10, ferry(delay + "_sum"));
-  // LONG_NEXT: -15 min at 15 min headway
-  EXPECT_EQ(1, ferry(headway, {{"multiple", "true"}}));
-  // LONG: +25 min at 15 min headway
-  EXPECT_EQ(1, ferry(headway, {{"multiple", "false"}}));
+  // LONG_NEXT: -15 min at 15 min headway, 3 events from B
+  EXPECT_EQ(3, ferry(headway, {{"multiple", "true"}}));
+  // LONG: +25 min at 15 min headway, 3 events from B
+  EXPECT_EQ(3, ferry(headway, {{"multiple", "false"}}));
 
   EXPECT_EQ(3, rail(rt_events, predicted));
   EXPECT_EQ(3, rail(rt_events, propagated));
   EXPECT_EQ(0, rail(rt_events, {{"timestamp_reason", "OBSERVED"}}));
   EXPECT_EQ(2, bus(rt_events, predicted));
   EXPECT_EQ(0, bus(rt_events, propagated));
-  EXPECT_EQ(2, tram(rt_events, predicted));
-  EXPECT_EQ(2, tram(rt_events, propagated));
-  EXPECT_EQ(8, m.at("total_trips_with_realtime_count"));
+  EXPECT_EQ(3, tram(rt_events, predicted));
+  EXPECT_EQ(3, tram(rt_events, propagated));
+  EXPECT_EQ(9, m.at("total_trips_with_realtime_count"));
 
   // UTC days of the first (LONG) and last (DAY_NEXT) departure
   auto const day_start = [](date::sys_days const x) {

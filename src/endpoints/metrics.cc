@@ -36,8 +36,10 @@ constexpr auto const kDelayMinutesBuckets = std::array<double, 18U>{
 constexpr auto const kMaxDistanceToMultipleInHeadways = 1.0 / 6.0;
 constexpr auto const kDay = n::unixtime_t::duration{std::chrono::days{1}};
 
-bool is_close_to_nonzero_multiple(double const delay, double const period) {
-  auto const r = std::abs(delay / period);
+bool is_close_to_nonzero_multiple(n::unixtime_t::duration const delay,
+                                  n::unixtime_t::duration const period) {
+  auto const r = std::abs(static_cast<double>(delay.count()) /
+                          static_cast<double>(period.count()));
   return std::round(r) != 0.0 &&
          std::abs(r - std::round(r)) <= kMaxDistanceToMultipleInHeadways;
 }
@@ -65,29 +67,31 @@ std::optional<std::pair<n::rt::run_stop, n::event_type>> current_event(
   return event;
 }
 
-n::unixtime_t::duration headway(n::timetable const& tt,
-                                n::transport const t,
-                                n::stop_idx_t const stop,
-                                n::event_type const ev) {
-  auto const r = tt.transport_route_[t.t_idx_];
-  auto const transports = tt.route_transport_ranges_[r];
-  auto const event_times = tt.event_times_at_stop(r, stop, ev);
-  auto const own = event_times[to_idx(t.t_idx_ - transports.from_)];
-  auto h = kDay;
-  for (auto const [i, o] : utl::enumerate(transports)) {
-    auto const gap_on_same_day =
-        n::unixtime_t::duration{event_times[i].count() - own.count()};
-    auto const closest_day_on_other_side =
-        gap_on_same_day > n::unixtime_t::duration{0} ? t.day_ - 1 : t.day_ + 1;
-    if (gap_on_same_day != n::unixtime_t::duration{0} &&
-        tt.is_transport_active(o, t.day_)) {
-      h = std::min(h, std::chrono::abs(gap_on_same_day));
+n::unixtime_t::duration headway(n::timetable const& tt, n::transport const t) {
+  auto const transports =
+      tt.route_transport_ranges_[tt.transport_route_[t.t_idx_]];
+  auto const n_transports = static_cast<int>(transports.size());
+  auto const own = static_cast<int>(to_idx(t.t_idx_ - transports.from_));
+  auto const departure = tt.event_time(t, 0U, n::event_type::kDep);
+  auto const gap_to_closest_active = [&](int const direction) {
+    for (auto step = 1; step <= n_transports; ++step) {
+      auto const i = own + direction * step;
+      auto const o =
+          static_cast<std::size_t>((i + n_transports) % n_transports);
+      auto const day = i < 0               ? t.day_ - 1
+                       : i >= n_transports ? t.day_ + 1
+                                           : t.day_;
+      auto const other = n::transport{transports[o], day};
+      auto const gap = std::chrono::abs(
+          tt.event_time(other, 0U, n::event_type::kDep) - departure);
+      if (gap != n::unixtime_t::duration{0} &&
+          tt.is_transport_active(other.t_idx_, other.day_)) {
+        return gap;
+      }
     }
-    if (tt.is_transport_active(o, closest_day_on_other_side)) {
-      h = std::min(h, kDay - std::chrono::abs(gap_on_same_day));
-    }
-  }
-  return h;
+    return kDay;
+  };
+  return std::min(gap_to_closest_active(1), gap_to_closest_active(-1));
 }
 
 void update_all_runs_metrics(nigiri::timetable const& tt,
@@ -153,7 +157,7 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
     }
 
     auto& rt = metrics.current_trips_running_scheduled_with_realtime_count_;
-    auto& hw = metrics.current_trips_running_delay_headway_count_;
+    auto& hw = metrics.total_rt_events_delay_headway_count_;
     auto const [it, _] = metrics.running_trips_by_provider_clasz_.emplace(
         key,
         running_trips_metrics{
@@ -176,6 +180,31 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
       }
       for (auto const state : rtt->rt_transport_data_states_[rt_t]) {
         m->rt_events_[static_cast<std::size_t>(state)]->Increment();
+      }
+      if (fr.is_scheduled() && !fr.is_cancelled()) {
+        auto const h = headway(tt, fr.t_);
+        auto const seq = rtt->rt_transport_location_seq_[rt_t];
+        for (auto const [i, state] :
+             utl::enumerate(rtt->rt_transport_data_states_[rt_t])) {
+          // inverse of rt_timetable::event_idx()
+          auto const stop = static_cast<n::stop_idx_t>((i + 1U) / 2U);
+          auto const ev =
+              i % 2U == 0U ? n::event_type::kDep : n::event_type::kArr;
+          if (state == n::rt_data_state::kNoRtData ||
+              state == n::rt_data_state::kInconsistent ||
+              n::stop{seq[stop]}.is_cancelled()) {
+            continue;
+          }
+          auto const delay = rtt->unix_event_time(rt_t, stop, ev) -
+                             tt.event_time(fr.t_, stop, ev);
+          if (is_close_to_nonzero_multiple(delay, h) ||
+              is_close_to_nonzero_multiple(delay, kDay)) {
+            m->headway_multiple_.Increment();
+          } else if (std::chrono::abs(delay) >=
+                     h * (1.0 - kMaxDistanceToMultipleInHeadways)) {
+            m->headway_other_.Increment();
+          }
+        }
       }
       auto const active = n::interval{
           fr[0].time(n::event_type::kDep),
@@ -207,16 +236,6 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
                   begin(kDelayMinutesBuckets), end(kDelayMinutesBuckets)});
         }
         m->delay_->Observe(delay);
-        auto const h =
-            static_cast<double>(headway(tt, fr.t_, stp.stop_idx_, ev).count());
-        if (is_close_to_nonzero_multiple(delay, h) ||
-            is_close_to_nonzero_multiple(delay,
-                                         static_cast<double>(kDay.count()))) {
-          m->headway_multiple_.Increment();
-        } else if (std::abs(delay) >=
-                   h * (1.0 - kMaxDistanceToMultipleInHeadways)) {
-          m->headway_other_.Increment();
-        }
       }
     }
   }

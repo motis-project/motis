@@ -55,8 +55,7 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>& current_trips_running_added_count_;
   prometheus::Family<prometheus::Histogram>&
       current_trips_running_delay_minutes_;
-  prometheus::Family<prometheus::Gauge>&
-      current_trips_running_delay_headway_count_;
+  prometheus::Family<prometheus::Gauge>& total_rt_events_delay_headway_count_;
   prometheus::Gauge& total_trips_with_realtime_count_;
   prometheus::Family<prometheus::Gauge>& total_rt_events_count_;
   prometheus::Family<prometheus::Gauge>& timetable_first_day_timestamp_;
