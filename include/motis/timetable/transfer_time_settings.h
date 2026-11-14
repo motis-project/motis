@@ -42,9 +42,16 @@ template <typename Query>
 nigiri::routing::transfer_time_settings get_transfer_time_settings(
     Query const& query) {
   utl::verify<net::bad_request_exception>(
-      query.minTransferTime_ >= 0 && query.additionalTransferTime_ >= 0,
-      "minTransferTime={} and additionalTransferTime={} must not be negative",
-      query.minTransferTime_, query.additionalTransferTime_);
+      query.minTransferTime_ >= 0, "minTransferTime={} must not be negative",
+      query.minTransferTime_);
+  utl::verify<net::bad_request_exception>(
+      query.additionalTransferTime_ >= 0,
+      "additionalTransferTime={} must not be negative",
+      query.additionalTransferTime_);
+  utl::verify<net::bad_request_exception>(
+      query.transferTimeFactor_ >= 1.0,
+      "transferTimeFactor={} must not be smaller than 1",
+      query.transferTimeFactor_);
   return {.default_ = (query.minTransferTime_ == 0 &&
                        query.additionalTransferTime_ == 0 &&
                        query.transferTimeFactor_ == 1.0),

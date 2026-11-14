@@ -93,7 +93,7 @@ TEST(motis, map_stops_filter_modes) {
 }
 
 // Negative transfer times are rejected.
-TEST(motis, plan_rejects_negative_transfer_times) {
+TEST(motis, plan_rejects_invalid_transfer_time_settings) {
   auto& d = timetable_only();
   auto const routing = utl::init_from<ep::routing>(d).value();
   constexpr auto const kPlan =
@@ -101,6 +101,8 @@ TEST(motis, plan_rejects_negative_transfer_times) {
   EXPECT_THROW(routing(fmt::format("{}&additionalTransferTime=-1", kPlan)),
                net::bad_request_exception);
   EXPECT_THROW(routing(fmt::format("{}&minTransferTime=-1", kPlan)),
+               net::bad_request_exception);
+  EXPECT_THROW(routing(fmt::format("{}&transferTimeFactor=0.5", kPlan)),
                net::bad_request_exception);
   EXPECT_NO_THROW(routing(kPlan));
 }
