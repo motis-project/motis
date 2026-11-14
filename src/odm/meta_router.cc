@@ -49,6 +49,7 @@
 #include "motis/tag_lookup.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
+#include "motis/timetable/transfer_time_settings.h"
 #include "motis/transport_mode.h"
 
 namespace n = nigiri;
@@ -162,52 +163,38 @@ meta_router::~meta_router() = default;
 
 n::routing::query meta_router::get_base_query(
     n::interval<n::unixtime_t> const& intvl) const {
-  return {
-      .start_time_ = intvl,
-      .start_match_mode_ = r_.is_osr_loaded()
-                               ? n::routing::location_match_mode::kIntermodal
-                               : n::routing::location_match_mode::kEquivalent,
-      .dest_match_mode_ = r_.is_osr_loaded()
-                              ? n::routing::location_match_mode::kIntermodal
-                              : n::routing::location_match_mode::kEquivalent,
-      .use_start_footpaths_ = !r_.is_osr_loaded(),
-      .max_transfers_ = static_cast<std::uint8_t>(
-          query_.maxTransfers_.has_value() ? *query_.maxTransfers_
-                                           : n::routing::kMaxTransfers),
-      .max_travel_time_ = query_.maxTravelTime_
-                              .and_then([](std::int64_t const dur) {
-                                return std::optional{n::duration_t{dur}};
-                              })
-                              .value_or(ep::kInfinityDuration),
-      .min_connection_count_ = 0U,
-      .extend_interval_earlier_ = false,
-      .extend_interval_later_ = false,
-      .max_interval_ = std::nullopt,
-      .prf_idx_ = static_cast<n::profile_idx_t>(
-          query_.useRoutedTransfers_
-              ? (query_.pedestrianProfile_ ==
-                         api::PedestrianProfileEnum::WHEELCHAIR
-                     ? 2U
-                     : 1U)
-              : 0U),
-      .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
-      .require_bike_transport_ = query_.requireBikeTransport_,
-      .require_car_transport_ = query_.requireCarTransport_,
-      .no_compulsory_reservation_ = query_.noCompulsoryReservation_,
-      .transfer_time_settings_ =
-          n::routing::transfer_time_settings{
-              .default_ = (query_.minTransferTime_ == 0 &&
-                           query_.additionalTransferTime_ == 0 &&
-                           query_.transferTimeFactor_ == 1.0),
-              .min_transfer_time_ = n::duration_t{query_.minTransferTime_},
-              .additional_time_ = n::duration_t{query_.additionalTransferTime_},
-              .factor_ = static_cast<float>(query_.transferTimeFactor_)},
-      .via_stops_ =
-          motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
-                                   query_.viaMinimumStay_, query_.arriveBy_),
-      .fastest_direct_ = fastest_direct_ == ep::kInfinityDuration
-                             ? std::nullopt
-                             : std::optional{fastest_direct_}};
+  return {.start_time_ = intvl,
+          .start_match_mode_ =
+              r_.is_osr_loaded() ? n::routing::location_match_mode::kIntermodal
+                                 : n::routing::location_match_mode::kEquivalent,
+          .dest_match_mode_ =
+              r_.is_osr_loaded() ? n::routing::location_match_mode::kIntermodal
+                                 : n::routing::location_match_mode::kEquivalent,
+          .use_start_footpaths_ = !r_.is_osr_loaded(),
+          .max_transfers_ = static_cast<std::uint8_t>(
+              query_.maxTransfers_.has_value() ? *query_.maxTransfers_
+                                               : n::routing::kMaxTransfers),
+          .max_travel_time_ = query_.maxTravelTime_
+                                  .and_then([](std::int64_t const dur) {
+                                    return std::optional{n::duration_t{dur}};
+                                  })
+                                  .value_or(ep::kInfinityDuration),
+          .min_connection_count_ = 0U,
+          .extend_interval_earlier_ = false,
+          .extend_interval_later_ = false,
+          .max_interval_ = std::nullopt,
+          .prf_idx_ = get_profile_idx(query_),
+          .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
+          .require_bike_transport_ = query_.requireBikeTransport_,
+          .require_car_transport_ = query_.requireCarTransport_,
+          .no_compulsory_reservation_ = query_.noCompulsoryReservation_,
+          .transfer_time_settings_ = get_transfer_time_settings(query_),
+          .via_stops_ = motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
+                                                 query_.viaMinimumStay_,
+                                                 query_.arriveBy_),
+          .fastest_direct_ = fastest_direct_ == ep::kInfinityDuration
+                                 ? std::nullopt
+                                 : std::optional{fastest_direct_}};
 }
 
 std::vector<meta_router::routing_result> meta_router::search_interval(
@@ -534,7 +521,7 @@ api::plan_response meta_router::run() {
                 annotation_rtt_, r_.matches_, r_.elevations_, r_.shapes_,
                 gbfs_rd_, r_.ae_, r_.tz_, j, start_, dest_, cache,
                 ep::blocked.get(),
-                query_.requireCarTransport_ && query_.useRoutedTransfers_,
+                query_.requireCarTransport_ && use_routed_transfers(query_),
                 params, query_.pedestrianProfile_, query_.elevationCosts_,
                 query_.joinInterlinedLegs_, detailed_transfers,
                 query_.detailedLegs_, query_.withFares_,

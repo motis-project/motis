@@ -75,6 +75,7 @@
 #include "motis/td_offsets.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
+#include "motis/timetable/transfer_time_settings.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
@@ -1116,27 +1117,12 @@ api::plan_response routing::route(api::plan_params const& query,
         .min_connection_count_ = static_cast<unsigned>(query.numItineraries_),
         .extend_interval_earlier_ = start_time.extend_interval_earlier_,
         .extend_interval_later_ = start_time.extend_interval_later_,
-        .prf_idx_ = static_cast<n::profile_idx_t>(
-            query.useRoutedTransfers_
-                ? query.requireCarTransport_ ? n::kCarProfile
-                  : query.pedestrianProfile_ ==
-                          api::PedestrianProfileEnum::WHEELCHAIR
-                      ? n::kWheelchairProfile
-                      : n::kFootProfile
-                : 0U),
+        .prf_idx_ = get_profile_idx(query),
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
         .require_bike_transport_ = query.requireBikeTransport_,
         .require_car_transport_ = query.requireCarTransport_,
         .no_compulsory_reservation_ = query.noCompulsoryReservation_,
-        .transfer_time_settings_ =
-            n::routing::transfer_time_settings{
-                .default_ = (query.minTransferTime_ == 0 &&
-                             query.additionalTransferTime_ == 0 &&
-                             query.transferTimeFactor_ == 1.0),
-                .min_transfer_time_ = n::duration_t{query.minTransferTime_},
-                .additional_time_ =
-                    n::duration_t{query.additionalTransferTime_},
-                .factor_ = static_cast<float>(query.transferTimeFactor_)},
+        .transfer_time_settings_ = get_transfer_time_settings(query),
         .via_stops_ = get_via_stops(*tt_, *tags_, query.via_,
                                     query.viaMinimumStay_, query.arriveBy_),
         .fastest_direct_ = fastest_direct == kInfinityDuration
@@ -1282,7 +1268,7 @@ api::plan_response routing::route(api::plan_params const& query,
               w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
               elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
               blocked.get(),
-              query.requireCarTransport_ && query.useRoutedTransfers_,
+              query.requireCarTransport_ && use_routed_transfers(query),
               osr_params, query.pedestrianProfile_, query.elevationCosts_,
               query.joinInterlinedLegs_, detailed_transfers,
               query.detailedLegs_, query.withFares_,

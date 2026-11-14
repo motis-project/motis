@@ -18,26 +18,11 @@
 #include "motis/endpoints/stop_times.h"
 #include "motis/itinerary_id.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
+#include "motis/timetable/transfer_time_settings.h"
 
 #include "itinerary_id.pb.h"
 
 namespace motis::ep {
-
-// Mirrors the `plan` endpoint's profile selection.
-nigiri::profile_idx_t leg_alternatives_prf_idx(
-    bool const use_routed_transfers,
-    bool const require_car_transport,
-    api::PedestrianProfileEnum const pedestrian_profile) {
-  if (!use_routed_transfers) {
-    return nigiri::profile_idx_t{0U};
-  }
-  if (require_car_transport) {
-    return nigiri::kCarProfile;
-  }
-  return pedestrian_profile == api::PedestrianProfileEnum::WHEELCHAIR
-             ? nigiri::kWheelchairProfile
-             : nigiri::kFootProfile;
-}
 
 template <typename Endpoint>
 ep::routing make_routing(Endpoint const& ep) {
@@ -95,9 +80,8 @@ api::Itinerary refresh_itinerary::operator()(
       static_cast<std::size_t>(query.numLegAlternatives_),
       to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
       query.requireCarTransport_, query.noCompulsoryReservation_,
-      leg_alternatives_prf_idx(query.useRoutedTransfers_,
-                               query.requireCarTransport_,
-                               query.pedestrianProfile_),
+      get_profile_idx(query.useRoutedTransfers_, query.requireCarTransport_,
+                      query.pedestrianProfile_),
       make_capped_first_last_mile_options(*this, query));
 }
 
@@ -127,9 +111,8 @@ api::Itinerary refresh_itinerary_post::operator()(
       static_cast<std::size_t>(query.numLegAlternatives_),
       to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
       query.requireCarTransport_, query.noCompulsoryReservation_,
-      leg_alternatives_prf_idx(query.useRoutedTransfers_,
-                               query.requireCarTransport_,
-                               query.pedestrianProfile_),
+      get_profile_idx(query.useRoutedTransfers_, query.requireCarTransport_,
+                      query.pedestrianProfile_),
       make_capped_first_last_mile_options(*this, query));
 }
 

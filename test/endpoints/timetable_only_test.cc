@@ -13,6 +13,7 @@
 #include "motis/data.h"
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/one_to_many_post.h"
+#include "motis/endpoints/routing.h"
 #include "motis/import.h"
 
 using namespace motis;
@@ -89,4 +90,17 @@ TEST(motis, map_stops_filter_modes) {
   EXPECT_EQ(2U, stops(kBox).size());
   EXPECT_EQ(2U, stops(fmt::format("{}&modes=BUS", kBox)).size());
   EXPECT_TRUE(stops(fmt::format("{}&modes=SUBWAY", kBox)).empty());
+}
+
+// Negative transfer times are rejected.
+TEST(motis, plan_rejects_negative_transfer_times) {
+  auto& d = timetable_only();
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  constexpr auto const kPlan =
+      "?fromPlace=test_A&toPlace=test_B&time=2019-05-01T08:00Z";
+  EXPECT_THROW(routing(fmt::format("{}&additionalTransferTime=-1", kPlan)),
+               net::bad_request_exception);
+  EXPECT_THROW(routing(fmt::format("{}&minTransferTime=-1", kPlan)),
+               net::bad_request_exception);
+  EXPECT_NO_THROW(routing(kPlan));
 }
