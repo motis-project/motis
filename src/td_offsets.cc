@@ -35,14 +35,14 @@ void normalize_td_offsets(std::vector<n::routing::td_offset>& offsets) {
   for (auto it = begin(offsets); it != end(offsets);) {
     auto const t = it->valid_from_;
     for (; it != end(offsets) && it->valid_from_ == t; ++it) {
-      if (it->duration_ >= n::footpath::kMaxDuration) {
+      if (it->duration_ >= n::kTdFootpathBan) {
         active.erase(it->mode());
       } else {
         active[it->mode()] = it->duration_;
       }
     }
 
-    auto best = n::routing::td_offset{t, n::footpath::kMaxDuration};
+    auto best = n::routing::td_offset{t, n::kTdFootpathBan};
     for (auto const& [mode, duration] : active) {
       if (duration < best.duration_ ||
           (duration == best.duration_ && mode < best.mode())) {
@@ -64,7 +64,7 @@ void normalize_td_offsets(std::vector<n::routing::td_offset>& offsets) {
   auto best_arr = std::optional<n::unixtime_t>{};
   for (auto i = envelope.size(); i-- != 0U;) {
     auto const& e = envelope[i];
-    if (e.duration_ >= n::footpath::kMaxDuration) {
+    if (e.duration_ >= n::kTdFootpathBan) {
       fixed.push_back(e);
       continue;
     }
@@ -74,13 +74,13 @@ void normalize_td_offsets(std::vector<n::routing::td_offset>& offsets) {
                                : n::unixtime_t::max();
     if (best_arr.has_value() && *best_arr - e.duration_ <= e.valid_from_) {
       // whole window dominated by waiting for a later, faster offer
-      fixed.push_back({e.valid_from_, n::footpath::kMaxDuration});
+      fixed.push_back({e.valid_from_, n::kTdFootpathBan});
       continue;
     }
 
     if (best_arr.has_value() && *best_arr - e.duration_ < next_from) {
       // tail of the window dominated -> end the offer early
-      fixed.push_back({*best_arr - e.duration_, n::footpath::kMaxDuration});
+      fixed.push_back({*best_arr - e.duration_, n::kTdFootpathBan});
     }
     fixed.push_back(e);
     best_arr = e.valid_from_ + e.duration_;
@@ -93,7 +93,7 @@ void normalize_td_offsets(std::vector<n::routing::td_offset>& offsets) {
   offsets.clear();
   auto const zero = n::unixtime_t{n::i32_minutes{0}};
   if (fixed.front().valid_from_ > zero) {
-    offsets.push_back({zero, n::footpath::kMaxDuration});
+    offsets.push_back({zero, n::kTdFootpathBan});
   }
   for (auto const& e : fixed) {
     if (offsets.empty() || !is_same_td_state(offsets.back(), e)) {

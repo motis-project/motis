@@ -214,6 +214,98 @@ TEST(motis, trip_ticketing) {
       leg2.ticketUrls_->web_);
 }
 
+// Trip-qualified transfers.txt rows move the last stop of T1 and T2 to virtual
+// locations below Child2 / Child2B. Ticketing data is stated per stop: it has
+// to be found from there as well.
+constexpr auto const kTicketingRulesGTFS = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone,ticketing_deep_link_id
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin,link-1
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+Parent1,Parent1,50.0,8.0,1,,
+Child1A,Child1A,50.001,8.001,0,Parent1,1
+Parent2,Parent2,51.0,9.0,1,,
+Child2,Child2,51.001,9.001,0,Parent2,1
+Child2B,Child2B,51.002,9.002,0,Parent2,2
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,R1,R1,,109
+R2,DB,R2,R2,,109
+R3,DB,R3,R3,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+R1,S1,T1,Parent2 Express,
+R2,S1,T2,Parent2 Local,
+R3,S1,T3,Parent1,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type,ticketing_type
+T1,10:00:00,10:00:00,Child1A,1,0,0,0
+T1,13:55:00,13:55:00,Child2,2,0,0,0
+T2,12:00:00,12:00:00,Child1A,1,0,0,0
+T2,13:55:00,13:55:00,Child2B,2,0,0,1
+T3,14:00:00,14:00:00,Child2,1,0,0,0
+T3,15:00:00,15:00:00,Child1A,2,0,0,0
+
+# transfers.txt
+from_stop_id,to_stop_id,from_trip_id,to_trip_id,transfer_type,min_transfer_time
+Child2,Child2,,,2,120
+Child2,Child2,T1,T3,2,600
+Child2B,Child2,,,2,180
+Child2B,Child2,T2,T3,2,600
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+
+# ticketing_deep_links.txt
+ticketing_deep_link_id,web_url,android_intent_uri,ios_universal_link_url
+link-1,https://example.com,https://example.com,https://example.com
+
+# ticketing_identifiers.txt
+ticketing_stop_id,stop_id,agency_id
+ticket-stop-3,Child2,DB
+)";
+
+TEST(motis, trip_ticketing_at_transfer_rule_stops) {
+  auto const dir = std::filesystem::path{"test/data/trip_ticketing_rules"};
+  auto ec = std::error_code{};
+  std::filesystem::remove_all(dir, ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kTicketingRulesGTFS}}}},
+             .street_routing_ = false};
+  import(c, dir);
+  auto d = data{dir, c};
+
+  // precondition: both rules create virtual locations
+  ASSERT_GE(test::n_virts(*d.tt_), 2U);
+
+  auto const trip_ep = utl::init_from<ep::trip>(d).value();
+
+  // the ticketing stop id of Child2 is found from its virtual location
+  auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
+  ASSERT_EQ(1, res.legs_.size());
+  ASSERT_TRUE(res.legs_[0].ticketUrls_.has_value());
+  EXPECT_NE(std::string::npos,
+            res.legs_[0].ticketUrls_->web_->find(
+                "to_ticketing_stop_time_id=%5B%22ticket-stop-3%22%5D"))
+      << *res.legs_[0].ticketUrls_->web_;
+
+  // ticketing_type=1 at Child2B: no ticket for a leg that ends there
+  auto const res2 = trip_ep("?tripId=20190501_12%3A00_test_T2");
+  ASSERT_EQ(1, res2.legs_.size());
+  EXPECT_FALSE(res2.legs_[0].ticketUrls_.has_value());
+}
+
 // Two trips joined into one transport via `block_id`. The second trip's
 // stop_sequence numbers are indexed relative to the trip, not the transport.
 constexpr auto const kGTFSInterlined = R"(
@@ -477,6 +569,99 @@ TEST(motis, trip_ticketing_rt_added) {
       trip_ep("?tripId=20190501_12%3A00_test_RT_ADDED&joinInterlinedLegs=true");
   ASSERT_EQ(1, res.legs_.size());
   EXPECT_FALSE(res.legs_[0].ticketUrls_.has_value());
+}
+
+// T1 runs S1 10:00 -> S5 10:40, the leg is S3 10:20 -> S4 10:30 (08:20 -
+// 08:30 UTC). A trip alert counts for the leg only if it is active in that
+// time, not at any other point of the run.
+TEST(motis, leg_alerts_leg_time) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto msg =
+      to_feed_msg({alert{.header_ = "before boarding",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}},
+                   alert{.header_ = "on board",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}}},
+                  date::sys_days{2019_y / May / 1} + 6h);
+  auto const set_period = [&](int const entity, int const h, int const m) {
+    auto const start =
+        date::sys_seconds{date::sys_days{2019_y / May / 1} +
+                          std::chrono::hours{h} + std::chrono::minutes{m}};
+    auto const p =
+        msg.mutable_entity(entity)->mutable_alert()->add_active_period();
+    p->set_start(static_cast<std::uint64_t>(start.time_since_epoch().count()));
+    p->set_end(
+        static_cast<std::uint64_t>((start + 5min).time_since_epoch().count()));
+  };
+  set_period(0, 8, 0);
+  set_period(1, 8, 22);
+  n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+                           msg);
+
+  auto const routing_ep = utl::init_from<ep::routing>(d).value();
+  auto const res =
+      routing_ep("?fromPlace=test_S3&toPlace=test_S4&time=2019-05-01T08:00Z");
+  ASSERT_EQ(1, res.itineraries_.size());
+
+  auto const& legs = res.itineraries_.front().legs_;
+  ASSERT_EQ(1, legs.size());
+  ASSERT_TRUE(legs[0].alerts_.has_value());
+  ASSERT_EQ(1U, legs[0].alerts_->size());
+  EXPECT_EQ("on board", legs[0].alerts_->front().headerText_);
+}
+
+// T1 and T2 share BLOCK1 (one transport, two trip sections). A leg on T2 must
+// get T2's trip alerts, not those of the transport's first trip T1.
+TEST(motis, leg_alerts_second_trip_section) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto const msg =
+      to_feed_msg({alert{.header_ = "T1",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}},
+                   alert{.header_ = "T2",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T2"}}}}}},
+                  date::sys_days{2019_y / May / 1} + 6h);
+  n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+                           msg);
+
+  auto const routing_ep = utl::init_from<ep::routing>(d).value();
+  auto const res =
+      routing_ep("?fromPlace=test_S6&toPlace=test_S7&time=2019-05-01T08:45Z");
+  ASSERT_EQ(1, res.itineraries_.size());
+
+  auto const& legs = res.itineraries_.front().legs_;
+  ASSERT_EQ(1, legs.size());
+  ASSERT_TRUE(legs[0].alerts_.has_value());
+  ASSERT_EQ(1U, legs[0].alerts_->size());
+  EXPECT_EQ("T2", legs[0].alerts_->front().headerText_);
 }
 
 constexpr auto kNetex = R"(

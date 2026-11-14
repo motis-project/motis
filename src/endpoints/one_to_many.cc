@@ -7,7 +7,9 @@
 #include <optional>
 
 #include "utl/enumerate.h"
+#include "utl/verify.h"
 
+#include "net/bad_request_exception.h"
 #include "net/too_many_exception.h"
 
 #include "nigiri/common/delta_t.h"
@@ -19,6 +21,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
+#include "motis/timetable/transfer_time_settings.h"
 
 namespace motis::ep {
 
@@ -147,24 +150,12 @@ std::vector<api::ParetoSet> transit_durations(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ =
           std::chrono::duration_cast<n::duration_t>(max_travel_time),
-      .prf_idx_ = query.useRoutedTransfers_
-                      ? (query.pedestrianProfile_ ==
-                                 api::PedestrianProfileEnum::WHEELCHAIR
-                             ? n::kWheelchairProfile
-                             : n::kFootProfile)
-                      : n::kDefaultProfile,
+      .prf_idx_ = get_profile_idx(query),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .no_compulsory_reservation_ = query.noCompulsoryReservation_,
-      .transfer_time_settings_ =
-          n::routing::transfer_time_settings{
-              .default_ = (query.minTransferTime_ == 0 &&
-                           query.additionalTransferTime_ == 0 &&
-                           query.transferTimeFactor_ == 1.0),
-              .min_transfer_time_ = n::duration_t{query.minTransferTime_},
-              .additional_time_ = n::duration_t{query.additionalTransferTime_},
-              .factor_ = static_cast<float>(query.transferTimeFactor_)},
+      .transfer_time_settings_ = get_transfer_time_settings(query),
   };
 
   if (ep.tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
@@ -243,6 +234,9 @@ api::OneToManyIntermodalResponse run_one_to_many_intermodal(
     Query const& query,
     place_t const& one,
     std::vector<place_t> const& many) {
+  utl::verify<net::bad_request_exception>(
+      ep.w_ != nullptr && ep.l_ != nullptr,
+      "one-to-many-intermodal requires street routing (OSM)");
   ep.metrics_->one_to_many_requests_.Increment();
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));

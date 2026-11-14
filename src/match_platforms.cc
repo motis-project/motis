@@ -228,7 +228,9 @@ vector_map<n::location_idx_t, osr::platform_idx_t> get_matches(
   m.resize(tt.n_locations());
   utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
     auto const l = n::location_idx_t{i};
-    m[l] = get_match(tt, pl, w, lookup, l, max_matching_distance);
+    m[l] = tt.locations_.is_virt(l)
+               ? osr::platform_idx_t::invalid()
+               : get_match(tt, pl, w, lookup, l, max_matching_distance);
   });
   return m;
 }
@@ -314,6 +316,9 @@ void way_matches_storage::preprocess_osr_matches(
       [&](int, std::size_t const idx) {
         auto const l =
             n::location_idx_t{static_cast<n::location_idx_t::value_t>(idx)};
+        if (tt.locations_.is_virt(l)) {
+          return std::vector<osr::raw_way_candidate>{};
+        }
         return lookup.get_raw_match(
             osr::location{tt.locations_.coordinates_[l],
                           pl.get_level(w, platform_matches[l])},

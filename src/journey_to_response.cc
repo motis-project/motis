@@ -106,18 +106,13 @@ std::optional<std::vector<api::Alert>> get_alerts(
     return to_alert(rtt->alerts_, x, language);
   };
 
-  auto const x =
-      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs_ev) {
-         auto const& [rs, ev_type] = rs_ev;
-         return std::optional{rs.get_trip_idx(ev_type)};
-       }).value_or(fr.trip_idx());
-  auto const l =
-      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs) {
-         return std::optional{rs.first.get_location_idx()};
-       }).value_or(n::location_idx_t::invalid());
+  auto const x = s ? s->first.get_trip_idx(s->second)
+                   : fr[0].get_trip_idx(n::event_type::kDep);
+  auto const stop_idx = s ? std::optional{s->first.stop_idx_} : std::nullopt;
+
   auto alerts = std::vector<api::Alert>{};
-  for (auto const& a : rtt->alerts_.get_alerts(tt, tt.trip_id_src_[x], x,
-                                               fr.rt_, l, fuzzy_stop)) {
+  for (auto const& a : rtt->alerts_.get_alerts(tt, *rtt, tt.trip_id_src_[x], x,
+                                               fr, stop_idx, fuzzy_stop)) {
     alerts.emplace_back(call_to_alert(a));
   }
 
@@ -170,9 +165,8 @@ std::optional<api::TicketUrls> get_ticketing_urls(
   }
 
   if (tt.locations_.ticketing_unavailable_.test(
-          enter_stop.get_stop().location_idx()) ||
-      tt.locations_.ticketing_unavailable_.test(
-          exit_stop.get_stop().location_idx())) {
+          enter_stop.get_location_idx()) ||
+      tt.locations_.ticketing_unavailable_.test(exit_stop.get_location_idx())) {
     return std::nullopt;
   }
 
@@ -202,7 +196,7 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     auto const location_ticketing_id =
         [&](n::rt::run_stop stop) -> std::optional<std::string_view> {
       auto const provider_ids =
-          tt.location_ticketing_identifier_[stop.get_stop().location_idx()];
+          tt.location_ticketing_identifier_[stop.get_location_idx()];
       auto const provider_idx = exit_stop.get_provider_idx(n::event_type::kArr);
 
       auto const it = std::lower_bound(
@@ -677,7 +671,13 @@ api::Itinerary journey_to_response(
                         [](auto&& x) { return x.transfer_idx_; }),
                     .effectiveFareLegIndex_ = fare_indices.transform(
                         [](auto&& x) { return x.effective_fare_leg_idx_; }),
-                    .alerts_ = get_alerts(fr, std::nullopt, false, lang),
+                    .alerts_ =
+                        get_alerts(n::rt::frun{tt,
+                                               rtt,
+                                               {.t_ = fr.t_,
+                                                .stop_range_ = common_stops,
+                                                .rt_ = fr.rt_}},
+                                   std::nullopt, false, lang),
                     .loopedCalendarSince_ =
                         enter_stop.looped_calendar_since(n::event_type::kDep),
                     .bikesAllowed_ =

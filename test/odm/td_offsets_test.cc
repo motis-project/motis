@@ -40,8 +40,7 @@ TEST(odm, get_td_offsets_basic) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 1min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 
@@ -70,8 +69,7 @@ TEST(odm, get_td_offsets_extension) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 3min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 
@@ -100,8 +98,7 @@ TEST(odm, get_td_offsets_extension_reverse) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 3min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 
@@ -130,8 +127,7 @@ TEST(odm, get_td_offsets_extension_fill_gap) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 3min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 
@@ -158,8 +154,7 @@ TEST(odm, get_td_offsets_intermittent) {
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[0].mode(), kOdmTransportMode);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 1min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].valid_from_, unixtime_t{11h});
@@ -167,8 +162,7 @@ TEST(odm, get_td_offsets_intermittent) {
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[2].mode(), kOdmTransportMode);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].valid_from_,
             unixtime_t{11h + 1min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].mode(), kOdmTransportMode);
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[4].valid_from_, unixtime_t{12h});
@@ -176,8 +170,7 @@ TEST(odm, get_td_offsets_intermittent) {
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[4].mode(), kOdmTransportMode);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[5].valid_from_,
             unixtime_t{12h + 1min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[5].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[5].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[5].mode(), kOdmTransportMode);
 }
 
@@ -216,8 +209,7 @@ TEST(odm, get_td_offsets_long_short_long) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].valid_from_,
             unixtime_t{10h + 3min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].mode(), kOdmTransportMode);
 }
 
@@ -262,8 +254,7 @@ TEST(odm, get_td_offsets_late_improvement) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].valid_from_,
             unixtime_t{10h + 4min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[3].mode(), kOdmTransportMode);
 }
 
@@ -298,8 +289,7 @@ TEST(odm, get_td_offsets_late_worse) {
 
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].valid_from_,
             unixtime_t{10h + 4min});
-  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_,
-            footpath::kMaxDuration);
+  EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].duration_, kTdFootpathBan);
   EXPECT_EQ(td_offsets.at(location_idx_t{1U})[1].mode(), kOdmTransportMode);
 }
 

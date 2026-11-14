@@ -75,6 +75,7 @@
 #include "motis/td_offsets.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
+#include "motis/timetable/transfer_time_settings.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
@@ -130,7 +131,7 @@ std::vector<n::routing::offset> client_offsets(
     // parent stations have no departures - expand them to their child stops
     // (a child stop expands to just itself)
     n::routing::for_each_meta(
-        tt, n::routing::location_match_mode::kOnlyChildren,
+        tt, nullptr, n::routing::location_match_mode::kOnlyChildren,
         tags.get_location(tt, x.stopId_), [&](n::location_idx_t const l) {
           ret.emplace_back(l, duration, mode);
         });
@@ -570,7 +571,7 @@ std::vector<n::routing::offset> routing::get_offsets(
               return station_start(l.l_);
             }
             auto offsets = do_get_offsets(stop_to_osr_location(*this, l.l_));
-            for_each_meta(*tt_,
+            for_each_meta(*tt_, nullptr,
                           nigiri::routing::location_match_mode::kEquivalent,
                           l.l_, [&](n::location_idx_t const c) {
                             offsets.emplace_back(c, n::duration_t{0U}, 0U);
@@ -764,7 +765,7 @@ void remove_slower_than_fastest_direct(n::routing::query& q) {
 
   auto const worse_than_fastest_direct = [&](n::duration_t const min) {
     return [&, min](auto const& o) {
-      return o.duration() < nigiri::footpath::kMaxDuration &&
+      return o.duration() < nigiri::kTdFootpathBan &&
              o.duration() + min >= q.fastest_direct_;
     };
   };
@@ -1116,27 +1117,12 @@ api::plan_response routing::route(api::plan_params const& query,
         .min_connection_count_ = static_cast<unsigned>(query.numItineraries_),
         .extend_interval_earlier_ = start_time.extend_interval_earlier_,
         .extend_interval_later_ = start_time.extend_interval_later_,
-        .prf_idx_ = static_cast<n::profile_idx_t>(
-            query.useRoutedTransfers_
-                ? query.requireCarTransport_ ? n::kCarProfile
-                  : query.pedestrianProfile_ ==
-                          api::PedestrianProfileEnum::WHEELCHAIR
-                      ? n::kWheelchairProfile
-                      : n::kFootProfile
-                : 0U),
+        .prf_idx_ = get_profile_idx(query),
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
         .require_bike_transport_ = query.requireBikeTransport_,
         .require_car_transport_ = query.requireCarTransport_,
         .no_compulsory_reservation_ = query.noCompulsoryReservation_,
-        .transfer_time_settings_ =
-            n::routing::transfer_time_settings{
-                .default_ = (query.minTransferTime_ == 0 &&
-                             query.additionalTransferTime_ == 0 &&
-                             query.transferTimeFactor_ == 1.0),
-                .min_transfer_time_ = n::duration_t{query.minTransferTime_},
-                .additional_time_ =
-                    n::duration_t{query.additionalTransferTime_},
-                .factor_ = static_cast<float>(query.transferTimeFactor_)},
+        .transfer_time_settings_ = get_transfer_time_settings(query),
         .via_stops_ = get_via_stops(*tt_, *tags_, query.via_,
                                     query.viaMinimumStay_, query.arriveBy_),
         .fastest_direct_ = fastest_direct == kInfinityDuration
@@ -1165,7 +1151,7 @@ api::plan_response routing::route(api::plan_params const& query,
     auto search_state = n::routing::search_state{};
 #if defined(NIGIRI_CUDA)
     auto gpu_used = false;
-    auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
+    auto const gpu_supported = n::routing::gpu::is_gpu_supported(q, rtt);
     auto const run_on_gpu = [&](bool const use_pong) -> bool {
       try {
         auto const lease = gpu_pool_->acquire();
@@ -1282,7 +1268,7 @@ api::plan_response routing::route(api::plan_params const& query,
               w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
               elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
               blocked.get(),
-              query.requireCarTransport_ && query.useRoutedTransfers_,
+              query.requireCarTransport_ && use_routed_transfers(query),
               osr_params, query.pedestrianProfile_, query.elevationCosts_,
               query.joinInterlinedLegs_, detailed_transfers,
               query.detailedLegs_, query.withFares_,

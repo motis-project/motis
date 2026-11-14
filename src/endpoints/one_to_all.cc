@@ -23,6 +23,7 @@
 #include "motis/place.h"
 #include "motis/server.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
+#include "motis/timetable/transfer_time_settings.h"
 
 namespace motis::ep {
 
@@ -119,25 +120,12 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,
-      .prf_idx_ = static_cast<n::profile_idx_t>(
-          query.useRoutedTransfers_
-              ? (query.pedestrianProfile_ ==
-                         api::PedestrianProfileEnum::WHEELCHAIR
-                     ? 2U
-                     : 1U)
-              : 0U),
+      .prf_idx_ = get_profile_idx(query),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .no_compulsory_reservation_ = query.noCompulsoryReservation_,
-      .transfer_time_settings_ =
-          n::routing::transfer_time_settings{
-              .default_ = (query.minTransferTime_ == 0 &&
-                           query.additionalTransferTime_ == 0 &&
-                           query.transferTimeFactor_ == 1.0),
-              .min_transfer_time_ = n::duration_t{query.minTransferTime_},
-              .additional_time_ = n::duration_t{query.additionalTransferTime_},
-              .factor_ = static_cast<float>(query.transferTimeFactor_)},
+      .transfer_time_settings_ = get_transfer_time_settings(query),
   };
 
   if (tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {

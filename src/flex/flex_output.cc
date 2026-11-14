@@ -217,30 +217,36 @@ void flex_output::annotate_leg(n::lang_t const& lang,
   }
 
   auto const trip = tt_.flex_transport_trip_[t];
+  auto const start =
+      std::chrono::time_point_cast<n::unixtime_t::duration>(*leg.startTime_);
+  auto const end =
+      std::chrono::time_point_cast<n::unixtime_t::duration>(*leg.endTime_);
   auto const get_alerts =
-      [&](n::location_idx_t const l) -> std::optional<std::vector<api::Alert>> {
+      [&](n::location_idx_t const l, n::unixtime_t const from,
+          n::unixtime_t const to) -> std::optional<std::vector<api::Alert>> {
     if (rtt_ == nullptr) {
       return std::nullopt;
     }
     auto alerts = std::vector<api::Alert>{};
-    for (auto const& a :
-         rtt_->alerts_.get_alerts(tt_, tt_.trip_id_src_[trip], trip,
-                                  n::rt_transport_idx_t::invalid(), l, false)) {
+    for (auto const& a : rtt_->alerts_.get_alerts(
+             tt_, tt_.trip_id_src_[trip], trip, n::rt::run{}, l,
+             {from, to + n::duration_t{1}}, false)) {
       alerts.emplace_back(to_alert(rtt_->alerts_, a, lang));
     }
     return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
   };
 
-  auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
+  auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n,
+                                   n::unixtime_t const time) {
     if (w_.is_additional_node(n)) {
       auto const l = additional_nodes_.get(n);
       p = to_place(&tt_, &tags_, &w_, pl_, matches_, ae_, tz_, lang,
                    tt_location{l});
-      p.alerts_ = get_alerts(l);
+      p.alerts_ = get_alerts(l, time, time);
     }
   };
-  write_node_info(leg.from_, from);
-  write_node_info(leg.to_, to);
+  write_node_info(leg.from_, from, start);
+  write_node_info(leg.to_, to, end);
 
   leg.mode_ = api::ModeEnum::FLEX;
   leg.from_.flex_ = get_flex_stop_name(tt_, lang, stop_seq[*from_stop]);
@@ -263,8 +269,6 @@ void flex_output::annotate_leg(n::lang_t const& lang,
   auto const agency =
       tt_.route_ids_[src].route_id_provider_[tt_.trip_route_id_[trip]];
   auto const tz = n::to_time_zone(tt_.timezones_[tt_.providers_[agency].tz_]);
-  auto const start =
-      std::chrono::time_point_cast<n::unixtime_t::duration>(*leg.startTime_);
   leg.from_.pickupBookingRule_ = get_booking_rule(
       tt_, lang, tt_.flex_transport_pickup_booking_rule_[t][*from_stop], start,
       tz);
@@ -272,7 +276,7 @@ void flex_output::annotate_leg(n::lang_t const& lang,
       tt_, lang, tt_.flex_transport_drop_off_booking_rule_[t][*to_stop], start,
       tz);
 
-  leg.alerts_ = get_alerts(n::location_idx_t::invalid());
+  leg.alerts_ = get_alerts(n::location_idx_t::invalid(), start, end);
 }
 
 api::Place flex_output::get_place(n::lang_t const& lang,
