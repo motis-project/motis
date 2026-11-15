@@ -32,6 +32,7 @@
 #include "nigiri/routing/direct.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/leg_alternatives.h"
+#include "nigiri/routing/raptor/reconstruct.h"
 #include "nigiri/routing/search_location.h"
 #include "nigiri/routing/transfer_durations.h"
 #include "nigiri/rt/frun.h"
@@ -870,6 +871,7 @@ api::Itinerary reconstruct_itinerary(
     change.legs_ = {*prev, *fp_leg, *next};
     n::routing::fix_transfer_durations(stop_times_ep.tt_, rt.rtt_.get(), q,
                                        change);
+    n::routing::map_to_bases(stop_times_ep.tt_, rt.rtt_.get(), change);
     return reconstruct(change.legs_[1], tt_location{l.from_},
                        tt_location{l.to_});
   };
