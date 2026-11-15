@@ -578,8 +578,8 @@ TEST(motis, routing) {
     ioc.run();
   }
 
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto const stats = test::gtfsrt_update(
+      d,
       test::to_feed_msg(
           {test::trip_update{.trip_ = {.trip_id_ = "ICE",
                                        .start_time_ = {"03:35:00"},

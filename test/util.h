@@ -5,8 +5,11 @@
 
 #include "gtfsrt/gtfs-realtime.pb.h"
 
+#include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
+
+#include "motis/fwd.h"
 
 namespace motis::test {
 
@@ -65,6 +68,9 @@ std::uint64_t to_unix(T&& x) {
 transit_realtime::FeedMessage to_feed_msg(
     std::vector<feed_entity> const& feed_entities,
     date::sys_seconds const msg_time);
+
+nigiri::rt::statistics gtfsrt_update(data&,
+                                     transit_realtime::FeedMessage const&);
 
 // The number of virtual locations in the timetable.
 inline std::size_t n_virts(nigiri::timetable const& tt) {

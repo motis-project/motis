@@ -104,13 +104,12 @@ TEST(motis, one_to_all_realtime_mode) {
       "&maxTravelTime=45"sv;
 
   // Skip both stops of T1 = the trip is cancelled in the real-time timetable.
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      to_feed_msg(
-          {trip_update{.trip_ = {.trip_id_ = "T1", .date_ = {"20190501"}},
-                       .stop_updates_ = {{.stop_id_ = "A", .skip_ = true},
-                                         {.stop_id_ = "B", .skip_ = true}}}},
-          date::sys_days{2019_y / May / 1} + 7h));
+  auto const stats = test::gtfsrt_update(
+      d, to_feed_msg(
+             {trip_update{.trip_ = {.trip_id_ = "T1", .date_ = {"20190501"}},
+                          .stop_updates_ = {{.stop_id_ = "A", .skip_ = true},
+                                            {.stop_id_ = "B", .skip_ = true}}}},
+             date::sys_days{2019_y / May / 1} + 7h));
   EXPECT_EQ(1U, stats.total_entities_success_);
 
   // OFF and REALTIME_ANNOTATION_ONLY route on the schedule: the cancelled trip

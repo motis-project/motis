@@ -479,8 +479,8 @@ TEST(motis, trip_ticketing_rt_added) {
     return date::sys_seconds{date::sys_days{2019_y / May / 1} +
                              std::chrono::hours{h} + std::chrono::minutes{m}};
   };
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto const stats = test::gtfsrt_update(
+      d,
       to_feed_msg({trip_update{
                       .trip_ = {.trip_id_ = "RT_ADDED", .route_id_ = {"R1"}},
                       .stop_updates_ = {{.stop_id_ = "S1", .time_ = t(12, 0)},
@@ -540,8 +540,7 @@ TEST(motis, leg_alerts) {
   };
   set_period(0, 8, 0, 5min);
   set_period(1, 8, 22, 1h);  // also active during the T2 leg
-  n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-                           msg);
+  test::gtfsrt_update(d, msg);
 
   auto const routing_ep = utl::init_from<ep::routing>(d).value();
   auto const leg_alerts = [&](std::string_view const query) {

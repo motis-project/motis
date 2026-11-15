@@ -1134,6 +1134,7 @@ api::plan_response routing::route(api::plan_params const& query,
     auto r = n::routing::routing_result{};
     auto algorithm = query.algorithm_;
     auto search_state = n::routing::search_state{};
+    auto gpu_journeys = std::optional<std::vector<n::routing::journey>>{};
 #if defined(NIGIRI_CUDA)
     auto gpu_used = false;
     auto const gpu_supported = n::routing::gpu::is_gpu_supported(q, rtt);
@@ -1152,6 +1153,7 @@ api::plan_response routing::route(api::plan_params const& query,
         return true;
       } catch (std::exception const& e) {
         std::cout << "GPU EXCEPTION: " << e.what() << "\n";
+        utl::verify(!use_gpu_cpu_comparison_, "GPU search failed");
         return false;
       }
     };
@@ -1171,7 +1173,10 @@ api::plan_response routing::route(api::plan_params const& query,
           run_on_gpu(/*use_pong=*/pong_applicable &&
                      algorithm == api::algorithmEnum::PONG)) {
         gpu_used = true;
-        break;
+        if (!use_gpu_cpu_comparison_) {
+          break;
+        }
+        gpu_journeys = std::move(search_state.results_.els_);
       }
 #endif
 
@@ -1209,6 +1214,11 @@ api::plan_response routing::route(api::plan_params const& query,
       }
       break;
     }
+    utl::verify(
+        !gpu_journeys || std::ranges::equal(*gpu_journeys, r.journeys_->els_,
+                                            {}, &n::routing::journey::criteria,
+                                            &n::routing::journey::criteria),
+        "GPU and CPU journeys differ");
 
     // record the algorithm that actually ran (after any fallbacks)
     auto const algo_stats = meta_t{

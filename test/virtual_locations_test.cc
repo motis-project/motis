@@ -246,8 +246,8 @@ S1,20190501,1
 )";
 
 data& delay_a_at_s1(data& d) {
-  n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  test::gtfsrt_update(
+      d,
       test::to_feed_msg(
           {test::trip_update{.trip_ = {.trip_id_ = "A",
                                        .start_time_ = {"10:00:00"},

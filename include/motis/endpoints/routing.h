@@ -55,6 +55,8 @@ std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum>);
 void remove_slower_than_fastest_direct(nigiri::routing::query&);
 
 struct routing {
+  static inline bool use_gpu_cpu_comparison_{false};  // for tests
+
   api::plan_response operator()(boost::urls::url_view const&) const;
 
   api::plan_response route(api::plan_params const&,

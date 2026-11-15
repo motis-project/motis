@@ -22,6 +22,7 @@
 #include "motis/elevators/update_elevators.h"
 #include "motis/endpoints/routing.h"
 #include "motis/import.h"
+#include "motis/rt_update.h"
 
 #include "./util.h"
 
@@ -43,18 +44,17 @@ void apply_one_min_delay(data& d,
                          std::string_view const last_stop_id,
                          std::uint32_t const last_stop_seq,
                          std::optional<std::string> start_time = std::nullopt) {
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      test::to_feed_msg(
-          {test::trip_update{
-              .trip_ = {.trip_id_ = std::string{trip_id},
-                        .start_time_ = std::move(start_time),
-                        .date_ = std::string{"20190501"}},
-              .stop_updates_ = {{.stop_id_ = std::string{last_stop_id},
-                                 .seq_ = std::optional{last_stop_seq},
-                                 .ev_type_ = n::event_type::kArr,
-                                 .delay_minutes_ = 1}}}},
-          date::sys_days{2019_y / May / 1} + 9h));
+  auto const stats = test::gtfsrt_update(
+      d, test::to_feed_msg(
+             {test::trip_update{
+                 .trip_ = {.trip_id_ = std::string{trip_id},
+                           .start_time_ = std::move(start_time),
+                           .date_ = std::string{"20190501"}},
+                 .stop_updates_ = {{.stop_id_ = std::string{last_stop_id},
+                                    .seq_ = std::optional{last_stop_seq},
+                                    .ev_type_ = n::event_type::kArr,
+                                    .delay_minutes_ = 1}}}},
+             date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats.total_entities_success_);
 }
 
@@ -867,6 +867,7 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   // not always working get their wheelchair walks routed again.
   auto new_rtt = std::make_unique<n::rt_timetable>(*d.rt_->rtt_);
   d.rt_->e_ = update_elevators(d.config_, d, kElevatorBlockedFasta, *new_rtt);
+  finalize_rtt(*d.tt_, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   // Delay the LOCAL 00:35 ICE alt by 1 min — this is a frequency-
@@ -1244,8 +1245,8 @@ TEST(motis, routing_leg_alternatives_rt_filtered) {
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   // Apply two delays via a single FeedMessage (one entity each).
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto const stats = test::gtfsrt_update(
+      d,
       test::to_feed_msg(
           {test::trip_update{.trip_ = {.trip_id_ = "T1_EARLY",
                                        .start_time_ = std::nullopt,

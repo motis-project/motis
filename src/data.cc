@@ -43,6 +43,7 @@
 #include "motis/odm/bounds.h"
 #include "motis/point_rtree.h"
 #include "motis/railviz.h"
+#include "motis/rt_update.h"
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
@@ -254,6 +255,8 @@ data::data(std::filesystem::path p, config const& c)
                               cista::mmap::protection::READ}
                       .view(),
             *new_rtt);
+        metrics_->gpu_rt_timetable_.Set(finalize_rtt(*tt_, *new_rtt) ? 1.0
+                                                                     : 0.0);
         rt_->rtt_ = std::move(new_rtt);
       }
     }
@@ -313,17 +316,6 @@ data::data(std::filesystem::path p, config const& c)
     gpu_tt_ = std::make_unique<n::routing::gpu::gpu_timetable>(*tt_);
     gpu_pool_ = std::make_unique<gpu_search_pool>(
         *gpu_tt_, c.server_ ? c.server_->gpu_states_ : 2U);
-    if (rt_->rtt_ != nullptr) {
-      try {
-        rt_->rtt_->gpu_rtt_.ptr_ =
-            n::routing::gpu::make_gpu_rtt(*tt_, *rt_->rtt_);
-        metrics_->gpu_rt_timetable_.Set(1);
-      } catch (std::exception const& e) {
-        n::log(n::log_lvl::error, "motis.data",
-               "GPU rt timetable upload failed: {}", e.what());
-        metrics_->gpu_rt_timetable_.Set(0);
-      }
-    }
   }
 #endif
 }
@@ -369,6 +361,7 @@ void data::init_initial(std::string_view motis_version) {
 void data::init_rtt(date::sys_days const d) {
   rt_->rtt_ =
       std::make_unique<n::rt_timetable>(n::rt::create_rt_timetable(*tt_, d));
+  metrics_->gpu_rt_timetable_.Set(finalize_rtt(*tt_, *rt_->rtt_) ? 1.0 : 0.0);
 }
 
 void data::load_shapes() {

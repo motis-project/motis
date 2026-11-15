@@ -363,8 +363,7 @@ TEST(motis, flex_alerts) {
                         sys_days{2019_y / May / 1} + 6h);
   msg.mutable_entity(0)->mutable_alert()->set_severity_level(
       transit_realtime::Alert_SeverityLevel_WARNING);
-  n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-                           msg);
+  test::gtfsrt_update(d, msg);
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   auto const res = route_a_to_b(routing, sys_days{2019_y / May / 1} + 7h);

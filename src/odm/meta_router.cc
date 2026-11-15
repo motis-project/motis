@@ -486,8 +486,7 @@ api::plan_response meta_router::run() {
   taxi_journeys.insert(end(taxi_journeys), begin(ride_share_journeys),
                        end(ride_share_journeys));
   utl::sort(taxi_journeys, [](auto const& a, auto const& b) {
-    return std::tuple{a.departure_time(), a.arrival_time(), a.transfers_} <
-           std::tuple{b.departure_time(), b.arrival_time(), b.transfers_};
+    return a.criteria() < b.criteria();
   });
 
   r_.metrics_->routing_journeys_found_.Increment(

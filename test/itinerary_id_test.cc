@@ -35,6 +35,7 @@
 #include "motis/gbfs/update.h"
 #include "motis/import.h"
 #include "motis/itinerary_id.h"
+#include "motis/rt_update.h"
 #include "motis/tag_lookup.h"
 
 #include "net/base64.h"
@@ -612,8 +613,8 @@ TEST(motis, refresh_itinerary_matches_scheduled_then_applies_realtime) {
       date::sys_days{date::year{2019} / date::May / date::day{1}};
   data.init_rtt(rt_base_day);
 
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *data.tt_, *data.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto const stats = test::gtfsrt_update(
+      data,
       test::to_feed_msg(
           {test::trip_update{.trip_ = {.trip_id_ = "ICE",
                                        .start_time_ = "10:35:00",
@@ -657,9 +658,8 @@ TEST(motis, refresh_itinerary_reconstructs_added_trip_by_trip_id_only) {
       date::sys_days{date::year{2019} / date::May / date::day{1}};
   data.init_rtt(rt_base_day);
 
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *data.tt_, *data.rt_->rtt_, n::source_idx_t{0}, "test",
-      make_added_trip_update(rt_base_day + std::chrono::hours{9}));
+  auto const stats = test::gtfsrt_update(
+      data, make_added_trip_update(rt_base_day + std::chrono::hours{9}));
   EXPECT_EQ(1U, stats.total_entities_success_);
 
   auto const added_trip_id = std::string{"20190501_09:02_test_ADDED_ICE"};
@@ -692,6 +692,7 @@ DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
 # stops.txt
 stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
 DA,DA Hbf,49.87260,8.63085,1,,
+DA_3,DA Hbf,49.87355,8.63003,0,DA,3
 DA_10,DA Hbf,49.87336,8.62926,0,DA,10
 DA_FLEX,DA Flex Pickup,49.87420,8.62940,0,,
 FFM,FFM Hbf,50.10701,8.66341,1,,
@@ -700,6 +701,7 @@ FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
 ICE,DB,ICE,,,101
+RB,DB,RB,,,106
 FLEXA,DB,FlexArea,,,715
 FLEXG,DB,FlexGroup,,,715
 
@@ -707,6 +709,7 @@ FLEXG,DB,FlexGroup,,,715
 route_id,service_id,trip_id,trip_headsign,block_id
 ICE,S_ALL,ICE,,
 ICE,S_ALL,ICE_LATE,,
+RB,S_ALL,RB,,
 FLEXA,S_AREA,FLEX_AREA,,
 FLEXG,S_GROUP,FLEX_GROUP,,
 
@@ -720,6 +723,8 @@ ICE,10:00:00,10:00:00,DA_10,,,0,,,,,0,0
 ICE,11:00:00,11:00:00,FFM_10,,,1,,,,,0,0
 ICE_LATE,11:00:00,11:00:00,DA_10,,,0,,,,,0,0
 ICE_LATE,12:00:00,12:00:00,FFM_10,,,1,,,,,0,0
+RB,09:00:00,09:00:00,FFM_10,,,0,,,,,0,0
+RB,09:57:00,09:57:00,DA_10,,,1,,,,,0,0
 FLEX_AREA,,,,,da_flex,0,00:00:00,24:00:00,BR,BR,2,2
 FLEX_AREA,,,,,da_flex,1,00:00:00,24:00:00,BR,BR,2,2
 FLEX_GROUP,,,,da_group,,0,00:00:00,24:00:00,BR,BR,2,2
@@ -742,6 +747,11 @@ da_group,DA Flex Group
 location_group_id,stop_id
 da_group,DA_FLEX
 da_group,DA_10
+
+# transfers.txt
+from_stop_id,to_stop_id,transfer_type,min_transfer_time,from_route_id,to_route_id,from_trip_id,to_trip_id
+DA,DA,2,120,,,,
+DA,DA,2,300,,,RB,ICE
 )";
 
 // Plans a FLEX first mile to board the ICE on `day` (area on 2019-05-01,
@@ -855,12 +865,21 @@ TEST(motis, refresh_itinerary_flex_first_mile_booking_rule_and_alert) {
   auto const rt_base_day =
       date::sys_days{date::year{2019} / date::May / date::day{1}};
   d.init_rtt(rt_base_day);
-  n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      test::to_feed_msg({test::alert{.header_ = "Booking required",
-                                     .description_ = "Book via the app.",
-                                     .entities_ = {{.route_id_ = "FLEXA"}}}},
-                        rt_base_day + std::chrono::hours{4}));
+  test::gtfsrt_update(
+      d,
+      test::to_feed_msg(
+          {test::trip_update{.trip_ = {.trip_id_ = "ICE",
+                                       .start_time_ = {"10:00:00"},
+                                       .date_ = {"20190501"}},
+                             .stop_updates_ = {{.stop_id_ = "DA_10",
+                                                .seq_ = std::optional{0U},
+                                                .stop_assignment_ = "DA_3"}}},
+           test::alert{.header_ = "Booking required",
+                       .description_ = "Book via the app.",
+                       .entities_ = {{.route_id_ = "FLEXA"}}}},
+          rt_base_day + std::chrono::hours{4}));
+  ASSERT_NE(0U, test::n_virts(*d.tt_)) << "precondition";
+  ASSERT_NE(0U, d.rt_->rtt_->n_rt_locations()) << "precondition";
 
   // DA_FLEX is next to the platform, so start further away to get a flex ride.
   auto const routing = utl::init_from<ep::routing>(d).value();
@@ -876,6 +895,10 @@ TEST(motis, refresh_itinerary_flex_first_mile_booking_rule_and_alert) {
       "&detailedLegs=true");
   ASSERT_FALSE(res.itineraries_.empty());
   auto const& original = res.itineraries_.front();
+  auto const ice = utl::find_if(
+      original.legs_, [](api::Leg const& l) { return l.tripId_.has_value(); });
+  ASSERT_NE(end(original.legs_), ice);
+  EXPECT_EQ("3", ice->from_.track_);  // real-time location of the moved ICE
 
   auto query = api::refreshItinerary_params{};
   query.itineraryId_ = original.id_;
@@ -2452,6 +2475,7 @@ TEST(motis, itinerary_id_refresh_offset_waits_for_elevator) {
   auto new_rtt = std::make_unique<nigiri::rt_timetable>(
       nigiri::rt_timetable{*d.rt_->rtt_});
   d.rt_->e_ = update_elevators(d.config_, d, kElevatorsBlocked, *new_rtt);
+  finalize_rtt(*d.tt_, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   auto query = api::refreshItinerary_params{};
@@ -2513,6 +2537,7 @@ TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
   auto new_rtt = std::make_unique<nigiri::rt_timetable>(
       nigiri::rt_timetable{*d.rt_->rtt_});
   d.rt_->e_ = update_elevators(d.config_, d, kElevatorsBlocked, *new_rtt);
+  finalize_rtt(*d.tt_, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   auto query = api::refreshItinerary_params{};
@@ -2568,6 +2593,7 @@ TEST(motis, itinerary_id_refresh_access_before_elevator_outage) {
    "outOfService":[["2019-04-30T22:20:00Z","2019-04-30T22:33:00Z"]]}
 ])__",
                                *new_rtt);
+  finalize_rtt(*d.tt_, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   auto query = api::refreshItinerary_params{};
@@ -2630,6 +2656,7 @@ TEST(motis, itinerary_id_refresh_transfer_after_elevator_outage) {
       nigiri::rt_timetable{*d.rt_->rtt_});
   d.rt_->e_ =
       update_elevators(d.config_, d, kElevatorsFfmShortOutage, *new_rtt);
+  finalize_rtt(*d.tt_, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   auto query = api::refreshItinerary_params{};
@@ -3144,6 +3171,7 @@ TEST(motis, itinerary_id_refresh_first_mile_td_anchor) {
   auto new_rtt = std::make_unique<nigiri::rt_timetable>(
       nigiri::rt_timetable{*d.rt_->rtt_});
   d.rt_->e_ = update_elevators(d.config_, d, kElevatorsDaShortOutage, *new_rtt);
+  finalize_rtt(*d.tt_, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   auto query = api::refreshItinerary_params{};
