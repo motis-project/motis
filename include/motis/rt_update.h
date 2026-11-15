@@ -3,9 +3,11 @@
 #include <chrono>
 #include <memory>
 
-#include "boost/asio/io_context.hpp"
-
 #include "motis/fwd.h"
+
+namespace boost::asio {
+class io_context;
+}
 
 namespace motis {
 
