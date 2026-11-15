@@ -58,6 +58,7 @@
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
+#include "motis/timetable/transfer_time_settings.h"
 #include "motis/transport_mode.h"
 
 #include "itinerary_id.pb.h"
@@ -723,12 +724,9 @@ api::Itinerary reconstruct_itinerary(
       routing.is_osr_loaded() ? n::routing::location_match_mode::kIntermodal
                               : n::routing::location_match_mode::kEquivalent;
 
-  auto const safe_prf_idx =
-      stop_times_ep.tt_.locations_.footpaths_out_.at(prf_idx).empty()
-          ? n::profile_idx_t{0U}
-          : prf_idx;
+  auto const safe_prf_idx = get_available_profile(stop_times_ep.tt_, prf_idx);
 
-  auto stats = ep::stats_map_t{};
+  auto stats = meta_t{};
   auto gbfs_rd = gbfs::gbfs_routing_data{routing.w_, routing.l_,
                                          std::atomic_load(&routing.gbfs_)};
   auto cache = street_routing_cache_t{};

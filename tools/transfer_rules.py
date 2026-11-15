@@ -168,7 +168,7 @@ class GtfsRules:
             if d > MAX_MINUTES * 60 * WALK_SPEED:
                 del self.by_pair[key]
                 continue
-            walk = int(d / WALK_SPEED / 60)
+            walk = math.ceil(d / WALK_SPEED / 60)
             self.by_pair[key] = [
                 (level, ty, max(minutes, walk) if ty in (0, 2) else minutes,
                  fr, tr, ft, tt)

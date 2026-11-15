@@ -183,7 +183,7 @@ n::routing::query meta_router::get_base_query(
           .extend_interval_earlier_ = false,
           .extend_interval_later_ = false,
           .max_interval_ = std::nullopt,
-          .prf_idx_ = get_profile_idx(query_),
+          .prf_idx_ = get_profile_idx(*tt_, query_),
           .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
           .require_bike_transport_ = query_.requireBikeTransport_,
           .require_car_transport_ = query_.requireCarTransport_,
@@ -269,7 +269,7 @@ api::plan_response meta_router::run() {
   auto const init_start = std::chrono::steady_clock::now();
   utl::verify(r_.tt_ != nullptr && r_.tags_ != nullptr,
               "mode=TRANSIT requires timetable to be loaded");
-  auto prepare_stats = motis::ep::stats_map_t{};
+  auto prepare_stats = meta_t{};
   auto const start_intvl = std::visit(
       utl::overloaded{[](n::interval<n::unixtime_t> const i) { return i; },
                       [](n::unixtime_t const t) {

@@ -120,17 +120,13 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,
-      .prf_idx_ = get_profile_idx(query),
+      .prf_idx_ = get_profile_idx(tt_, query),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .no_compulsory_reservation_ = query.noCompulsoryReservation_,
       .transfer_time_settings_ = get_transfer_time_settings(query),
   };
-
-  if (tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
-    q.prf_idx_ = 0U;
-  }
 
   auto const state =
       query.arriveBy_

@@ -1116,7 +1116,7 @@ S,20190501,1
                                        d.matches_.get(), tt_location{stop});
 
     auto otm = one_to_many_searches{};
-    auto stats = ep::stats_map_t{};
+    auto stats = meta_t{};
     auto const offsets = routing.get_offsets(
         d.rt_->rtt_.get(), pos, dir, {api::ModeEnum::RENTAL},
         rental_options{.ignore_return_constraints_ = true}, {},

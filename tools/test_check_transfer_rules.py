@@ -21,7 +21,7 @@ from transfer_rules import FORBIDDEN, TOO_SHORT, Checker  # noqa: E402
 TOOL = os.path.join(HERE, "check-transfer-rules.py")
 
 # S (station ST with the stops S and S2), the stop S9 11.1 km north of S (a
-# 123 min walk at 1.5 m/s) and S10 33.4 km north (too far to walk). Every
+# 124 min walk at 1.5 m/s) and S10 33.4 km north (too far to walk). Every
 # change of vehicles at S takes 10 minutes; T1 -> T2 is guaranteed, although
 # the row states 5 minutes; T1 -> T4 is forbidden; two rows of the same
 # specificity disagree on T1 -> T5 at S2; T1 -> T6 states 90 s, T1 -> T7
@@ -145,12 +145,12 @@ class TransferRulesTest(unittest.TestCase):
         self.assertEqual(254, v[0][5])
 
     def test_adjust_footpaths_raises_time_to_the_walk(self):
-        # S -> S9 states 1 min, the beeline walk takes 123 min
+        # S -> S9 states 1 min, the beeline walk takes 124 min
         v = self.check(change("S", "S9", 100, "T8"))
         self.assertEqual(1, len(v))
         self.assertEqual(TOO_SHORT, v[0][3])
-        self.assertEqual(123, v[0][5])
-        self.assertEqual([], self.check(change("S", "S9", 123, "T8")))
+        self.assertEqual(124, v[0][5])
+        self.assertEqual([], self.check(change("S", "S9", 124, "T8")))
 
         stated = Checker({"t_": self.feed}, adjust_footpaths=False)
         self.assertEqual([], stated.check([json.dumps(

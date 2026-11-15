@@ -7,6 +7,7 @@
 #include "motis-api/motis-api.h"
 
 #include "nigiri/routing/transfer_time_settings.h"
+#include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
 namespace motis {
@@ -36,6 +37,19 @@ template <typename Query>
 nigiri::profile_idx_t get_profile_idx(Query const& query) {
   return get_profile_idx(use_routed_transfers(query),
                          query.requireCarTransport_, query.pedestrianProfile_);
+}
+
+inline nigiri::profile_idx_t get_available_profile(
+    nigiri::timetable const& tt, nigiri::profile_idx_t const prf_idx) {
+  return tt.locations_.footpaths_out_.at(prf_idx).empty()
+             ? nigiri::kDefaultProfile
+             : prf_idx;
+}
+
+template <typename Query>
+nigiri::profile_idx_t get_profile_idx(nigiri::timetable const& tt,
+                                      Query const& query) {
+  return get_available_profile(tt, get_profile_idx(query));
 }
 
 template <typename Query>

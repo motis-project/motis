@@ -574,14 +574,14 @@ def main():
             #                 dummies[0][0] + 1))
 
         # TRANSFER RULES: one pass over the responses of all binaries, so every
-        # feed is read once per group. The routed and wheelchair cases route
-        # on profiles that ignore transfers.txt.
+        # feed is read once per group. The routed, wheelchair and tts cases
+        # route on profiles that ignore transfers.txt.
         rule_violations = {}  # (binary, case label) -> violations
         if checker is not None:
             lines, owner = [], []
             for i, o in enumerate(outs):
                 for c, (label, _, start, count) in zip(group, spans):
-                    if c["routed"] or c["wheelchair"]:
+                    if c["routed"] or c["wheelchair"] or c["tts"]:
                         continue
                     lines += o[start:start + count]
                     owner += [(i, label, q) for q in range(count)]

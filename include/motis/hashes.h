@@ -10,6 +10,12 @@ namespace motis {
 using meta_entry_t = std::pair<std::string, std::uint64_t>;
 using meta_t = std::map<std::string, std::uint64_t>;
 
+meta_t join_meta(auto&&... maps) {
+  auto joined = meta_t{};
+  (joined.insert(begin(maps), end(maps)), ...);
+  return joined;
+}
+
 constexpr auto const osr_version = []() {
   return meta_entry_t{"osr_bin_ver", 38U};
 };

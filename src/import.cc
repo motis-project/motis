@@ -484,7 +484,7 @@ void import(config const& c,
         std::ofstream(data_path / "timetable_metrics.json")
             << to_str(n::get_metrics(*tt), *tt);
       },
-      std::move(tt_hashes)};
+      tt_hashes};
 
   auto tbd = task{"tbd",
                   {&tt},
@@ -496,7 +496,7 @@ void import(config const& c,
                         data_path / "tbd.bin",
                         n::routing::tb::preprocess(*d.tt_, n::kDefaultProfile));
                   },
-                  {tt_hash, n_version(), tbd_version()}};
+                  join_meta(tt_hashes, meta_t{tbd_version()})};
 
   auto adr_extend = task{
       "adr_extend",
@@ -536,13 +536,12 @@ void import(config const& c,
 
         cista::free_self_allocated(d.t_.get());
       },
-      {tt_hash,
-       osm_hash,
-       adr_version(),
-       adr_ext_version(),
-       n_version(),
-       {"geocoding", c.geocoding_},
-       {"reverse_geocoding", c.reverse_geocoding_}}};
+      join_meta(tt_hashes,
+                meta_t{osm_hash,
+                       adr_version(),
+                       adr_ext_version(),
+                       {"geocoding", c.geocoding_},
+                       {"reverse_geocoding", c.reverse_geocoding_}})};
 
   auto matches = task{
       "matches",
@@ -554,13 +553,16 @@ void import(config const& c,
         d.load_osr();
         write_matches(c, data_path, *d.tt_, d);
       },
-      {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
-       std::pair{"way_matches",
-                 cista::build_hash(c.timetable_.value_or(config::timetable{})
-                                       .preprocess_max_matching_distance_)},
-       std::pair{"max_matching_distance",
-                 cista::build_hash(c.timetable_.value_or(config::timetable{})
-                                       .max_matching_distance_)}}};
+      join_meta(tt_hashes,
+                meta_t{osm_hash, osr_version(), matches_version(),
+                       std::pair{"way_matches",
+                                 cista::build_hash(
+                                     c.timetable_.value_or(config::timetable{})
+                                         .preprocess_max_matching_distance_)},
+                       std::pair{"max_matching_distance",
+                                 cista::build_hash(
+                                     c.timetable_.value_or(config::timetable{})
+                                         .max_matching_distance_)}})};
 
   auto route_shapes_task = task{
       "route_shapes",
@@ -591,21 +593,22 @@ void import(config const& c,
         route_shapes(*d.w_, *d.l_, *d.tt_, shapes, *c.timetable_->route_shapes_,
                      route_shapes_clasz_enabled, shape_cache.get());
       },
-      {tt_hash,
-       osm_hash,
-       osr_version(),
-       n_version(),
-       routed_shapes_version(),
-       route_shapes_clasz_hash,
-       {"route_shapes_mode",
-        static_cast<std::uint64_t>(
-            c.timetable_.value_or(config::timetable{})
-                .route_shapes_.value_or(config::timetable::route_shapes{})
-                .mode_)},
-       {"cache_reuse_old_osm_data",
-        c.timetable_.value_or(config::timetable{})
-            .route_shapes_.value_or(config::timetable::route_shapes{})
-            .cache_reuse_old_osm_data_}}};
+      join_meta(
+          tt_hashes,
+          meta_t{osm_hash,
+                 osr_version(),
+                 routed_shapes_version(),
+                 route_shapes_clasz_hash,
+                 {"route_shapes_mode",
+                  static_cast<std::uint64_t>(
+                      c.timetable_.value_or(config::timetable{})
+                          .route_shapes_
+                          .value_or(config::timetable::route_shapes{})
+                          .mode_)},
+                 {"cache_reuse_old_osm_data",
+                  c.timetable_.value_or(config::timetable{})
+                      .route_shapes_.value_or(config::timetable::route_shapes{})
+                      .cache_reuse_old_osm_data_}})};
 
   auto tiles = task{
       "tiles",
