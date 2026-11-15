@@ -819,8 +819,7 @@ api::Itinerary reconstruct_itinerary(
     }
 
     auto const time = is_first ? l.arr_ : l.dep_;
-    auto const side =
-        is_first ? n::routing::side::kBoarding : n::routing::side::kAlighting;
+    auto const side = is_first ? n::event_type::kDep : n::event_type::kArr;
     auto const offset = n::routing::lookup_offset(
         stop_times_ep.tt_, loc, time, side, l.offsets_, l.td_offsets_);
 
@@ -860,7 +859,7 @@ api::Itinerary reconstruct_itinerary(
         {change_location(*next, false), n::duration_t{0}, kWalkTransportMode}};
 
     auto const fp_leg = n::routing::lookup_footpath(
-        change_location(*prev, true), l.dep_, n::routing::side::kAlighting,
+        change_location(*prev, true), l.dep_, n::event_type::kArr,
         stop_times_ep.tt_, rt.rtt_.get(), q, offs,
         n::routing::location_match_mode::kExact,
         /*use_footpaths=*/true);
@@ -970,8 +969,8 @@ api::Itinerary reconstruct_itinerary(
       }
       if (!is_transit(first)) {
         if (auto const access = n::routing::lookup_offset(
-                stop_times_ep.tt_, jl.from_, jl.dep_time_,
-                n::routing::side::kBoarding, first.offsets_, first.td_offsets_);
+                stop_times_ep.tt_, jl.from_, jl.dep_time_, n::event_type::kDep,
+                first.offsets_, first.td_offsets_);
             access.has_value()) {
           return access->dep_time_;
         }
