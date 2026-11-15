@@ -26,7 +26,7 @@ constexpr auto const adr_ext_version = []() {
   return meta_entry_t{"adr_ext_bin_ver", 6U};
 };
 constexpr auto const n_version = []() {
-  return meta_entry_t{"nigiri_bin_ver", 45U};
+  return meta_entry_t{"nigiri_bin_ver", 39U};
 };
 constexpr auto const tbd_version = []() {
   return meta_entry_t{"tbd_bin_ver", 1U};
@@ -38,7 +38,7 @@ constexpr auto const tiles_version = []() {
   return meta_entry_t{"tiles_bin_ver", 3U};
 };
 constexpr auto const osr_footpath_version = []() {
-  return meta_entry_t{"osr_footpath_bin_ver", 9U};
+  return meta_entry_t{"osr_footpath_bin_ver", 6U};
 };
 constexpr auto const routed_shapes_version = []() {
   return meta_entry_t{"routed_shapes_ver", 11U};

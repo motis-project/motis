@@ -144,6 +144,9 @@
         "CMAKE_CUDA_COMPILER": "/usr/local/cuda-12.9/bin/nvcc",
         "CMAKE_CUDA_HOST_COMPILER": "g++-14",
         "CMAKE_CUDA_FLAGS": "-isystem ${sourceDir}/deps/nigiri/cmake/cuda-glibc-compat"
+      },
+      "environment": {
+        "NVCC_CCBIN": "g++-14"
       }
     },
     {
