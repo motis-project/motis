@@ -821,8 +821,8 @@ api::Itinerary reconstruct_itinerary(
     auto const time = is_first ? l.arr_ : l.dep_;
     auto const side =
         is_first ? n::routing::side::kBoarding : n::routing::side::kAlighting;
-    auto const offset =
-        n::routing::lookup_offset(loc, time, side, l.offsets_, l.td_offsets_);
+    auto const offset = n::routing::lookup_offset(
+        stop_times_ep.tt_, loc, time, side, l.offsets_, l.td_offsets_);
 
     if (!offset.has_value()) {
       return {make_dummy_leg(h, "no offset found")};
@@ -970,8 +970,8 @@ api::Itinerary reconstruct_itinerary(
       }
       if (!is_transit(first)) {
         if (auto const access = n::routing::lookup_offset(
-                jl.from_, jl.dep_time_, n::routing::side::kBoarding,
-                first.offsets_, first.td_offsets_);
+                stop_times_ep.tt_, jl.from_, jl.dep_time_,
+                n::routing::side::kBoarding, first.offsets_, first.td_offsets_);
             access.has_value()) {
           return access->dep_time_;
         }
