@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -81,6 +82,20 @@ std::string read_file(std::filesystem::path const& path) {
 
 bool needs_refresh(file_info const& fi) {
   return fi.needs_update(std::chrono::system_clock::now());
+}
+
+std::string normalize_gbfs_url(std::string_view const url) {
+  static auto const kScheme = std::regex{"^[a-z]+://"};
+  static auto const kVersionAfterGbfs =
+      std::regex{R"(/gbfs/v?\d+([.-]\d+)*(?=/|$))"};
+  static auto const kTrailingGbfs = std::regex{R"((/gbfs(\.json)?)?/*$)"};
+
+  auto normalized = std::string{url};
+  std::transform(begin(normalized), end(normalized), begin(normalized),
+                 [](unsigned char const c) { return std::tolower(c); });
+  normalized = std::regex_replace(normalized, kScheme, "");
+  normalized = std::regex_replace(normalized, kVersionAfterGbfs, "/gbfs");
+  return std::regex_replace(normalized, kTrailingGbfs, "");
 }
 
 bool is_http_url(std::string_view const url) {
@@ -304,7 +319,11 @@ struct gbfs_update {
           p.use_connect_ = c.use_connect_.value_or(false);
           p.port_ = url.has_port() ? url.port() : (p.use_tls_ ? "443" : "80");
           return p;
-        })} {}
+        })} {
+    for (auto const& [id, feed] : c.feeds_) {
+      configured_feed_by_url_.emplace(normalize_gbfs_url(feed.url_), id);
+    }
+  }
 
   awaitable<void> run() {
     auto executor = co_await asio::this_coro::executor;
@@ -658,7 +677,7 @@ struct gbfs_update {
                   .overwrite_ttl_ = overwrite_ttl}))
               .get();
 
-      co_return co_await update_provider_feed(*saf, std::move(discovery));
+      co_await update_provider_feed(*saf, std::move(discovery));
     } catch (std::exception const& ex) {
       metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
       set_update_timestamps(id, false);
@@ -1266,6 +1285,23 @@ struct gbfs_update {
     co_await update_aggregated_feed_provider_feeds(af);
   }
 
+  bool is_upstream_duplicate(aggregated_feed const& af,
+                             std::string_view const system_id,
+                             std::string const& upstream_url) const {
+    if (upstream_url.empty()) {
+      return false;
+    }
+    auto const it =
+        configured_feed_by_url_.find(normalize_gbfs_url(upstream_url));
+    if (it == end(configured_feed_by_url_)) {
+      return false;
+    }
+    std::cerr << "[GBFS] (" << af.id_ << ") skipping " << system_id
+              << ": manifest _upstream_url is configured as feed " << it->second
+              << "\n";
+    return true;
+  }
+
   void process_aggregated_feed(aggregated_feed& af,
                                boost::json::object const& root) {
     auto feeds = std::vector<provider_feed>{};
@@ -1310,6 +1346,10 @@ struct gbfs_update {
             ++skipped_entries;
             continue;
           }
+          if (is_upstream_duplicate(
+                  af, system_id, optional_str(dataset_obj, "_upstream_url"))) {
+            continue;
+          }
           auto const combined_id = fmt::format("{}:{}", af.id_, system_id);
           feeds.emplace_back(provider_feed{
               .id_ = combined_id,
@@ -1346,6 +1386,10 @@ struct gbfs_update {
           auto const url = optional_str(system_obj, "url");
           if (system_id.empty() || url.empty()) {
             ++skipped_entries;
+            continue;
+          }
+          if (is_upstream_duplicate(
+                  af, system_id, optional_str(system_obj, "_upstream_url"))) {
             continue;
           }
           auto const combined_id = fmt::format("{}:{}", af.id_, system_id);
@@ -1693,6 +1737,7 @@ struct gbfs_update {
   std::optional<proxy> proxy_;
 
   std::vector<pending_routing_update> pending_routing_updates_;
+  hash_map<std::string, std::string> configured_feed_by_url_;
   hash_set<std::string> feeds_with_changed_type_;
 };
 

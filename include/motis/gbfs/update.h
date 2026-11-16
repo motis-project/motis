@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <string_view>
 
 #include "boost/asio/awaitable.hpp"
 #include "boost/asio/io_context.hpp"
@@ -9,6 +11,8 @@
 #include "motis/metrics_registry.h"
 
 namespace motis::gbfs {
+
+std::string normalize_gbfs_url(std::string_view);
 
 boost::asio::awaitable<void> update(config const&,
                                     osr::ways const&,

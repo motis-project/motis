@@ -1622,3 +1622,81 @@ TEST(motis, gbfs_update_http_stale_data_keeps_ttl) {
   server.srv_.stop();
   ioc.run();
 }
+
+namespace {
+
+config make_config_with_standalone_duplicate(fs::path const& agg_dir,
+                                             fs::path const& standalone_dir) {
+  auto c = make_gbfs_config(agg_dir, "agg");
+  c.gbfs_->feeds_.emplace(
+      "standalone", make_gbfs_config(standalone_dir).gbfs_->feeds_.at("test"));
+  return c;
+}
+
+bool has_provider(gbfs_data const& gbfs, std::string const& id) {
+  auto const it = gbfs.provider_by_id_.find(id);
+  return it != end(gbfs.provider_by_id_) &&
+         gbfs.providers_.at(it->second) != nullptr;
+}
+
+}  // namespace
+
+TEST(motis, gbfs_update_skips_manifest_entry_with_configured_upstream_url) {
+  auto const dir = make_temp_dir("upstream-dedup-manifest");
+  write_default_feed(dir / "provider-a");
+  write_default_feed(dir / "provider-b");
+  auto const standalone_url = (dir / "provider-b").string();
+  auto const manifest = json::serialize(json::value{
+      {"last_updated", 1},
+      {"ttl", 0},
+      {"version", "3.0"},
+      {"data",
+       {{"datasets",
+         {{{"system_id", "provider-a"},
+           {"versions", {{{"version", "2.3"}, {"url", "provider-a"}}}}},
+          {{"system_id", "provider-b"},
+           {"_upstream_url", standalone_url},
+           {"versions", {{{"version", "2.3"}, {"url", "provider-b"}}}}}}}}},
+  });
+  write_file(dir / "gbfs.json", manifest);
+  write_file(dir / "manifest.json", manifest);
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(make_config_with_standalone_duplicate(dir, standalone_url), gbfs);
+
+  EXPECT_TRUE(has_provider(*gbfs, "agg:provider-a"));
+  EXPECT_FALSE(has_provider(*gbfs, "agg:provider-b"));
+  EXPECT_TRUE(has_provider(*gbfs, "standalone"));
+}
+
+TEST(motis, gbfs_normalize_url) {
+  auto const same = [](std::string_view a, std::string_view b) {
+    return normalize_gbfs_url(a) == normalize_gbfs_url(b);
+  };
+
+  EXPECT_TRUE(same("https://example.com/customer/gbfs/v2/gbfs.json",
+                   "https://example.com/customer/gbfs/v3.0/"
+                   "gbfs.json"));
+  EXPECT_TRUE(same("https://example.com/api/public/gbfs/2/donkey_kiel/gbfs",
+                   "https://example.com/api/public/gbfs/3.0/donkey_kiel/"
+                   "gbfs.json"));
+  EXPECT_TRUE(
+      same("https://example.com/contracts/bruxelles/gbfs/gbfs.json",
+           "https://example.com/contracts/bruxelles/gbfs/v3/gbfs.json"));
+  EXPECT_TRUE(same("https://example.com/gbfs/gbfs.json",
+                   "https://example.com/gbfs/2-2/gbfs.json"));
+  EXPECT_TRUE(same("http://GBFS.example.com/gbfs/gbfs.json/",
+                   "https://gbfs.example.com/gbfs/2.3/gbfs.json"));
+  EXPECT_TRUE(same("/data/gbfs/provider/", "/data/gbfs/provider"));
+
+  EXPECT_FALSE(same("https://example.com/maps/gbfs/v2/nextbike_wr/gbfs.json",
+                    "https://example.com/maps/gbfs/v2/nextbike_bs/gbfs.json"));
+  EXPECT_FALSE(same("https://example.com/bz/2.1/gbfs.json",
+                    "https://example.com/me/2.1/gbfs.json"));
+  EXPECT_FALSE(same("https://example.com/customer/gbfs/v2/en/gbfs.json",
+                    "https://example.com/customer/gbfs/v2/fr/gbfs.json"));
+  EXPECT_FALSE(same("https://example.com/feeds/1/gbfs.json",
+                    "https://example.com/feeds/2/gbfs.json"));
+  EXPECT_FALSE(same("https://example.com/gbfs.json?system=a",
+                    "https://example.com/gbfs.json?system=b"));
+}
