@@ -146,9 +146,8 @@ data::data(std::filesystem::path p, config const& c)
   verify_version(c.timetable_.has_value(), "tt", n_version());
   verify_version(c.geocoding_ || c.reverse_geocoding_, "adr", adr_version());
   verify_version(c.use_street_routing(), "osr", osr_version());
-  // osr_footpath: the timetable import routes the walks (from the matches)
-  verify_version(c.use_street_routing() && c.timetable_,
-                 c.osr_footpath_ ? "tt" : "matches", matches_version());
+  verify_version(c.use_street_routing() && c.timetable_, "tt",
+                 matches_version());
   verify_version(c.tiles_.has_value(), "tiles", tiles_version());
   verify_version(c.osr_footpath_, "tt", osr_footpath_version());
 

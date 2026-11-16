@@ -383,20 +383,25 @@ void import(config const& c,
       };
 
   auto tt_hashes = meta_t{tt_hash, n_version()};
-  if (c.osr_footpath_) {
+  if (c.use_street_routing()) {
     auto const& t = c.get_timetable();
     tt_hashes = join_meta(
         tt_hashes, osr_hashes,
-        meta_t{osr_footpath_version(),
-               matches_version(),
-               {"osr_footpath_settings",
-                cista::build_hash(t.extend_missing_footpaths_,
-                                  t.max_matching_distance_)},
+        meta_t{matches_version(),
+               {"max_matching_distance",
+                cista::build_hash(t.max_matching_distance_)},
                {"way_matches",
                 cista::build_hash(t.preprocess_max_matching_distance_)}});
   }
+  if (c.osr_footpath_) {
+    tt_hashes = join_meta(
+        tt_hashes, meta_t{osr_footpath_version(),
+                          {"extend_missing_footpaths",
+                           c.get_timetable().extend_missing_footpaths_}});
+  }
   auto tt = task{
-      "tt", c.osr_footpath_ ? std::vector<task*>{&osr} : std::vector<task*>{},
+      "tt",
+      c.use_street_routing() ? std::vector<task*>{&osr} : std::vector<task*>{},
       c.timetable_.has_value(),
       [&]() {
         auto const& t = *c.timetable_;
@@ -476,6 +481,12 @@ void import(config const& c,
         tags->write(data_path / "tags.bin");
         std::ofstream(data_path / "timetable_metrics.json")
             << to_str(n::get_metrics(*tt), *tt);
+
+        if (c.use_street_routing() && !c.osr_footpath_) {
+          auto d = data{data_path};
+          d.load_osr();
+          write_matches(c, data_path, *tt, d);
+        }
       },
       tt_hashes};
 
@@ -535,26 +546,6 @@ void import(config const& c,
                        adr_ext_version(),
                        {"geocoding", c.geocoding_},
                        {"reverse_geocoding", c.reverse_geocoding_}})};
-
-  auto matches = task{
-      "matches",
-      {&tt, &osr},
-      c.timetable_ && c.use_street_routing() && !c.osr_footpath_,
-      [&]() {
-        auto d = data{data_path};
-        d.load_tt("tt.bin");
-        d.load_osr();
-        write_matches(c, data_path, *d.tt_, d);
-      },
-      join_meta(
-          tt_hashes, osr_hashes,
-          meta_t{
-              matches_version(),
-              {"way_matches",
-               cista::build_hash(
-                   c.get_timetable().preprocess_max_matching_distance_)},
-              {"max_matching_distance",
-               cista::build_hash(c.get_timetable().max_matching_distance_)}})};
 
   auto route_shapes_task = task{
       "route_shapes",
@@ -648,7 +639,7 @@ void import(config const& c,
       {tiles_version(), osm_hash, tiles_hash}};
 
   auto all_tasks = std::vector{
-      &tiles, &osr, &adr, &tt, &tbd, &adr_extend, &matches, &route_shapes_task};
+      &tiles, &osr, &adr, &tt, &tbd, &adr_extend, &route_shapes_task};
   auto todo = std::set<task*>{};
   if (task_filter.has_value()) {
     auto q = std::vector<task*>{};
