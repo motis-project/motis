@@ -1759,6 +1759,32 @@ export type PlanPostBody = {
     toOffsets?: Array<PlanOffset>;
 };
 
+/**
+ * Experimental. Debug output: the values of the extra Pareto criteria the
+ * multicriteria engine (algorithm BMRAPP) optimized for
+ * this itinerary. Only present if that engine ran; each value only if its
+ * criterion was requested.
+ *
+ */
+export type ItineraryCriteria = {
+    /**
+     * `minimizeNonTransit`: approximate minutes on foot or other selected pre/postTransit/transfer
+     *
+     */
+    nonTransit?: number;
+    /**
+     * `minimizeModeSwitches`: vehicle-class switches between consecutive
+     * trips (suburban, subway, tram and bus count as one class)
+     *
+     */
+    modeSwitches?: number;
+    /**
+     * `minimizeWithout`: whether the itinerary uses an avoided class
+     *
+     */
+    avoidedModes?: boolean;
+};
+
 export type Itinerary = {
     /**
      * journey duration in seconds
@@ -1790,6 +1816,7 @@ export type Itinerary = {
      * Fare information
      */
     fareTransfers?: Array<FareTransfer>;
+    criteria?: ItineraryCriteria;
 };
 
 /**
@@ -2284,7 +2311,7 @@ export type PlanData = {
         /**
          * algorithm to use
          */
-        algorithm?: 'RAPTOR' | 'PONG' | 'TB' | 'MCRAPTOR' | 'BMRAPP' | 'BMRAP';
+        algorithm?: 'RAPTOR' | 'PONG' | 'TB' | 'BMRAPP';
         /**
          * Optional. Default is `false`.
          *
@@ -2316,6 +2343,15 @@ export type PlanData = {
          *
          */
         detailedTransfers?: boolean;
+        /**
+         * Optional. Experimental. Default is `true`.
+         * Removes transit itineraries whose first or last mile (or both
+         * together) takes at least as long as the direct connection with the
+         * same mode. `false` keeps them, e.g. to compare routing algorithms
+         * on their raw results.
+         *
+         */
+        directFilter?: boolean;
         /**
          * Optional. Default is `WALK` which will compute walking routes as direct connections.
          *

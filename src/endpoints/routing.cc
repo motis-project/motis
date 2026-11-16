@@ -740,10 +740,14 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     }
   }
   utl::erase_duplicates(itineraries);
-  return {itineraries, fastest_direct != kInfinityDuration
-                           ? std::chrono::round<n::duration_t>(
-                                 fastest_direct * fastest_direct_factor)
-                           : fastest_direct};
+  // a large factor must not overflow the 16 bit minutes of n::duration_t
+  return {itineraries,
+          fastest_direct != kInfinityDuration
+              ? std::chrono::round<n::duration_t>(
+                    std::min(fastest_direct * fastest_direct_factor,
+                             std::chrono::duration<double, std::ratio<60>>{
+                                 kInfinityDuration}))
+              : fastest_direct};
 }
 
 void remove_slower_than_fastest_direct(n::routing::query& q) {
@@ -1176,12 +1180,12 @@ api::plan_response routing::route(api::plan_params const& query,
     // carried, but they no longer gate anything.
     // The multicriteria extra Pareto dimensions, selected per request. Any of
     // them switches routing to the multicriteria engine - see the criteria
-    // dispatch below. mode_filter avoids the union of the requested classes
-    // as ONE binary criterion (AIR, COACH, or both - see mode_filter_dim).
+    // dispatch below. avoided_modes is ONE binary criterion for the union of
+    // the requested classes (AIR, COACH, or both - query::avoided_claszes_).
     auto const min_non_transit = query.minimizeNonTransit_;
     auto const min_mode_switches = query.minimizeModeSwitches_;
-    auto const min_mode_filter = !query.minimizeWithout_.empty();
-    auto const mode_filter_mask = [&] {
+    auto const min_avoided_modes = !query.minimizeWithout_.empty();
+    auto const avoided_modes_mask = [&] {
       auto mask = n::routing::clasz_mask_t{0U};
       for (auto const& c : query.minimizeWithout_) {
         switch (c) {
@@ -1195,24 +1199,19 @@ api::plan_response routing::route(api::plan_params const& query,
       }
       return mask;
     }();
-    if (min_mode_filter) {
-      // mode_filter_dim::avoided_mask() is thread_local, not carried by the
-      // criteria TYPE - set it before the search below reads it. Safe
-      // because one request's search runs start to finish on this thread.
-      n::routing::mode_filter_dim::set_avoided(mode_filter_mask);
+    if (min_avoided_modes) {
+      q.avoided_claszes_ = avoided_modes_mask;
     }
     auto const mc_criteria_on =
-        min_non_transit || min_mode_switches || min_mode_filter;
-    // An explicit BMRAPP/BMRAP/MCRAPTOR still runs the mc engine even with no
-    // extra criteria (arr only) - useful for benchmarking against PONG.
-    auto const mc_engine_requested = algorithm == api::algorithmEnum::BMRAPP ||
-                                     algorithm == api::algorithmEnum::BMRAP ||
-                                     algorithm == api::algorithmEnum::MCRAPTOR;
+        min_non_transit || min_mode_switches || min_avoided_modes;
+    // An explicit BMRAPP still runs the mc engine even with no extra criteria
+    // (arr only) - useful for benchmarking against PONG.
+    auto const mc_engine_requested = algorithm == api::algorithmEnum::BMRAPP;
     auto const mc_requested = mc_engine_requested || mc_criteria_on;
-    auto const mc_g_rt = rtt == nullptr || rtt->n_rt_transports() == 0U;
-    auto const mc_g_td = q.td_start_.empty() && q.td_dest_.empty();
+    // the gates of mcraptor_supported, reported below
     auto const mc_g_nobikecar =
         !q.require_bike_transport_ && !q.require_car_transport_;
+    auto const mc_g_noreservation = !q.no_compulsory_reservation_;
     auto const mc_g_novia = q.via_stops_.empty();
     auto const mc_supported = n::routing::mcraptor_supported(q, rtt);
     auto mc_applicable = mc_requested && mc_supported;
@@ -1245,75 +1244,45 @@ api::plan_response routing::route(api::plan_params const& query,
         auto const mc_timeout = query.timeout_.has_value()
                                     ? std::chrono::seconds{*query.timeout_}
                                     : max_timeout;
-        // server.gpu_mc_states: 0 (default) keeps the multicriteria phases on
-        // the CPU (only the bicriteria ping/pong run on the GPU); >= 1 runs
-        // every phase on the GPU (gpu_mc_mode 2 - see bmrap_profile_search).
-        // Only takes effect for the criteria the device mcraptor implements.
-        // The device mode_filter dimension still hardcodes AIR as the
-        // avoided mask (mcraptor_impl.cuh: kAvoidedMask) - a request that
-        // asks to avoid anything else (COACH, or AIR+COACH) must stay on the
-        // CPU, where the mask is a per-request value, or the GPU would
-        // silently compute the wrong criterion.
-        auto const gpu_mode_filter_ok =
-            !min_mode_filter ||
-            mode_filter_mask == n::routing::to_mask(n::clasz::kAir);
-        [[maybe_unused]] auto const gpu_mc_mode =
-            config_.server_.has_value() && config_.server_->gpu_mc_states_ >= 1U &&
-                    gpu_mode_filter_ok
-                ? 2
-                : 0;
         // Extra pareto dimensions of the multicriteria engines, each toggled
         // by its own request parameter (minimizeNonTransit / minimizeWithout /
         // minimizeModeSwitches). They compose freely (see arr_with in
         // mcraptor.h); the eight aliases below are just the dispatched
         // combinations. With none set the engine runs arrival-only (only
-        // reachable via an explicit algorithm=BMRAPP/BMRAP/MCRAPTOR).
+        // reachable via an explicit algorithm=BMRAPP).
         //   non_transit    minutes not on transit: offsets + transfer footpaths
-        //   mode_filter    binary "uses an avoided vehicle class" (flights) -
+        //   avoided_modes  binary "uses an avoided vehicle class" (flights) -
         //                  keeps both the fast option that flies and the best
         //                  one that does not, instead of filtering it out
         //   mode_switches  number of vehicle-class switches between consecutive
         //                  trips (bus -> subway counts, subway -> subway not)
         // BMRAPP takes the SCALAR state (its ping/pong/pruning searches),
-        // like pong_search does, so it can run those on the GPU; its
-        // multicriteria phases allocate their own CPU state internally.
-        // BMRAP (the range variant with one bound matrix for the whole
-        // window, kept for benchmarking against BMRAPP) and MCRAPTOR take the
-        // multicriteria state and run on the CPU only.
+        // like pong_search does, so it can run those on the GPU. Its
+        // multicriteria phases run on the device too on a pool slot that
+        // holds a device mc state (server.gpu_mc_states), else on the CPU.
         auto const run = [&]<typename Criteria>(std::type_identity<Criteria>) {
-          if (algorithm == api::algorithmEnum::BMRAPP) {
-#if defined(NIGIRI_CUDA)
-            if (gpu_supported && gpu_pool_ != nullptr) {
-              try {
-                auto const lease = gpu_pool_->acquire();
-                gpu_used = true;
-                return n::routing::bmrap_profile_search<Criteria>(
-                    *tt_, rtt, search_state, lease.state_, q, dir, mc_timeout,
-                    gpu_mc_mode);
-              } catch (std::exception const& e) {
-                std::cout << "GPU BMRAPP EXCEPTION: " << e.what() << "\n";
-                gpu_used = false;
-              }
-            }
-#endif
-            auto scalar_state = n::routing::raptor_state{};
-            return n::routing::bmrap_profile_search<Criteria>(
-                *tt_, rtt, search_state, scalar_state, q, dir, mc_timeout);
-          }
           auto mc_state = n::routing::basic_mcraptor_state<Criteria>{};
-          if (algorithm == api::algorithmEnum::BMRAP) {
-            return n::routing::bmrap_range_search(*tt_, rtt, search_state,
-                                                  mc_state, q, dir, mc_timeout);
+#if defined(NIGIRI_CUDA)
+          if (gpu_supported && gpu_pool_ != nullptr) {
+            // a failure is answered by the plain GPU raptor, see below
+            auto const lease = gpu_pool_->acquire(/*mc=*/true);
+            gpu_used = true;
+            return n::routing::bmrap_profile_search<Criteria>(
+                *tt_, rtt, search_state, lease.state_, mc_state, q, dir,
+                mc_timeout, lease.mc_);
           }
-          return n::routing::raptor_search(*tt_, rtt, search_state, mc_state, q,
-                                           dir, mc_timeout);
+#endif
+          auto scalar_state = n::routing::raptor_state{};
+          return n::routing::bmrap_profile_search<Criteria>(
+              *tt_, rtt, search_state, scalar_state, mc_state, q, dir,
+              mc_timeout);
         };
         auto const run_with = [&]<typename Criteria>() {
           return run(std::type_identity<Criteria>{});
         };
         try {
           auto const sel = (min_non_transit ? 0b100 : 0) |
-                           (min_mode_filter ? 0b010 : 0) |
+                           (min_avoided_modes ? 0b010 : 0) |
                            (min_mode_switches ? 0b001 : 0);
           switch (sel) {
             case 0b000:
@@ -1325,11 +1294,11 @@ api::plan_response routing::route(api::plan_params const& query,
               break;
             case 0b010:
               r = run_with.template
-                  operator()<n::routing::arr_mode_filter_criteria>();
+                  operator()<n::routing::arr_avoided_modes_criteria>();
               break;
             case 0b011:
               r = run_with.template operator()<
-                  n::routing::arr_mode_filter_mode_switches_criteria>();
+                  n::routing::arr_avoided_modes_mode_switches_criteria>();
               break;
             case 0b100:
               r = run_with.template
@@ -1341,18 +1310,29 @@ api::plan_response routing::route(api::plan_params const& query,
               break;
             case 0b110:
               r = run_with.template operator()<
-                  n::routing::arr_non_transit_mode_filter_criteria>();
+                  n::routing::arr_non_transit_avoided_modes_criteria>();
               break;
             default:  // 0b111
               r = run_with.template operator()<
                   n::routing::
-                      arr_non_transit_mode_filter_mode_switches_criteria>();
+                      arr_non_transit_avoided_modes_mode_switches_criteria>();
               break;
           }
         } catch (std::exception const& e) {
-          std::cout << "MCRAPTOR EXCEPTION: " << e.what() << "\n";
+          std::cout << "BMRAPP EXCEPTION: " << e.what() << "\n";
           mc_applicable = false;
           algorithm = api::algorithmEnum::RAPTOR;
+#if defined(NIGIRI_CUDA)
+          // GPU BMRAPP failed (a device capacity, out of memory, a CUDA
+          // error): the plain GPU raptor answers (PONG where applicable, as
+          // BMRAPP's anchor search) instead of the much slower CPU
+          // multicriteria engine; the loop falls back to the CPU if that fails
+          // too.
+          if (gpu_used && pong_applicable) {
+            algorithm = api::algorithmEnum::PONG;
+          }
+          gpu_used = false;
+#endif
           continue;
         }
       } else if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
@@ -1370,9 +1350,7 @@ api::plan_response routing::route(api::plan_params const& query,
           continue;
         }
       } else if (algorithm == api::algorithmEnum::RAPTOR ||
-                 algorithm == api::algorithmEnum::MCRAPTOR ||
-                 algorithm == api::algorithmEnum::BMRAPP ||
-                 algorithm == api::algorithmEnum::BMRAP || tbd_ == nullptr ||
+                 algorithm == api::algorithmEnum::BMRAPP || tbd_ == nullptr ||
                  (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
@@ -1404,11 +1382,10 @@ api::plan_response routing::route(api::plan_params const& query,
         {"mc_requested", mc_requested},
         {"mc_supported", mc_supported},
         {"mc_min_non_transit", min_non_transit},
-        {"mc_min_mode_filter", min_mode_filter},
+        {"mc_min_avoided_modes", min_avoided_modes},
         {"mc_min_mode_switches", min_mode_switches},
-        {"mc_g_rt", mc_g_rt},
-        {"mc_g_td", mc_g_td},
         {"mc_g_nobikecar", mc_g_nobikecar},
+        {"mc_g_noreservation", mc_g_noreservation},
         {"mc_g_novia", mc_g_novia},
 #if defined(NIGIRI_CUDA)
         {"gpu_used", gpu_used},
@@ -1435,7 +1412,9 @@ api::plan_response routing::route(api::plan_params const& query,
                                r.interval_, journeys);
     }
 
-    direct_filter(direct, journeys);
+    if (query.directFilter_) {
+      direct_filter(direct, journeys);
+    }
 
     auto q_for_alts = q;
     if (query.arriveBy_) {
@@ -1468,6 +1447,26 @@ api::plan_response routing::route(api::plan_params const& query,
                   : alternatives_context{},
               &fares_time, one_to_many_view{&otm_searches});
         });
+
+    // the multicriteria engine's criterion values, for comparing engines
+    if (mc_applicable) {
+      for (auto i = 0U; i != itineraries.size(); ++i) {
+        auto const& j = journeys[i];
+        itineraries[i].criteria_ = api::ItineraryCriteria{
+            .nonTransit_ =
+                min_non_transit
+                    ? std::optional{static_cast<std::int64_t>(j.criteria_cost_)}
+                    : std::nullopt,
+            .modeSwitches_ = min_mode_switches
+                                 ? std::optional{static_cast<std::int64_t>(
+                                       j.criteria_mode_switches_)}
+                                 : std::nullopt,
+            .avoidedModes_ =
+                min_avoided_modes
+                    ? std::optional{j.criteria_avoided_modes_ != 0U}
+                    : std::nullopt};
+      }
+    }
 
     return {
         .debugOutput_ = join_meta(

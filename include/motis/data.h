@@ -35,25 +35,34 @@ template <typename T>
 using ptr = std::unique_ptr<T>;
 
 #if defined(NIGIRI_CUDA)
+// The device search states, all allocated at startup.
 struct gpu_search_pool {
   struct lease {
-    lease(gpu_search_pool&, nigiri::routing::gpu::gpu_raptor_state&);
+    lease(gpu_search_pool&, unsigned slot);
     ~lease();
     lease(lease const&) = delete;
     lease& operator=(lease const&) = delete;
     gpu_search_pool& pool_;
+    unsigned slot_;
     nigiri::routing::gpu::gpu_raptor_state& state_;
+    bool mc_;  // state_ holds a device mcraptor state (bmrap_profile gpu_mc)
   };
 
   gpu_search_pool(nigiri::routing::gpu::gpu_timetable const&, unsigned n);
   ~gpu_search_pool();
 
-  lease acquire();
+  // Device mcraptor states for the first n slots (fewer if the device runs
+  // out: those slots run the multicriteria phases on the CPU).
+  void add_mc_states(unsigned n);
+
+  // mc: prefers a free slot with a device mcraptor state, else one without.
+  lease acquire(bool mc = false);
 
   std::mutex mutex_;
   std::condition_variable cv_;
   std::vector<std::unique_ptr<nigiri::routing::gpu::gpu_raptor_state>> states_;
-  std::vector<nigiri::routing::gpu::gpu_raptor_state*> free_;
+  std::vector<bool> mc_;  // per slot
+  std::vector<unsigned> free_;
 };
 #endif
 

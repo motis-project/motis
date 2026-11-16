@@ -161,6 +161,8 @@ void config::verify() const {
               "server.gpu_states must be >= 1");
   utl::verify(!gbfs_ || gbfs_->cache_size_ >= 1U,
               "gbfs.cache_size must be >= 1");
+  utl::verify(!server_ || server_->gpu_mc_states_ <= server_->gpu_states_,
+              "server.gpu_mc_states must be <= server.gpu_states");
 
   if (timetable_) {
     utl::verify(!timetable_->route_shapes_.has_value() ||
