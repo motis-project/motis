@@ -362,8 +362,7 @@ void import(config const& c,
              .profile_idx_ = n::kFootProfile,
              .max_matching_distance_ = c.timetable_->max_matching_distance_,
              .extend_missing_ = c.timetable_->extend_missing_footpaths_,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min,
-             .is_default_profile_ = true},
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
             {.profile_ = osr::search_profile::kWheelchair,
              .profile_idx_ = n::kWheelchairProfile,
              .max_matching_distance_ = 8.0,
@@ -371,7 +370,7 @@ void import(config const& c,
             {.profile_ = osr::search_profile::kCar,
              .profile_idx_ = n::kCarProfile,
              .max_matching_distance_ = 250.0,
-             .max_duration_ = 8h,
+             .max_duration_ = n::footpath::kMax,
              .is_candidate_ = [&](n::location_idx_t const l) {
                return n::any_route_at(tt, l, [&](n::route_idx_t const r) {
                  return tt.is_flag_set(nigiri::kCarsAllowed, r);

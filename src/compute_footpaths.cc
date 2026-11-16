@@ -3,7 +3,6 @@
 #include "cista/mmap.h"
 #include "cista/serialization.h"
 
-#include "utl/concat.h"
 #include "utl/erase_if.h"
 #include "utl/parallel_for.h"
 
@@ -65,16 +64,14 @@ void compute_footpaths(
   auto transfers = n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
       tt.n_locations());
   for (auto const& mode : settings) {
-    // A footpath holds at most kMax minutes, kMax + 1 would be a ban.
-    auto const max_duration =
-        std::min(mode.max_duration_, std::chrono::seconds{n::footpath::kMax});
+    auto const is_default_profile = mode.profile_idx_ == n::kFootProfile;
     for (auto& fps : transfers) {
       fps.clear();
     }
 
     auto default_estimates =
         n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
-            mode.is_default_profile_ ? tt.n_locations() : 0U);
+            is_default_profile ? tt.n_locations() : 0U);
 
     auto const is_candidate = [&](n::location_idx_t const l) {
       return !mode.is_candidate_ || mode.is_candidate_(l);
@@ -134,14 +131,14 @@ void compute_footpaths(
             return;
           }
 
-          loc_rtree.in_radius(
-              tt.locations_.coordinates_[l],
-              get_max_distance(mode.profile_, osr_parameters{}, max_duration),
-              [&](n::location_idx_t const x) {
-                if (x != l && is_candidate(x)) {
-                  s.neighbors_.emplace_back(x);
-                }
-              });
+          loc_rtree.in_radius(tt.locations_.coordinates_[l],
+                              get_max_distance(mode.profile_, osr_parameters{},
+                                               mode.max_duration_),
+                              [&](n::location_idx_t const x) {
+                                if (x != l && is_candidate(x)) {
+                                  s.neighbors_.emplace_back(x);
+                                }
+                              });
 
           auto const results =
               osr::route_one_to_many(
@@ -160,8 +157,8 @@ void compute_footpaths(
                     }
                     return s.neighbor_candidates_;
                   }(),
-                  max_duration, osr::direction::kForward, nullptr, nullptr,
-                  elevations,
+                  mode.max_duration_, osr::direction::kForward, nullptr,
+                  nullptr, elevations,
                   [](osr::path const& p) { return p.uses_elevator_; })
                   ->results();
 
@@ -175,23 +172,18 @@ void compute_footpaths(
             transfers[l].emplace_back(n::footpath{n, duration});
           }
 
-          if (mode.extend_missing_ || mode.is_default_profile_) {
+          if (mode.extend_missing_ || is_default_profile) {
             for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
               if (r.has_value()) {
                 continue;
               }
               auto const dist = geo::distance(tt.locations_.coordinates_[l],
                                               tt.locations_.coordinates_[n]);
-              auto const estimate = n::footpath{
-                  n, n::duration_t{
-                         static_cast<int>(std::ceil((dist / 0.7) / 60.0))}};
-              if (estimate.duration() > max_duration) {
-                continue;
-              }
+              auto const estimate = n::footpath{n, n::walk_duration(dist)};
               auto const is_close = dist < kMaxMissingFootpathDistance;
               if (mode.extend_missing_ && is_close) {
                 transfers[l].push_back(estimate);
-              } else if (mode.is_default_profile_ &&
+              } else if (is_default_profile &&
                          (is_close || tt.locations_.get_root_idx(l) ==
                                           tt.locations_.get_root_idx(n))) {
                 default_estimates[l].push_back(estimate);
@@ -200,7 +192,7 @@ void compute_footpaths(
           }
 
           utl::erase_if(transfers[l], [&](n::footpath fp) {
-            return fp.duration() > max_duration;
+            return fp.duration() > mode.max_duration_;
           });
           utl::sort(transfers[l]);
 
@@ -211,13 +203,15 @@ void compute_footpaths(
       tt.locations_.footpaths_out_[mode.profile_idx_].emplace_back(x);
     }
 
-    if (mode.is_default_profile_) {
+    if (is_default_profile) {
       walks.clear();
-      for (auto const [i, routed] : utl::enumerate(transfers)) {
-        auto const l = n::location_idx_t{i};
-        utl::concat(routed, default_estimates[l]);
+      for (auto const [routed, estimates] :
+           utl::zip(transfers, default_estimates)) {
         auto bucket = walks.emplace_back();
         for (auto const fp : routed) {
+          bucket.push_back(fp);
+        }
+        for (auto const fp : estimates) {
           bucket.push_back(fp);
         }
       }

@@ -18,8 +18,6 @@ struct routed_transfers_settings {
   bool extend_missing_{false};
   std::chrono::seconds max_duration_;
   std::function<bool(nigiri::location_idx_t)> is_candidate_{};
-
-  bool is_default_profile_{false};
 };
 
 void compute_footpaths(osr::ways const&,

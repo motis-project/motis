@@ -12,6 +12,7 @@
 #include "utl/verify.h"
 
 #include "nigiri/clasz.h"
+#include "nigiri/footpath.h"
 #include "nigiri/routing/limits.h"
 
 #include "rfl.hpp"
@@ -148,6 +149,10 @@ void config::verify() const {
                   nigiri::routing::kMaxSearchIntervalSize.count(),
               "plan_max_search_window_minutes limit cannot be above {}",
               nigiri::routing::kMaxSearchIntervalSize.count());
+  utl::verify(!timetable_ || timetable_->max_footpath_length_ <=
+                                 nigiri::footpath::kMax.count(),
+              "max_footpath_length cannot be above {}",
+              nigiri::footpath::kMax.count());
   utl::verify(limits_.value().geocode_max_suggestions_ >= 1U,
               "geocode_max_suggestions must be >= 1");
   utl::verify(limits_.value().reverse_geocode_max_results_ >= 1U,

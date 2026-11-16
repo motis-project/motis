@@ -102,13 +102,13 @@ TEST(motis, default_profile_walks_without_osr_footpath) {
 }
 
 // With osr_footpath, the default profile walks on routed footpaths. A pair the
-// router cannot connect keeps an estimate (beeline at 0.7m/s) if it is closer
+// router cannot connect keeps an estimate (beeline at 1.5m/s) if it is closer
 // than 100m or within one station. transfers.txt stays authoritative.
 TEST(motis, default_profile_walks_with_osr_footpath) {
   auto const d = import_with(true, "default_profile_routed");
   auto const& tt = *d.tt_;
-  EXPECT_EQ(8, minutes(tt, n::kDefaultProfile, "P1", "P2"));  // one station
-  EXPECT_EQ(8, minutes(tt, n::kDefaultProfile, "P2", "P1"));
+  EXPECT_EQ(4, minutes(tt, n::kDefaultProfile, "P1", "P2"));  // one station
+  EXPECT_EQ(4, minutes(tt, n::kDefaultProfile, "P2", "P1"));
   EXPECT_EQ(2, minutes(tt, n::kDefaultProfile, "P1", "Q"));  // < 100m
   EXPECT_EQ(std::nullopt, minutes(tt, n::kDefaultProfile, "P1", "R"));
   EXPECT_EQ(11, minutes(tt, n::kDefaultProfile, "P2", "R"));  // transfers.txt
