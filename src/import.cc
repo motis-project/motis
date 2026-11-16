@@ -348,9 +348,7 @@ void import(config const& c,
                    {"geocoding", c.geocoding_},
                    {"reverse_geocoding", c.reverse_geocoding_}}};
 
-  // osr_footpath: the walks are routed on OSM (from the platform matches)
-  // instead of beelines, the transfer rules apply on them.
-  auto const add_routed_footpaths =
+  auto const compute_walks =
       [&](n::timetable& tt,
           n::mutable_fws_multimap<n::location_idx_t, n::footpath>& walks) {
         auto d = data{data_path};
@@ -468,11 +466,10 @@ void import(config const& c,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_,
              .merge_stats_dir_ = data_path,
-             .compute_walks_ =
-                 c.osr_footpath_
-                     ? decltype(n::loader::finalize_options::
-                                    compute_walks_){add_routed_footpaths}
-                     : nullptr},
+             .compute_walks_ = c.osr_footpath_
+                                   ? decltype(n::loader::finalize_options::
+                                                  compute_walks_){compute_walks}
+                                   : nullptr},
             interval, assistance.get(), shapes.get(), false))};
 
         tt->write(data_path / "tt.bin");
