@@ -26,6 +26,19 @@ struct rt_metric_families {
                 .Name("nigiri_gtfsrt_updates_error_total")
                 .Help("Number of failed updates of the GTFS-RT feed")
                 .Register(registry)},
+        gtfsrt_updates_not_modified_{
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_updates_not_modified_total")
+                .Help("Number of updates of the GTFS-RT feed where the server "
+                      "responded 304 Not Modified (cached version was used)")
+                .Register(registry)},
+        gtfsrt_updates_stale_{
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_updates_stale_total")
+                .Help(
+                    "Number of updates of the GTFS-RT feed where the download "
+                    "failed and the cached previous version was used")
+                .Register(registry)},
         gtfsrt_total_entities_{
             prometheus::BuildCounter()
                 .Name("nigiri_gtfsrt_total_entities_total")
@@ -114,6 +127,19 @@ struct rt_metric_families {
             prometheus::BuildCounter()
                 .Name("nigiri_vdvaus_updates_error_total")
                 .Help("Number of failed updates of the VDV AUS feed")
+                .Register(registry)},
+        vdvaus_updates_not_modified_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvaus_updates_not_modified_total")
+                .Help("Number of updates of the VDV AUS feed where the server "
+                      "responded 304 Not Modified (cached version was used)")
+                .Register(registry)},
+        vdvaus_updates_stale_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvaus_updates_stale_total")
+                .Help(
+                    "Number of updates of the VDV AUS feed where the download "
+                    "failed and the cached previous version was used")
                 .Register(registry)},
         vdvaus_unsupported_additional_runs_{
             prometheus::BuildCounter()
@@ -256,6 +282,8 @@ struct rt_metric_families {
   prometheus::Family<prometheus::Counter>& gtfsrt_updates_requested_;
   prometheus::Family<prometheus::Counter>& gtfsrt_updates_successful_;
   prometheus::Family<prometheus::Counter>& gtfsrt_updates_error_;
+  prometheus::Family<prometheus::Counter>& gtfsrt_updates_not_modified_;
+  prometheus::Family<prometheus::Counter>& gtfsrt_updates_stale_;
 
   prometheus::Family<prometheus::Counter>& gtfsrt_total_entities_;
   prometheus::Family<prometheus::Counter>& gtfsrt_total_entities_success_;
@@ -275,6 +303,8 @@ struct rt_metric_families {
   prometheus::Family<prometheus::Counter>& vdvaus_updates_requested_;
   prometheus::Family<prometheus::Counter>& vdvaus_updates_successful_;
   prometheus::Family<prometheus::Counter>& vdvaus_updates_error_;
+  prometheus::Family<prometheus::Counter>& vdvaus_updates_not_modified_;
+  prometheus::Family<prometheus::Counter>& vdvaus_updates_stale_;
 
   prometheus::Family<prometheus::Counter>& vdvaus_unsupported_additional_runs_;
   prometheus::Family<prometheus::Counter>& vdvaus_unsupported_additional_stops_;
@@ -307,6 +337,9 @@ struct gtfsrt_metrics {
       : updates_requested_{m.gtfsrt_updates_requested_.Add({{"tag", tag}})},
         updates_successful_{m.gtfsrt_updates_successful_.Add({{"tag", tag}})},
         updates_error_{m.gtfsrt_updates_error_.Add({{"tag", tag}})},
+        updates_not_modified_{
+            m.gtfsrt_updates_not_modified_.Add({{"tag", tag}})},
+        updates_stale_{m.gtfsrt_updates_stale_.Add({{"tag", tag}})},
         total_entities_{m.gtfsrt_total_entities_.Add({{"tag", tag}})},
         total_entities_success_{
             m.gtfsrt_total_entities_success_.Add({{"tag", tag}})},
@@ -344,6 +377,8 @@ struct gtfsrt_metrics {
   prometheus::Counter& updates_requested_;
   prometheus::Counter& updates_successful_;
   prometheus::Counter& updates_error_;
+  prometheus::Counter& updates_not_modified_;
+  prometheus::Counter& updates_stale_;
 
   prometheus::Counter& total_entities_;
   prometheus::Counter& total_entities_success_;
@@ -365,6 +400,9 @@ struct vdvaus_metrics {
       : updates_requested_{m.vdvaus_updates_requested_.Add({{"tag", tag}})},
         updates_successful_{m.vdvaus_updates_successful_.Add({{"tag", tag}})},
         updates_error_{m.vdvaus_updates_error_.Add({{"tag", tag}})},
+        updates_not_modified_{
+            m.vdvaus_updates_not_modified_.Add({{"tag", tag}})},
+        updates_stale_{m.vdvaus_updates_stale_.Add({{"tag", tag}})},
         unsupported_additional_runs_{
             m.vdvaus_unsupported_additional_runs_.Add({{"tag", tag}})},
         unsupported_additional_stops_{
@@ -427,6 +465,8 @@ struct vdvaus_metrics {
   prometheus::Counter& updates_requested_;
   prometheus::Counter& updates_successful_;
   prometheus::Counter& updates_error_;
+  prometheus::Counter& updates_not_modified_;
+  prometheus::Counter& updates_stale_;
 
   prometheus::Counter& unsupported_additional_runs_;
   prometheus::Counter& unsupported_additional_stops_;

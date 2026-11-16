@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -43,6 +44,7 @@
 
 #include "motis/config.h"
 #include "motis/data.h"
+#include "motis/feed_cache.h"
 #include "motis/gbfs/data.h"
 #include "motis/http_req.h"
 #include "motis/repeat.h"
@@ -68,6 +70,7 @@ struct gbfs_file {
   cista::hash_t hash_{};
   std::chrono::system_clock::time_point next_refresh_;
   std::optional<std::chrono::system_clock::time_point> last_updated_{};
+  bool is_stale_{false};
 };
 
 std::string read_file(std::filesystem::path const& path) {
@@ -79,6 +82,20 @@ std::string read_file(std::filesystem::path const& path) {
 
 bool needs_refresh(file_info const& fi) {
   return fi.needs_update(std::chrono::system_clock::now());
+}
+
+std::string normalize_gbfs_url(std::string_view const url) {
+  static auto const kScheme = std::regex{"^[a-z]+://"};
+  static auto const kVersionAfterGbfs =
+      std::regex{R"(/gbfs/v?\d+([.-]\d+)*(?=/|$))"};
+  static auto const kTrailingGbfs = std::regex{R"((/gbfs(\.json)?)?/*$)"};
+
+  auto normalized = std::string{url};
+  std::transform(begin(normalized), end(normalized), begin(normalized),
+                 [](unsigned char const c) { return std::tolower(c); });
+  normalized = std::regex_replace(normalized, kScheme, "");
+  normalized = std::regex_replace(normalized, kVersionAfterGbfs, "/gbfs");
+  return std::regex_replace(normalized, kTrailingGbfs, "");
 }
 
 bool is_http_url(std::string_view const url) {
@@ -283,8 +300,10 @@ struct gbfs_update {
               osr::lookup const& l,
               gbfs_data* d,
               gbfs_data const* prev_d,
-              metrics_registry const* metrics)
+              metrics_registry const* metrics,
+              feed_cache* cache)
       : metrics_{metrics},
+        cache_{cache},
         c_{c},
         w_{w},
         l_{l},
@@ -300,7 +319,11 @@ struct gbfs_update {
           p.use_connect_ = c.use_connect_.value_or(false);
           p.port_ = url.has_port() ? url.port() : (p.use_tls_ ? "443" : "80");
           return p;
-        })} {}
+        })} {
+    for (auto const& [id, feed] : c.feeds_) {
+      configured_feed_by_url_.emplace(normalize_gbfs_url(feed.url_), id);
+    }
+  }
 
   awaitable<void> run() {
     auto executor = co_await asio::this_coro::executor;
@@ -631,7 +654,8 @@ struct gbfs_update {
       if (is_manifest(discovery.json_)) {
         co_return co_await init_aggregated_feed(
             id, config.url_, headers, dir, std::move(oauth),
-            discovery.json_.as_object(), default_ttl, overwrite_ttl);
+            discovery.json_.as_object(), discovery.is_stale_, default_ttl,
+            overwrite_ttl);
       }
 
       auto saf =
@@ -653,7 +677,7 @@ struct gbfs_update {
                   .overwrite_ttl_ = overwrite_ttl}))
               .get();
 
-      co_return co_await update_provider_feed(*saf, std::move(discovery));
+      co_await update_provider_feed(*saf, std::move(discovery));
     } catch (std::exception const& ex) {
       metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
       set_update_timestamps(id, false);
@@ -750,6 +774,7 @@ struct gbfs_update {
         co_return;
       }
       if (discovery) {
+        failed = failed || discovery->is_stale_;
         auto urls = parse_discovery(discovery->json_);
         utl::verify(!urls.empty(), "GBFS discovery contains no file URLs");
         file_infos->urls_ = std::move(urls);
@@ -777,6 +802,7 @@ struct gbfs_update {
             }
             fi.expiry_ = file.next_refresh_;
             fi.hash_ = file.hash_;
+            failed = failed || file.is_stale_;
             co_return hash_changed;
           } catch (std::exception const& ex) {
             failed = true;
@@ -894,7 +920,9 @@ struct gbfs_update {
                      station_status_updated || vehicle_status_updated ||
                      vehicle_status_removed || geofencing_updated;
 
-      set_last_update(pf.id_);
+      if (!discovery.has_value() || !discovery->is_stale_) {
+        set_last_update(pf.id_);
+      }
       metrics_->gbfs_feed_timestamp_seconds_.Add({{"provider_id", pf.id_}})
           .Set(std::chrono::duration_cast<std::chrono::duration<double>>(
                    provider.last_updated_.time_since_epoch())
@@ -1207,6 +1235,7 @@ struct gbfs_update {
       std::optional<std::filesystem::path> const& dir,
       std::shared_ptr<oauth_state>&& oauth,
       boost::json::object const& root,
+      bool const is_stale,
       std::map<std::string, unsigned> const& default_ttl = {},
       std::map<std::string, unsigned> const& overwrite_ttl = {}) {
     auto af = aggregated_feed{.id_ = prefix,
@@ -1218,11 +1247,17 @@ struct gbfs_update {
                               .overwrite_ttl_ = overwrite_ttl};
 
     process_aggregated_feed(af, root);
-    set_last_update(af.id_);
-    set_update_timestamps(af.id_, true);
+    record_manifest_update(af, is_stale);
     co_await update_aggregated_feed_provider_feeds(af);
     d_->aggregated_feeds_->emplace_back(
         std::make_unique<aggregated_feed>(std::move(af)));
+  }
+
+  void record_manifest_update(aggregated_feed const& af, bool const is_stale) {
+    if (!is_stale) {
+      set_last_update(af.id_);
+    }
+    set_update_timestamps(af.id_, !is_stale);
   }
 
   awaitable<void> update_aggregated_feed(aggregated_feed& af) {
@@ -1236,8 +1271,7 @@ struct gbfs_update {
           co_return;
         }
         process_aggregated_feed(af, file.json_.as_object());
-        set_last_update(af.id_);
-        set_update_timestamps(af.id_, true);
+        record_manifest_update(af, file.is_stale_);
       } catch (std::exception const& ex) {
         // keep the previous list of provider feeds
         set_update_timestamps(af.id_, false);
@@ -1249,6 +1283,23 @@ struct gbfs_update {
       set_last_update(af.id_);
     }
     co_await update_aggregated_feed_provider_feeds(af);
+  }
+
+  bool is_upstream_duplicate(aggregated_feed const& af,
+                             std::string_view const system_id,
+                             std::string const& upstream_url) const {
+    if (upstream_url.empty()) {
+      return false;
+    }
+    auto const it =
+        configured_feed_by_url_.find(normalize_gbfs_url(upstream_url));
+    if (it == end(configured_feed_by_url_)) {
+      return false;
+    }
+    std::cerr << "[GBFS] (" << af.id_ << ") skipping " << system_id
+              << ": manifest _upstream_url is configured as feed " << it->second
+              << "\n";
+    return true;
   }
 
   void process_aggregated_feed(aggregated_feed& af,
@@ -1295,6 +1346,10 @@ struct gbfs_update {
             ++skipped_entries;
             continue;
           }
+          if (is_upstream_duplicate(
+                  af, system_id, optional_str(dataset_obj, "_upstream_url"))) {
+            continue;
+          }
           auto const combined_id = fmt::format("{}:{}", af.id_, system_id);
           feeds.emplace_back(provider_feed{
               .id_ = combined_id,
@@ -1331,6 +1386,10 @@ struct gbfs_update {
           auto const url = optional_str(system_obj, "url");
           if (system_id.empty() || url.empty()) {
             ++skipped_entries;
+            continue;
+          }
+          if (is_upstream_duplicate(
+                  af, system_id, optional_str(system_obj, "_upstream_url"))) {
             continue;
           }
           auto const combined_id = fmt::format("{}:{}", af.id_, system_id);
@@ -1397,20 +1456,25 @@ struct gbfs_update {
       std::map<std::string, unsigned> const& overwrite_ttl = {}) {
     auto content = std::string{};
     auto source = std::string{url};
+    auto is_stale = false;
     if (dir.has_value()) {
       auto const path = *dir / fmt::format("{}.json", name);
       source = path.string();
       content = read_file(path);
     } else {
-      auto headers = base_headers;
-      co_await get_oauth_token(oauth, headers);
-      auto const res = co_await http_GET(boost::urls::url{url},
-                                         std::move(headers), timeout_, proxy_);
-      content = get_http_body(res);
-      if (res.result_int() != 200) {
-        throw std::runtime_error(
-            fmt::format("HTTP {} fetching {}", res.result_int(), url));
+      auto res = co_await cached_http_GET(
+          cache_, fmt::format("{}|{}", feed_id, name), boost::urls::url{url},
+          base_headers, timeout_, std::chrono::seconds{c_.max_stale_age_},
+          proxy_,
+          [&](headers_t& headers) { return get_oauth_token(oauth, headers); });
+      is_stale = res.status_ == feed_cache::status::kStale;
+      if (is_stale) {
+        inc_fetch_error(std::string{feed_id}, name);
+        std::cerr << "[GBFS] error fetching " << name << " for feed " << feed_id
+                  << " (" << url << "): " << res.download_error_
+                  << " - using cached version\n";
       }
+      content = std::move(res.decoded_body_);
       if (gbfs_dump_enabled()) {
         write_dump(gbfs_dump_dir(feed_id), name, content);
       }
@@ -1433,7 +1497,8 @@ struct gbfs_update {
     co_return gbfs_file{.json_ = std::move(j),
                         .hash_ = hash_gbfs_data(content),
                         .next_refresh_ = next_refresh,
-                        .last_updated_ = last_updated};
+                        .last_updated_ = last_updated,
+                        .is_stale_ = is_stale};
   }
 
   awaitable<void> get_oauth_token(std::shared_ptr<oauth_state> const& oauth,
@@ -1659,6 +1724,7 @@ struct gbfs_update {
   };
 
   metrics_registry const* metrics_{};
+  feed_cache* cache_{};
 
   config::gbfs const& c_;
   osr::ways const& w_;
@@ -1671,6 +1737,7 @@ struct gbfs_update {
   std::optional<proxy> proxy_;
 
   std::vector<pending_routing_update> pending_routing_updates_;
+  hash_map<std::string, std::string> configured_feed_by_url_;
   hash_set<std::string> feeds_with_changed_type_;
 };
 
@@ -1678,7 +1745,8 @@ awaitable<void> update(config const& c,
                        osr::ways const& w,
                        osr::lookup const& l,
                        std::shared_ptr<gbfs_data>& data_ptr,
-                       metrics_registry const* metrics) {
+                       metrics_registry const* metrics,
+                       feed_cache* cache) {
   auto const t = utl::scoped_timer{"gbfs::update"};
 
   if (!c.gbfs_.has_value()) {
@@ -1688,7 +1756,8 @@ awaitable<void> update(config const& c,
   auto const prev_d = data_ptr;
   auto const d = std::make_shared<gbfs_data>(c.gbfs_->cache_size_);
 
-  auto update = gbfs_update{*c.gbfs_, w, l, d.get(), prev_d.get(), metrics};
+  auto update =
+      gbfs_update{*c.gbfs_, w, l, d.get(), prev_d.get(), metrics, cache};
   try {
     co_await update.run();
   } catch (std::exception const& e) {
@@ -1728,9 +1797,10 @@ void run_gbfs_update(boost::asio::io_context& ioc,
       ioc,
       [&, metrics]() -> awaitable<void> {
         auto cc = c;
-        co_await repeat(std::chrono::seconds{cc.gbfs_->update_interval_},
-                        "gbfs update",
-                        [&] { return update(cc, w, l, data_ptr, metrics); });
+        auto cache = feed_cache{};
+        co_await repeat(
+            std::chrono::seconds{cc.gbfs_->update_interval_}, "gbfs update",
+            [&] { return update(cc, w, l, data_ptr, metrics, &cache); });
       },
       boost::asio::detached);
 }

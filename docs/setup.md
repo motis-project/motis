@@ -66,6 +66,7 @@ timetable:                          # if not set, no timetable will be loaded
   update_interval: 60               # real-time updates are polled every `update_interval` seconds
   http_timeout: 30                  # maximum time in seconds the real-time feed download may take
   incremental_rt_update: false      # false = real-time updates are applied to a clean slate, true = no data will be dropped
+  rt_max_stale_age: 600             # if a real-time feed download fails, the last successfully downloaded version is used if it is at most this many seconds old (0 = disabled)
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
   max_matching_distance: 25.0       # maximum distance from geolocation to next OSM ways that will be found
   default_transfer_time: 2          # default transfer time applied when no transfer is found from datasets
@@ -198,6 +199,7 @@ gbfs:
   update_interval: 60
   http_timeout: 30
   cache_size: 50 # cache state of n most recently used providers, speeding up queries, slowing down updates
+  max_stale_age: 86400 # if a GBFS file download fails, the last successfully downloaded version is used if it is at most this many seconds old (0 = disabled)
   proxy: # HTTP proxy used for all GBFS requests
 ```
 

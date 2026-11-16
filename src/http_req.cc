@@ -143,9 +143,9 @@ asio::awaitable<http::response<http::dynamic_body>> http_GET(
     auto const res = co_await (
         use_tls ? req_tls(next_url, headers, std::nullopt, timeout, proxy)
                 : req_no_tls(next_url, headers, std::nullopt, timeout, proxy));
-    auto const code = res.base().result_int();
-    if (code >= 300 && code < 400) {
-      next_url = boost::urls::url{res.base()["Location"]};
+    if (is_followable_redirect(res.base().result_int()) &&
+        !res.base()[http::field::location].empty()) {
+      next_url = boost::urls::url{res.base()[http::field::location]};
       ++n_redirects;
       continue;
     } else {
@@ -169,9 +169,9 @@ asio::awaitable<http::response<http::dynamic_body>> http_POST(
     auto const res = co_await (
         use_tls ? req_tls(next_url, headers, body, timeout, proxy)
                 : req_no_tls(next_url, headers, body, timeout, proxy));
-    auto const code = res.base().result_int();
-    if (code >= 300 && code < 400) {
-      next_url = boost::urls::url{res.base()["Location"]};
+    if (is_followable_redirect(res.base().result_int()) &&
+        !res.base()[http::field::location].empty()) {
+      next_url = boost::urls::url{res.base()[http::field::location]};
       ++n_redirects;
       continue;
     } else {
@@ -182,18 +182,34 @@ asio::awaitable<http::response<http::dynamic_body>> http_POST(
                   fmt::streamed(url), fmt::streamed(next_url));
 }
 
-std::string get_http_body(http_response const& res) {
-  auto body = beast::buffers_to_string(res.body().data());
-  if (res[http::field::content_encoding] == "gzip") {
+bool is_followable_redirect(unsigned const status_code) {
+  switch (status_code) {
+    case 301:
+    case 302:
+    case 303:
+    case 307:
+    case 308: return true;
+    default: return false;
+  }
+}
+
+std::string decode_http_body(std::string body,
+                             std::string_view const content_encoding) {
+  if (content_encoding == "gzip") {
     auto const src = boost::iostreams::array_source{body.data(), body.size()};
     auto is = boost::iostreams::filtering_istream{};
     auto os = std::stringstream{};
     is.push(boost::iostreams::gzip_decompressor{});
     is.push(src);
     boost::iostreams::copy(is, os);
-    body = os.str();
+    return os.str();
   }
   return body;
+}
+
+std::string get_http_body(http_response const& res) {
+  return decode_http_body(beast::buffers_to_string(res.body().data()),
+                          res[http::field::content_encoding]);
 }
 
 }  // namespace motis
