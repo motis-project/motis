@@ -151,6 +151,7 @@ struct config {
     std::optional<std::filesystem::path> assistance_times_{};
     std::optional<route_shapes> route_shapes_{};
   };
+  timetable const& get_timetable() const;
   std::optional<timetable> timetable_{};
 
   struct gbfs {

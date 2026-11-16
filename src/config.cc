@@ -281,6 +281,11 @@ bool config::has_rt_feeds() const {
   });
 }
 
+config::timetable const& config::get_timetable() const {
+  static auto const default_timetable = timetable{};
+  return timetable_.has_value() ? *timetable_ : default_timetable;
+}
+
 std::optional<config::street_routing> config::get_street_routing() const {
   return std::visit(
       utl::overloaded{

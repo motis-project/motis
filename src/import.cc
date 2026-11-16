@@ -275,7 +275,7 @@ void import(config const& c,
       };
 
   auto const route_shapes_clasz_enabled = to_clasz_bool_array(
-      true, c.timetable_.value_or(config::timetable{})
+      true, c.get_timetable()
                 .route_shapes_.value_or(config::timetable::route_shapes{})
                 .clasz_);
   auto route_shapes_clasz_hash =
@@ -289,12 +289,10 @@ void import(config const& c,
   auto const shape_cache_lock_path =
       fs::path{shape_cache_path.generic_string() + "-lock"};
   auto const route_shapes_task_enabled =
-      c.timetable_
-          .transform([](auto&& x) { return x.route_shapes_.has_value(); })
-          .value_or(false);
+      c.get_timetable().route_shapes_.has_value();
   auto const existing_rs_hashes = read_hashes(data_path, "route_shapes");
   auto const route_shapes_reuse_old_osm_data =
-      c.timetable_.value_or(config::timetable{})
+      c.get_timetable()
           .route_shapes_.value_or(config::timetable::route_shapes{})
           .cache_reuse_old_osm_data_;
   auto const reuse_shapes_cache =
@@ -326,6 +324,7 @@ void import(config const& c,
     fs::remove(shape_cache_lock_path, ec);
   }
 
+  auto const osr_hashes = meta_t{osm_hash, osr_version(), elevation_dir_hash};
   auto osr = task{"osr",
                   {},
                   c.use_street_routing(),
@@ -333,7 +332,7 @@ void import(config const& c,
                     osr::extract(true, fs::path{*c.osm_}, data_path / "osr",
                                  elevation_dir);
                   },
-                  {osm_hash, osr_version(), elevation_dir_hash}};
+                  osr_hashes};
 
   auto adr = task{"adr",
                   {},
@@ -349,57 +348,54 @@ void import(config const& c,
                    {"geocoding", c.geocoding_},
                    {"reverse_geocoding", c.reverse_geocoding_}}};
 
-  auto osr_footpath_settings_hash =
-      meta_entry_t{"osr_footpath_settings", cista::BASE_HASH};
-  if (c.timetable_) {
-    auto& h = osr_footpath_settings_hash.second;
-    h = cista::hash_combine(h, c.timetable_->extend_missing_footpaths_,
-                            c.timetable_->max_matching_distance_,
-                            c.timetable_->max_footpath_length_);
-  }
-
   // osr_footpath: the walks are routed on OSM (from the platform matches)
   // instead of beelines, the transfer rules apply on them.
-  auto const add_routed_footpaths = [&](n::timetable& tt, auto& walks) {
-    auto d = data{data_path};
-    d.load_osr();
+  auto const add_routed_footpaths =
+      [&](n::timetable& tt,
+          n::mutable_fws_multimap<n::location_idx_t, n::footpath>& walks) {
+        auto d = data{data_path};
+        d.load_osr();
 
-    auto const [matches, way_matches] = write_matches(c, data_path, tt, d);
+        auto const [matches, way_matches] = write_matches(c, data_path, tt, d);
 
-    utl::get_active_progress_tracker()->status("Route Footpaths");
-    auto const profiles = std::vector<routed_transfers_settings>{
-        {.profile_ = osr::search_profile::kFoot,
-         .profile_idx_ = n::kFootProfile,
-         .max_matching_distance_ = c.timetable_->max_matching_distance_,
-         .extend_missing_ = c.timetable_->extend_missing_footpaths_,
-         .max_duration_ = c.timetable_->max_footpath_length_ * 1min,
-         .is_default_profile_ = true},
-        {.profile_ = osr::search_profile::kWheelchair,
-         .profile_idx_ = n::kWheelchairProfile,
-         .max_matching_distance_ = 8.0,
-         .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
-        {.profile_ = osr::search_profile::kCar,
-         .profile_idx_ = n::kCarProfile,
-         .max_matching_distance_ = 250.0,
-         .max_duration_ = 8h,
-         .is_candidate_ = [&](n::location_idx_t const l) {
-           return n::any_route_at(tt, l, [&](n::route_idx_t const r) {
-             return tt.is_flag_set(nigiri::kCarsAllowed, r);
-           });
-         }}};
-    compute_footpaths(*d.w_, *d.l_, *d.pl_, tt, walks, matches,
-                      way_matches.has_value() ? &*way_matches : nullptr,
-                      d.elevations_.get(), profiles);
-  };
+        utl::get_active_progress_tracker()->status("Route Footpaths");
+        auto const profiles = std::vector<routed_transfers_settings>{
+            {.profile_ = osr::search_profile::kFoot,
+             .profile_idx_ = n::kFootProfile,
+             .max_matching_distance_ = c.timetable_->max_matching_distance_,
+             .extend_missing_ = c.timetable_->extend_missing_footpaths_,
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min,
+             .is_default_profile_ = true},
+            {.profile_ = osr::search_profile::kWheelchair,
+             .profile_idx_ = n::kWheelchairProfile,
+             .max_matching_distance_ = 8.0,
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+            {.profile_ = osr::search_profile::kCar,
+             .profile_idx_ = n::kCarProfile,
+             .max_matching_distance_ = 250.0,
+             .max_duration_ = 8h,
+             .is_candidate_ = [&](n::location_idx_t const l) {
+               return n::any_route_at(tt, l, [&](n::route_idx_t const r) {
+                 return tt.is_flag_set(nigiri::kCarsAllowed, r);
+               });
+             }}};
+        compute_footpaths(*d.w_, *d.l_, *d.pl_, tt, walks, matches,
+                          way_matches.has_value() ? &*way_matches : nullptr,
+                          d.elevations_.get(), profiles);
+      };
 
   auto tt_hashes = meta_t{tt_hash, n_version()};
   if (c.osr_footpath_) {
-    tt_hashes.insert(
-        {osm_hash, osr_footpath_settings_hash, osr_version(),
-         osr_footpath_version(), matches_version(),
-         std::pair{"way_matches",
-                   cista::build_hash(c.timetable_.value_or(config::timetable{})
-                                         .preprocess_max_matching_distance_)}});
+    auto const& t = c.get_timetable();
+    tt_hashes = join_meta(
+        tt_hashes, osr_hashes,
+        meta_t{osr_footpath_version(),
+               matches_version(),
+               {"osr_footpath_settings",
+                cista::build_hash(t.extend_missing_footpaths_,
+                                  t.max_matching_distance_)},
+               {"way_matches",
+                cista::build_hash(t.preprocess_max_matching_distance_)}});
   }
   auto tt = task{
       "tt", c.osr_footpath_ ? std::vector<task*>{&osr} : std::vector<task*>{},
@@ -553,16 +549,15 @@ void import(config const& c,
         d.load_osr();
         write_matches(c, data_path, *d.tt_, d);
       },
-      join_meta(tt_hashes,
-                meta_t{osm_hash, osr_version(), matches_version(),
-                       std::pair{"way_matches",
-                                 cista::build_hash(
-                                     c.timetable_.value_or(config::timetable{})
-                                         .preprocess_max_matching_distance_)},
-                       std::pair{"max_matching_distance",
-                                 cista::build_hash(
-                                     c.timetable_.value_or(config::timetable{})
-                                         .max_matching_distance_)}})};
+      join_meta(
+          tt_hashes, osr_hashes,
+          meta_t{
+              matches_version(),
+              {"way_matches",
+               cista::build_hash(
+                   c.get_timetable().preprocess_max_matching_distance_)},
+              {"max_matching_distance",
+               cista::build_hash(c.get_timetable().max_matching_distance_)}})};
 
   auto route_shapes_task = task{
       "route_shapes",
@@ -594,19 +589,17 @@ void import(config const& c,
                      route_shapes_clasz_enabled, shape_cache.get());
       },
       join_meta(
-          tt_hashes,
-          meta_t{osm_hash,
-                 osr_version(),
-                 routed_shapes_version(),
+          tt_hashes, osr_hashes,
+          meta_t{routed_shapes_version(),
                  route_shapes_clasz_hash,
                  {"route_shapes_mode",
                   static_cast<std::uint64_t>(
-                      c.timetable_.value_or(config::timetable{})
+                      c.get_timetable()
                           .route_shapes_
                           .value_or(config::timetable::route_shapes{})
                           .mode_)},
                  {"cache_reuse_old_osm_data",
-                  c.timetable_.value_or(config::timetable{})
+                  c.get_timetable()
                       .route_shapes_.value_or(config::timetable::route_shapes{})
                       .cache_reuse_old_osm_data_}})};
 
