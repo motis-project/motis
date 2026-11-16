@@ -92,8 +92,7 @@ std::optional<fare_indices> get_fare_indices(
 
 std::optional<std::vector<api::Alert>> get_alerts(
     n::rt::frun const& fr,
-    std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s,
-    bool const fuzzy_stop,
+    n::alert_stop_match const match,
     std::optional<std::vector<std::string>> const& language) {
   if (fr.rtt_ == nullptr || !fr.is_scheduled()) {  // TODO added
     return std::nullopt;
@@ -106,13 +105,8 @@ std::optional<std::vector<api::Alert>> get_alerts(
     return to_alert(rtt->alerts_, x, language);
   };
 
-  auto const x = s ? s->first.get_trip_idx(s->second)
-                   : fr[0].get_trip_idx(n::event_type::kDep);
-  auto const stop_idx = s ? std::optional{s->first.stop_idx_} : std::nullopt;
-
   auto alerts = std::vector<api::Alert>{};
-  for (auto const& a : rtt->alerts_.get_alerts(tt, *rtt, tt.trip_id_src_[x], x,
-                                               fr, stop_idx, fuzzy_stop)) {
+  for (auto const& a : rtt->alerts_.get_alerts(tt, *rtt, fr, match)) {
     alerts.emplace_back(call_to_alert(a));
   }
 
@@ -538,7 +532,14 @@ api::Itinerary journey_to_response(
                               n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, ae, tz_map, lang,
                                  s, start, dest, ev_type);
-      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, lang);
+      p.alerts_ = get_alerts(
+          n::rt::frun{tt,
+                      rtt,
+                      {.t_ = s.fr_->t_,
+                       .stop_range_ = {s.stop_idx_, static_cast<n::stop_idx_t>(
+                                                        s.stop_idx_ + 1U)},
+                       .rt_ = s.fr_->rt_}},
+          n::alert_stop_match::kStopMatch, lang);
       if (auto const it = is_unique.find(s.get_location_idx());
           it != end(is_unique) && !it->second) {
         p.name_ =
@@ -678,7 +679,7 @@ api::Itinerary journey_to_response(
                                                {.t_ = fr.t_,
                                                 .stop_range_ = common_stops,
                                                 .rt_ = fr.rt_}},
-                                   std::nullopt, false, lang),
+                                   n::alert_stop_match::kStopMatch, lang),
                     .loopedCalendarSince_ =
                         enter_stop.looped_calendar_since(n::event_type::kDep),
                     .bikesAllowed_ =

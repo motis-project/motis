@@ -230,7 +230,7 @@ void flex_output::annotate_leg(n::lang_t const& lang,
     auto alerts = std::vector<api::Alert>{};
     for (auto const& a : rtt_->alerts_.get_alerts(
              tt_, tt_.trip_id_src_[trip], trip, n::rt::run{}, l,
-             {from, to + n::duration_t{1}}, false)) {
+             {from, to + n::duration_t{1}}, n::alert_stop_match::kStopMatch)) {
       alerts.emplace_back(to_alert(rtt_->alerts_, a, lang));
     }
     return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
