@@ -11,6 +11,8 @@
 #include "boost/asio/use_awaitable.hpp"
 #include "boost/beast/core/buffers_to_string.hpp"
 
+#include "fmt/chrono.h"
+
 #include "utl/read_file.h"
 #include "utl/timer.h"
 #include "utl/verify.h"
@@ -28,6 +30,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/elevators/update_elevators.h"
+#include "motis/feed_cache.h"
 #include "motis/http_req.h"
 #include "motis/railviz.h"
 #include "motis/repeat.h"
@@ -44,14 +47,54 @@ namespace motis {
 
 asio::awaitable<ptr<elevators>> update_elevators(config const& c,
                                                  data const& d,
-                                                 n::rt_timetable& new_rtt) {
+                                                 n::rt_timetable& new_rtt,
+                                                 feed_cache* cache) {
   utl::verify(c.has_elevators() && c.get_elevators()->url_ && c.timetable_,
               "elevator update requires settings for timetable + elevators");
-  auto const res =
-      co_await http_GET(boost::urls::url{*c.get_elevators()->url_},
-                        c.get_elevators()->headers_.value_or(headers_t{}),
-                        std::chrono::seconds{c.get_elevators()->http_timeout_});
-  co_return update_elevators(c, d, get_http_body(res), new_rtt);
+  auto const& url = *c.get_elevators()->url_;
+  auto const res = co_await cached_http_GET(
+      cache, fmt::format("elevators|{}", url), boost::urls::url{url},
+      c.get_elevators()->headers_.value_or(headers_t{}),
+      std::chrono::seconds{c.get_elevators()->http_timeout_},
+      std::chrono::seconds{c.get_elevators()->max_stale_age_});
+  if (res.status_ == feed_cache::status::kStale) {
+    n::log(n::log_lvl::error, "motis.rt",
+           "elevator fetch failed, using cached version: url={}, error={}", url,
+           res.download_error_);
+  }
+  co_return update_elevators(c, d, res.decoded_body_, new_rtt);
+}
+
+std::string get_cache_key(auto&& ep) {
+  return fmt::format("{}|{}", ep.tag_, ep.ep_.url_);
+}
+
+void count_and_log_fetch(auto const& ep,
+                         std::string_view const protocol,
+                         feed_cache::result const& res) {
+  switch (res.status_) {
+    case feed_cache::status::kDownloaded: break;
+    case feed_cache::status::kNotModified:
+      ep.metrics_.updates_not_modified_.Increment();
+      break;
+    case feed_cache::status::kStale:
+      ep.metrics_.updates_error_.Increment();
+      ep.metrics_.updates_stale_.Increment();
+      n::log(n::log_lvl::error, "motis.rt",
+             "{} FETCH ERROR: tag={}, url={}, error={} - using cached version "
+             "(confirmed {:%FT%TZ})",
+             protocol, ep.tag_, ep.ep_.url_, res.download_error_,
+             std::chrono::floor<std::chrono::seconds>(res.confirmed_at_));
+      break;
+  }
+}
+
+// Stale data counts as error (see count_and_log_fetch).
+void count_applied_update(auto const& ep, feed_cache::result const& res) {
+  if (res.status_ != feed_cache::status::kStale) {
+    ep.metrics_.updates_successful_.Increment();
+    ep.metrics_.last_update_timestamp_.SetToCurrentTime();
+  }
 }
 
 std::string get_dump_path(auto&& ep) {
@@ -186,7 +229,8 @@ void apply_canned(data& d, endpoints_t const& endpoints, n::rt_timetable& rtt) {
 awaitable<void> update_rt(config const& c,
                           data& d,
                           bool const dump_rt,
-                          endpoints_t const& endpoints) {
+                          endpoints_t const& endpoints,
+                          feed_cache* cache) {
   auto executor = co_await asio::this_coro::executor;
   // Create new real-time timetable.
   auto const today = std::chrono::time_point_cast<date::days>(
@@ -198,6 +242,8 @@ awaitable<void> update_rt(config const& c,
 
   // Schedule updates for each real-time endpoint.
   auto const timeout = std::chrono::seconds{c.timetable_->http_timeout_};
+  auto const max_stale_age =
+      std::chrono::seconds{c.timetable_->rt_max_stale_age_};
 
   if (c.timetable_->canned_rt_) {
     apply_canned(d, endpoints, *rtt);
@@ -216,16 +262,20 @@ awaitable<void> update_rt(config const& c,
                         [&](gtfs_rt_endpoint const& g) -> awaitable<void> {
                           g.metrics_.updates_requested_.Increment();
                           try {
-                            auto const res = co_await http_GET(
+                            auto const res = co_await cached_http_GET(
+                                cache, get_cache_key(g),
                                 boost::urls::url{g.ep_.url_},
-                                g.ep_.headers_.value_or(headers_t{}), timeout);
-                            auto const body = get_http_body(res);
+                                g.ep_.headers_.value_or(headers_t{}), timeout,
+                                max_stale_age);
+                            count_and_log_fetch(g, "RT", res);
+                            auto const& body = res.decoded_body_;
                             if (dump_rt) {
                               std::ofstream{get_dump_path(g)}.write(
                                   body.c_str(), static_cast<long>(body.size()));
                             }
                             ret = n::rt::gtfsrt_update_buf(*d.tt_, *rtt, g.src_,
                                                            g.tag_, body);
+                            count_applied_update(g, res);
                           } catch (std::exception const& e) {
                             g.metrics_.updates_error_.Increment();
                             n::log(n::log_lvl::error, "motis.rt",
@@ -243,15 +293,22 @@ awaitable<void> update_rt(config const& c,
                                 boost::urls::url{auser.fetch_url(a.ep_.url_)};
                             fmt::println("[auser] fetch url: {}",
                                          fetch_url.c_str());
-                            auto const res = co_await http_GET(
-                                fetch_url, a.ep_.headers_.value_or(headers_t{}),
-                                timeout);
-                            auto body = get_http_body(res);
+                            auto const is_incremental_vdv_aus =
+                                auser.upd_.get_format() ==
+                                n::rt::vdv_aus::updater::xml_format::kVdv;
+                            auto res = co_await cached_http_GET(
+                                is_incremental_vdv_aus ? nullptr : cache,
+                                get_cache_key(a), fetch_url,
+                                a.ep_.headers_.value_or(headers_t{}), timeout,
+                                max_stale_age);
+                            count_and_log_fetch(a, "VDV AUS", res);
+                            auto& body = res.decoded_body_;
                             if (dump_rt) {
                               std::ofstream{get_dump_path(a)}.write(
                                   body.c_str(), static_cast<long>(body.size()));
                             }
                             ret = auser.consume_update(body, *rtt, true);
+                            count_applied_update(a, res);
                           } catch (std::exception const& e) {
                             a.metrics_.updates_error_.Increment();
                             n::log(
@@ -284,8 +341,6 @@ awaitable<void> update_rt(config const& c,
                     std::rethrow_exception(ex);
                   }
 
-                  g.metrics_.updates_successful_.Increment();
-                  g.metrics_.last_update_timestamp_.SetToCurrentTime();
                   g.metrics_.update(std::get<n::rt::statistics>(s));
 
                   n::log(n::log_lvl::info, "motis.rt",
@@ -305,8 +360,6 @@ awaitable<void> update_rt(config const& c,
                     std::rethrow_exception(ex);
                   }
 
-                  a.metrics_.updates_successful_.Increment();
-                  a.metrics_.last_update_timestamp_.SetToCurrentTime();
                   a.metrics_.update(std::get<n::rt::vdv_aus::statistics>(s));
 
                   n::log(
@@ -328,7 +381,7 @@ awaitable<void> update_rt(config const& c,
   auto elevators = std::unique_ptr<motis::elevators>{};
   if (c.has_elevators() && c.get_elevators()->url_) {
     try {
-      elevators = co_await update_elevators(c, d, *rtt);
+      elevators = co_await update_elevators(c, d, *rtt, cache);
     } catch (std::exception const& e) {
       n::log(n::log_lvl::error, "motis.rt",
              "elevator update failed, keeping previous elevators: {}",
@@ -376,10 +429,11 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
         auto executor = co_await asio::this_coro::executor;
 
         auto const endpoints = make_endpoints(c, d);
+        auto cache = feed_cache{};
 
-        co_await repeat(std::chrono::seconds{c.timetable_->update_interval_},
-                        "rt update",
-                        [&] { return update_rt(c, d, dump_rt, endpoints); });
+        co_await repeat(
+            std::chrono::seconds{c.timetable_->update_interval_}, "rt update",
+            [&] { return update_rt(c, d, dump_rt, endpoints, &cache); });
       },
       boost::asio::detached);
 }

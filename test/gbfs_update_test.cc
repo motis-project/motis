@@ -28,10 +28,13 @@
 
 #include "motis/config.h"
 #include "motis/data.h"
+#include "motis/feed_cache.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/update.h"
 #include "motis/import.h"
 #include "motis/metrics_registry.h"
+
+#include "./http_test_server.h"
 
 namespace fs = std::filesystem;
 namespace json = boost::json;
@@ -1436,4 +1439,186 @@ TEST(motis, gbfs_update_removed_provider_is_removed_from_rtree_and_cache) {
   EXPECT_FALSE(rtree_contains(*gbfs, station_pos, idx));
   EXPECT_FALSE(rtree_contains(*gbfs, vehicle_pos, idx));
   EXPECT_FALSE(gbfs->cache_.contains(idx));
+}
+
+namespace {
+
+// Discovery URLs are rewritten to absolute URLs.
+struct gbfs_http_server {
+  gbfs_http_server(boost::asio::io_context& ioc, fs::path dir)
+      : dir_{std::move(dir)},
+        srv_{ioc, [this](auto const& req) { return handle(req); }} {}
+
+  motis::test::http_test_server::response_t handle(
+      motis::test::http_test_server::request_t const& req) {
+    namespace http = boost::beast::http;
+    using motis::test::http_test_server;
+    if (fail_) {
+      return http_test_server::make_response(
+          req, http::status::internal_server_error, "down");
+    }
+    auto const name = std::string{req.target().substr(1)};
+    auto content = std::string{};
+    {
+      auto in = std::ifstream{dir_ / fmt::format("{}.json", name)};
+      if (!in) {
+        return http_test_server::make_response(req, http::status::not_found);
+      }
+      content.assign(std::istreambuf_iterator<char>{in}, {});
+    }
+    if (name == "gbfs") {
+      auto j = json::parse(content);
+      for (auto& feed : j.at("data").at("feeds").as_array()) {
+        auto& url = feed.as_object()["url"];
+        url = srv_.url(url.as_string());
+      }
+      content = json::serialize(j);
+    }
+    auto const etag = fmt::format("\"{}\"", std::hash<std::string>{}(content));
+    if (req[http::field::if_none_match] == etag) {
+      ++n_not_modified_;
+      return http_test_server::make_response(req, http::status::not_modified,
+                                             "", {{http::field::etag, etag}});
+    }
+    return http_test_server::make_response(req, http::status::ok, content,
+                                           {{http::field::etag, etag}});
+  }
+
+  fs::path dir_;
+  motis::test::http_test_server srv_;
+  bool fail_{false};
+  unsigned n_not_modified_{0U};
+};
+
+void run_http_update(boost::asio::io_context& ioc,
+                     config const& c,
+                     std::shared_ptr<gbfs_data>& gbfs,
+                     metrics_registry& metrics,
+                     feed_cache* cache) {
+  auto& d = street_data();
+  boost::asio::co_spawn(
+      ioc,
+      [&]() -> boost::asio::awaitable<void> {
+        co_await update(c, *d.w_, *d.l_, gbfs, &metrics, cache);
+        ioc.stop();
+      },
+      boost::asio::detached);
+  ioc.run();
+  ioc.restart();
+}
+
+}  // namespace
+
+TEST(motis, gbfs_update_http_conditional_requests_and_stale_cache) {
+  auto const dir = make_temp_dir("http-cache-feed");
+  write_default_feed(dir);
+
+  auto ioc = boost::asio::io_context{};
+  auto server = gbfs_http_server{ioc, dir};
+  auto c = make_gbfs_config(dir);
+  c.gbfs_->feeds_.at("test").url_ = server.srv_.url("gbfs");
+
+  auto const check_provider = [](std::shared_ptr<gbfs_data> const& gbfs) {
+    ASSERT_NE(nullptr, gbfs);
+    ASSERT_TRUE(gbfs->provider_by_id_.contains("test"));
+    auto const& p = gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+    ASSERT_NE(nullptr, p);
+    EXPECT_EQ("Test Bikes", p->sys_info_.name_);
+    ASSERT_EQ(1U, p->stations_.size());
+    EXPECT_EQ(3U, p->stations_.at(std::string{kStation1})
+                      .status_.num_vehicles_available_);
+    ASSERT_EQ(1U, p->vehicle_status_.size());
+  };
+
+  auto cache = feed_cache{};
+
+  {
+    auto metrics = metrics_registry{};
+    auto gbfs = std::shared_ptr<gbfs_data>{};
+    run_http_update(ioc, c, gbfs, metrics, &cache);
+    check_provider(gbfs);
+    EXPECT_EQ(0U, server.n_not_modified_);
+    EXPECT_TRUE(utl::all_of(server.srv_.requests_, [](auto const& req) {
+      return req[boost::beast::http::field::if_none_match].empty();
+    }));
+
+    // ttl=0: everything is refetched
+    auto const n_requests = server.srv_.requests_.size();
+    run_http_update(ioc, c, gbfs, metrics, &cache);
+    check_provider(gbfs);
+    EXPECT_EQ(n_requests, server.n_not_modified_);
+  }
+
+  // server down, no previous gbfs_data
+  server.fail_ = true;
+  {
+    auto metrics = metrics_registry{};
+    auto gbfs = std::shared_ptr<gbfs_data>{};
+    run_http_update(ioc, c, gbfs, metrics, &cache);
+    check_provider(gbfs);
+    EXPECT_TRUE(metrics.gbfs_fetch_errors_total_.Has(
+        {{"provider_id", "test"}, {"file", "gbfs"}}));
+    EXPECT_TRUE(has_last_attempted(metrics, "test"));
+    EXPECT_FALSE(has_last_successful(metrics, "test"));
+    EXPECT_EQ(0.0, last_update(metrics, "test").Value());
+  }
+
+  {
+    auto metrics = metrics_registry{};
+    auto gbfs = std::shared_ptr<gbfs_data>{};
+    run_http_update(ioc, c, gbfs, metrics, nullptr);
+    ASSERT_NE(nullptr, gbfs);
+    EXPECT_FALSE(gbfs->provider_by_id_.contains("test"));
+  }
+
+  {
+    auto metrics = metrics_registry{};
+    auto gbfs = std::shared_ptr<gbfs_data>{};
+    auto c_no_stale = c;
+    c_no_stale.gbfs_->max_stale_age_ = 0U;
+    run_http_update(ioc, c_no_stale, gbfs, metrics, &cache);
+    ASSERT_NE(nullptr, gbfs);
+    EXPECT_FALSE(gbfs->provider_by_id_.contains("test"));
+  }
+
+  server.srv_.stop();
+  ioc.run();
+}
+
+TEST(motis, gbfs_update_http_stale_data_keeps_ttl) {
+  auto const dir = make_temp_dir("http-cache-stale-ttl");
+  write_default_feed(dir);
+
+  auto ioc = boost::asio::io_context{};
+  auto server = gbfs_http_server{ioc, dir};
+  auto c = make_gbfs_config(dir);
+  auto& feed = c.gbfs_->feeds_.at("test");
+  feed.url_ = server.srv_.url("gbfs");
+  for (auto& [_, ttl] : *feed.ttl_->overwrite_) {
+    ttl = 3600U;
+  }
+
+  auto cache = feed_cache{};
+  {
+    auto metrics = metrics_registry{};
+    auto gbfs = std::shared_ptr<gbfs_data>{};
+    run_http_update(ioc, c, gbfs, metrics, &cache);
+  }
+
+  auto metrics = metrics_registry{};
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  server.fail_ = true;
+  run_http_update(ioc, c, gbfs, metrics, &cache);
+  ASSERT_TRUE(gbfs->provider_by_id_.contains("test"));
+  EXPECT_FALSE(has_last_successful(metrics, "test"));
+
+  // no additional load on a failing upstream: retried only after the ttl
+  server.fail_ = false;
+  auto const n_requests = server.srv_.requests_.size();
+  run_http_update(ioc, c, gbfs, metrics, &cache);
+  EXPECT_EQ(n_requests, server.srv_.requests_.size());
+  ASSERT_TRUE(gbfs->provider_by_id_.contains("test"));
+
+  server.srv_.stop();
+  ioc.run();
 }
