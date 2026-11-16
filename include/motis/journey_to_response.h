@@ -7,6 +7,7 @@
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
+#include "nigiri/rt/service_alert.h"
 #include "nigiri/types.h"
 
 #include "osr/location.h"
@@ -32,8 +33,7 @@ std::optional<double> get_level(osr::ways const*,
 
 std::optional<std::vector<api::Alert>> get_alerts(
     nigiri::rt::frun const&,
-    std::optional<std::pair<nigiri::rt::run_stop, nigiri::event_type>> const&,
-    bool fuzzy_stop,
+    nigiri::alert_stop_match,
     std::optional<std::vector<std::string>> const& language);
 
 struct query_alternatives {
