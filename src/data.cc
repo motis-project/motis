@@ -303,13 +303,13 @@ data::data(std::filesystem::path p, config const& c)
       shapes_->route_segment_bboxes_.size());
   // osr_footpath adds virtual locations after matching: never looked up, nigiri
   // hands out their base locations
-  utl_verify(matches_ == nullptr || tt_ == nullptr ||
-                 matches_->size() == tt_->n_locations() ||
-                 (matches_->size() < tt_->n_locations() &&
-                  tt_->locations_.is_virt(n::location_idx_t{
-                      static_cast<std::uint32_t>(matches_->size())})),
-             "mismatch: n_matches={}, n_locations={}", matches_->size(),
-             tt_->n_locations());
+  if (matches_ != nullptr && tt_ != nullptr) {
+    auto const n = static_cast<std::uint32_t>(matches_->size());
+    utl_verify(n == tt_->n_locations() ||
+                   (tt_->locations_.is_virt(n::location_idx_t{n}) &&
+                    !tt_->locations_.is_virt(n::location_idx_t{n - 1U})),
+               "mismatch: n_matches={}, n_locations={}", n, tt_->n_locations());
+  }
 
 #if defined(NIGIRI_CUDA)
   if (c.timetable_) {

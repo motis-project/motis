@@ -72,7 +72,6 @@ transit_realtime::FeedMessage to_feed_msg(
 nigiri::rt::statistics gtfsrt_update(data&,
                                      transit_realtime::FeedMessage const&);
 
-// The number of virtual locations in the timetable.
 inline std::size_t n_virts(nigiri::timetable const& tt) {
   return static_cast<std::size_t>(
       std::ranges::count(tt.locations_.types_, nigiri::location_type::kVirt));
