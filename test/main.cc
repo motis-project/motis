@@ -5,6 +5,7 @@
 
 #include "utl/progress_tracker.h"
 
+#include "motis/endpoints/routing.h"
 #include "test_dir.h"
 
 #ifdef PROTOBUF_LINKED
@@ -18,7 +19,8 @@ int main(int argc, char** argv) {
 
   auto const progress_tracker = utl::activate_progress_tracker("test");
   auto const silencer = utl::global_progress_bars{true};
-  fs::current_path(OSR_TEST_EXECUTION_DIR);
+  fs::current_path(MOTIS_TEST_EXECUTION_DIR);
+  motis::ep::routing::use_gpu_cpu_comparison_ = true;
 
   ::testing::InitGoogleTest(&argc, argv);
   auto test_result = RUN_ALL_TESTS();

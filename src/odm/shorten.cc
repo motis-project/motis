@@ -55,8 +55,8 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       }
       for (auto const [offset, times] :
            utl::zip(first_mile_taxi, first_mile_taxi_times)) {
-        if (nr::matches(tt, nr::location_match_mode::kExact, offset.target_,
-                        stop.get_location_idx()) &&
+        if (nr::matches(tt, nullptr, nr::location_match_mode::kExact,
+                        offset.target_, stop.get_location_idx()) &&
             utl::any_of(times, [&](auto const& t) {
               return t.contains(stop.time(n::event_type::kDep) -
                                 offset.duration_) &&
@@ -131,8 +131,8 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       }
       for (auto const [offset, times] :
            utl::zip(last_mile_taxi, last_mile_taxi_times)) {
-        if (nr::matches(tt, nr::location_match_mode::kExact, offset.target_,
-                        stop.get_location_idx()) &&
+        if (nr::matches(tt, nullptr, nr::location_match_mode::kExact,
+                        offset.target_, stop.get_location_idx()) &&
             utl::any_of(times, [&](auto const& t) {
               return t.contains(stop.time(n::event_type::kArr)) &&
                      t.contains(stop.time(n::event_type::kArr) +

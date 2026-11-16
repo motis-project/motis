@@ -40,9 +40,9 @@ nigiri::routing::td_offsets_t get_td_offsets(auto const& rides,
           if (i + 1 == end(td_offsets.at(r.stop_)) ||
               (i + 1)->valid_from_ != tdo.valid_from_ + 1min) {
             td_offsets.at(r.stop_).insert(
-                i + 1, nigiri::routing::td_offset::make(
-                           tdo.valid_from_ + 1min,
-                           nigiri::footpath::kMaxDuration, mode));
+                i + 1,
+                nigiri::routing::td_offset::make(tdo.valid_from_ + 1min,
+                                                 nigiri::kTdFootpathBan, mode));
           }
         }
       });

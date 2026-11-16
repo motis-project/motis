@@ -132,7 +132,7 @@ limits:
   max_max_matching_distance: 250  # upper bound (meters) for the maxMatchingDistance API param, larger values are capped to this limit
 logging:
   log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
-osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
+osr_footpath: true                # compute footpaths by street routing (for `useRoutedTransfers`; without it, they replace the beeline walks), `transfers.txt` stays authoritative
 geocoding: true                   # enable geocoding for place/stop name autocompletion
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses
 ```

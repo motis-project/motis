@@ -1,17 +1,20 @@
 #include "motis/odm/prima.h"
 
 #include <algorithm>
+#include <tuple>
 #include <variant>
 
 #include "boost/asio/io_context.hpp"
 #include "boost/json.hpp"
 
+#include "utl/erase_duplicates.h"
 #include "utl/erase_if.h"
 #include "utl/pipes.h"
 #include "utl/zip.h"
 
 #include "nigiri/common/parse_time.h"
 #include "nigiri/logging.h"
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
 
 #include "motis/elevators/elevators.h"
@@ -142,6 +145,13 @@ void init_pt(std::vector<n::routing::offset>& offsets,
       tt, rtt, intvl, offsets, {}, {}, n::routing::kMaxTravelTime,
       location_match_mode, false, rides, true, start_time.prf_idx_,
       start_time.transfer_time_settings_);
+  for (auto& s : rides) {
+    s.stop_ = n::rt::base(tt, rtt, s.stop_);
+  }
+  utl::erase_duplicates(
+      rides, [](n::routing::start const& a, n::routing::start const& b) {
+        return std::tie(a.stop_, a) < std::tie(b.stop_, b);
+      });
 }
 
 void prima::init(n::interval<n::unixtime_t> const& search_intvl,

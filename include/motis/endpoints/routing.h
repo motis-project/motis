@@ -16,6 +16,7 @@
 #include "motis-api/motis-api.h"
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
+#include "motis/hashes.h"
 #include "motis/match_platforms.h"
 #include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/parameters.h"
@@ -30,8 +31,6 @@ constexpr auto const kInfinityDuration =
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
-
-using stats_map_t = std::map<std::string, std::uint64_t>;
 
 nigiri::interval<nigiri::unixtime_t> shrink(
     bool keep_late,
@@ -56,6 +55,8 @@ std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum>);
 void remove_slower_than_fastest_direct(nigiri::routing::query&);
 
 struct routing {
+  static inline bool use_gpu_cpu_comparison_{false};  // for tests
+
   api::plan_response operator()(boost::urls::url_view const&) const;
 
   api::plan_response route(api::plan_params const&,
@@ -78,7 +79,7 @@ struct routing {
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&,
-      stats_map_t& stats,
+      meta_t& stats,
       one_to_many_side* = nullptr) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
@@ -94,7 +95,7 @@ struct routing {
                  double max_matching_distance,
                  std::chrono::seconds max,
                  nigiri::routing::start_time_t const&,
-                 stats_map_t& stats,
+                 meta_t& stats,
                  one_to_many_side* = nullptr) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(

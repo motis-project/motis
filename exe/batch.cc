@@ -11,6 +11,7 @@
 #include "motis/data.h"
 #include "motis/gbfs/update.h"
 #include "motis/motis_instance.h"
+#include "motis/parse_location.h"
 #include "motis/rt_update.h"
 
 #include "./flags.h"
@@ -133,6 +134,7 @@ int batch(int ac, char** av) {
   auto responses_path = fs::path{"responses.txt"};
   auto n_threads = std::thread::hardware_concurrency();
   auto rt = false;
+  auto rt_day = std::string{};
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
@@ -145,7 +147,9 @@ int batch(int ac, char** av) {
       ("rt", po::bool_switch(&rt),
        "apply a canned rt update (dump_rt/ in the working directory, written "
        "by a server run with an existing dump_rt directory) before running "
-       "the queries");
+       "the queries")  //
+      ("rt_day", po::value(&rt_day),
+       "day of the canned rt update (YYYY-MM-DD), default: today");
   add_data_path_opt(desc, data_path);
 
   auto vm = parse_opt(ac, av, desc);
@@ -170,7 +174,11 @@ int batch(int ac, char** av) {
                std::thread::hardware_concurrency(), n_threads);
 
   if (rt) {
-    apply_canned_rt_update(c, d);
+    apply_canned_rt_update(c, d,
+                           rt_day.empty()
+                               ? std::chrono::time_point_cast<date::days>(
+                                     std::chrono::system_clock::now())
+                               : parse_iso_date(rt_day));
   }
   gbfs::apply_canned_gbfs_update(c, d);
 

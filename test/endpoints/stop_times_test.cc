@@ -98,8 +98,8 @@ TEST(motis, stop_times) {
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   auto const stats =
-      n::rt::gtfsrt_update_msg(
-          *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      test::gtfsrt_update(
+          d,
           to_feed_msg({trip_update{
                            .trip_ = {.trip_id_ = "ICE",
                                      .start_time_ = {"00:35:00"},
@@ -450,8 +450,8 @@ TEST(motis, stop_times_alert_only_no_rt_data) {
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   // An alert for the ICE creates an RT transport without any real-time times.
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto const stats = test::gtfsrt_update(
+      d,
       to_feed_msg({alert{.header_ = "Hello",
                          .description_ = "World",
                          .entities_ = {{.trip_ = {{.trip_id_ = "ICE",
@@ -666,15 +666,14 @@ TEST(motis, stop_times_skipped_stop) {
   auto d = data{"test/data-skipped-stop", c};
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      to_feed_msg({trip_update{.trip_ = {.trip_id_ = "T1",
-                                         .start_time_ = {"08:00:00"},
-                                         .date_ = {"20190501"}},
-                               .stop_updates_ = {{.stop_id_ = "B",
-                                                  .seq_ = std::optional{1U},
-                                                  .skip_ = true}}}},
-                  date::sys_days{2019_y / May / 1} + 5h));
+  auto const stats = test::gtfsrt_update(
+      d, to_feed_msg({trip_update{.trip_ = {.trip_id_ = "T1",
+                                            .start_time_ = {"08:00:00"},
+                                            .date_ = {"20190501"}},
+                                  .stop_updates_ = {{.stop_id_ = "B",
+                                                     .seq_ = std::optional{1U},
+                                                     .skip_ = true}}}},
+                     date::sys_days{2019_y / May / 1} + 5h));
   EXPECT_EQ(1U, stats.total_entities_success_);
 
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();

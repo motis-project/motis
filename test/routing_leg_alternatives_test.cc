@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 #include "date/date.h"
@@ -14,14 +15,14 @@
 #include "nigiri/rt/gtfsrt_update.h"
 
 #include "motis-api/motis-api.h"
-#include "motis/compute_footpaths.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
+#include "motis/elevators/update_elevators.h"
 #include "motis/endpoints/routing.h"
 #include "motis/import.h"
-#include "motis/update_rtt_td_footpaths.h"
+#include "motis/rt_update.h"
 
 #include "./util.h"
 
@@ -43,18 +44,17 @@ void apply_one_min_delay(data& d,
                          std::string_view const last_stop_id,
                          std::uint32_t const last_stop_seq,
                          std::optional<std::string> start_time = std::nullopt) {
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      test::to_feed_msg(
-          {test::trip_update{
-              .trip_ = {.trip_id_ = std::string{trip_id},
-                        .start_time_ = std::move(start_time),
-                        .date_ = std::string{"20190501"}},
-              .stop_updates_ = {{.stop_id_ = std::string{last_stop_id},
-                                 .seq_ = std::optional{last_stop_seq},
-                                 .ev_type_ = n::event_type::kArr,
-                                 .delay_minutes_ = 1}}}},
-          date::sys_days{2019_y / May / 1} + 9h));
+  auto const stats = test::gtfsrt_update(
+      d, test::to_feed_msg(
+             {test::trip_update{
+                 .trip_ = {.trip_id_ = std::string{trip_id},
+                           .start_time_ = std::move(start_time),
+                           .date_ = std::string{"20190501"}},
+                 .stop_updates_ = {{.stop_id_ = std::string{last_stop_id},
+                                    .seq_ = std::optional{last_stop_seq},
+                                    .ev_type_ = n::event_type::kArr,
+                                    .delay_minutes_ = 1}}}},
+             date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats.total_entities_success_);
 }
 
@@ -860,21 +860,15 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   import(c, "test/data_leg_alts_td_footpath_blocked");
   auto d = data{"test/data_leg_alts_td_footpath_blocked", c};
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
-                                          parse_fasta(kElevatorBlockedFasta));
+                                          parse_fasta(std::string_view{"[]"}));
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
-  // Rebuild the rt_timetable's td_footpaths from the elevator state.
-  // Mirrors what `update_elevators` does in production: the
-  // elevator-footpath map (one entry per OSR-routed footpath that
-  // traverses an elevator node, written to disk by `import()`) tells
-  // `update_rtt_td_footpaths` which (from, to) stop pairs to refresh
-  // for the wheelchair profile.
-  auto const elevator_footpath_map = cista::read<elevator_footpath_map_t>(
-      "test/data_leg_alts_td_footpath_blocked/elevator_footpath_map.bin");
-  update_rtt_td_footpaths(
-      *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtree_, *d.rt_->e_,
-      *elevator_footpath_map, *d.matches_, *d.rt_->rtt_,
-      std::chrono::seconds{c.timetable_->max_footpath_length_ * 60});
+  // The elevator update as in production: the stops near an elevator that is
+  // not always working get their wheelchair walks routed again.
+  auto new_rtt = std::make_unique<n::rt_timetable>(*d.rt_->rtt_);
+  d.rt_->e_ = update_elevators(d.config_, d, kElevatorBlockedFasta, *new_rtt);
+  finalize_rtt(*d.tt_, *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
 
   // Delay the LOCAL 00:35 ICE alt by 1 min — this is a frequency-
   // expanded trip instance, so trip_id stays "ICE" and start_time
@@ -1251,8 +1245,8 @@ TEST(motis, routing_leg_alternatives_rt_filtered) {
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   // Apply two delays via a single FeedMessage (one entity each).
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto const stats = test::gtfsrt_update(
+      d,
       test::to_feed_msg(
           {test::trip_update{.trip_ = {.trip_id_ = "T1_EARLY",
                                        .start_time_ = std::nullopt,

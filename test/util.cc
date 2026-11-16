@@ -2,7 +2,18 @@
 
 #include "fmt/format.h"
 
+#include "motis/data.h"
+#include "motis/rt_update.h"
+
 namespace motis::test {
+
+nigiri::rt::statistics gtfsrt_update(data& d,
+                                     transit_realtime::FeedMessage const& msg) {
+  auto const stats = nigiri::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, nigiri::source_idx_t{0}, "test", msg);
+  finalize_rtt(*d.tt_, *d.rt_->rtt_);
+  return stats;
+}
 
 using namespace std::string_view_literals;
 using namespace std::chrono_literals;

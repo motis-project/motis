@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 
+#include "fmt/format.h"
+
 #include "utl/init_from.h"
 
 #include "motis-api/motis-api.h"
@@ -99,21 +101,26 @@ TEST(motis, routing_slow_direct) {
     EXPECT_EQ(res.itineraries_.at(1).legs_.at(1).tripId_,
               "20190501_04:35_test_ICE2");
   }
-  {
-    auto const res = routing(
-        "?fromPlace=49.87336,8.62926"
-        "&toPlace=test_FFM_10"
-        "&time=2019-05-01T01:30Z"
-        "&slowDirect=true"
-        "&numLegAlternatives=3");
-    ASSERT_TRUE(res.itineraries_.size() >= 2);
+  for (auto const algorithm : {"PONG", "RAPTOR"}) {
+    auto const res =
+        routing(fmt::format("?fromPlace=49.87336,8.62926"
+                            "&toPlace=test_FFM_10"
+                            "&time=2019-05-01T01:30Z"
+                            "&slowDirect=true"
+                            "&numLegAlternatives=3"
+                            "&algorithm={}",
+                            algorithm));
+    ASSERT_GE(res.itineraries_.size(), 3U) << algorithm;
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
-              "20190501_03:35_test_ICE2");
+              "20190501_03:35_test_ICE2")
+        << algorithm;
     EXPECT_EQ(
         res.itineraries_.at(1).legs_.at(1).tripId_,
-        "20190501_03:35_test_ICE2");  // this contains an addional 1min footpath
+        "20190501_03:35_test_ICE2")  // this contains an addional 1min footpath
+        << algorithm;
     EXPECT_EQ(res.itineraries_.at(2).legs_.at(1).tripId_,
-              "20190501_03:35_test_ICE");
+              "20190501_03:35_test_ICE")
+        << algorithm;
   }
   {
     auto const res = routing(
@@ -143,7 +150,7 @@ TEST(motis, routing_slow_direct) {
         "&numLegAlternatives=3");
     ASSERT_TRUE(res.itineraries_.size() >= 2);
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
-              "20190501_01:35_test_ICE2");
+              "20190501_02:35_test_ICE2");
     EXPECT_EQ(res.itineraries_.at(1).legs_.at(1).tripId_,
               "20190501_02:35_test_ICE2");
   }

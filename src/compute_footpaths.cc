@@ -1,19 +1,20 @@
 #include "motis/compute_footpaths.h"
 
-#include "nigiri/loader/build_lb_graph.h"
-
 #include "cista/mmap.h"
 #include "cista/serialization.h"
 
-#include "utl/concat.h"
 #include "utl/erase_if.h"
 #include "utl/parallel_for.h"
-#include "utl/sorted_diff.h"
 
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 #include "osr/util/infinite.h"
 #include "osr/util/reverse.h"
+
+#include "geo/latlng.h"
+
+#include "utl/helpers/algorithm.h"
+#include "utl/zip.h"
 
 #include "motis/constants.h"
 #include "motis/get_loc.h"
@@ -26,11 +27,14 @@ namespace n = nigiri;
 
 namespace motis {
 
-elevator_footpath_map_t compute_footpaths(
+constexpr auto const kMaxMissingFootpathDistance = 100.0;
+
+void compute_footpaths(
     osr::ways const& w,
     osr::lookup const& lookup,
     osr::platforms const& pl,
     nigiri::timetable& tt,
+    n::mutable_fws_multimap<n::location_idx_t, n::footpath>& walks,
     platform_matches_t const& matches,
     way_matches_storage const* way_matches,
     osr::elevation_storage const* elevations,
@@ -47,21 +51,7 @@ elevator_footpath_map_t compute_footpaths(
   auto const pt = utl::get_active_progress_tracker();
   pt->in_high(2U * tt.n_locations() * settings.size());
 
-  auto elevator_in_paths_mutex = std::mutex{};
-  auto elevator_in_paths = elevator_footpath_map_t{};
-  auto const add_if_elevator = [&](osr::node_idx_t const n,
-                                   n::location_idx_t const a,
-                                   n::location_idx_t const b) {
-    if (n != osr::node_idx_t::invalid() &&
-        w.r_->node_properties_[n].is_elevator()) {
-      auto l = std::unique_lock{elevator_in_paths_mutex};
-      elevator_in_paths[n].emplace(a, b);
-    }
-  };
-
   struct state {
-    std::vector<n::footpath> sorted_tt_fps_;
-    std::vector<n::footpath> missing_;
     std::vector<n::location_idx_t> neighbors_;
     std::vector<osr::location> neighbors_loc_;
     osr::match_result neighbor_candidates_;
@@ -74,9 +64,14 @@ elevator_footpath_map_t compute_footpaths(
   auto transfers = n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
       tt.n_locations());
   for (auto const& mode : settings) {
+    auto const is_default_profile = mode.profile_idx_ == n::kFootProfile;
     for (auto& fps : transfers) {
       fps.clear();
     }
+
+    auto default_estimates =
+        n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
+            is_default_profile ? tt.n_locations() : 0U);
 
     auto const is_candidate = [&](n::location_idx_t const l) {
       return !mode.is_candidate_ || mode.is_candidate_(l);
@@ -175,42 +170,25 @@ elevator_footpath_map_t compute_footpaths(
             auto const duration = n::duration_t{
                 static_cast<unsigned>(std::ceil(r->duration_.count() / 60.0))};
             transfers[l].emplace_back(n::footpath{n, duration});
-
-            if (mode.profile_ == osr::search_profile::kWheelchair) {
-              for (auto const& seg : r->segments_) {
-                add_if_elevator(seg.from_, l, n);
-                add_if_elevator(seg.from_, n, l);
-              }
-            }
           }
 
-          if (mode.extend_missing_) {
-            auto const& tt_fps = tt.locations_.footpaths_out_[0].at(l);
-            s.sorted_tt_fps_.resize(tt_fps.size());
-            std::copy(begin(tt_fps), end(tt_fps), begin(s.sorted_tt_fps_));
-            utl::sort(s.sorted_tt_fps_);
-            utl::sort(transfers[l]);
-
-            utl::sorted_diff(
-                s.sorted_tt_fps_, transfers[l],
-                [](auto&& a, auto&& b) { return a.target() < b.target(); },
-                [](auto&& a, auto&& b) { return a.target() == b.target(); },
-                utl::overloaded{
-                    [](n::footpath, n::footpath) { assert(false); },
-                    [&](utl::op const op, n::footpath const x) {
-                      if (op == utl::op::kDel) {
-                        auto const dist = geo::distance(
-                            tt.locations_.coordinates_[l],
-                            tt.locations_.coordinates_[x.target()]);
-                        if (dist < 100.0) {
-                          auto const duration = n::duration_t{
-                              static_cast<int>(std::ceil((dist / 0.7) / 60.0))};
-                          s.missing_.emplace_back(x.target(), duration);
-                        }
-                      }
-                    }});
-
-            utl::concat(transfers[l], s.missing_);
+          if (mode.extend_missing_ || is_default_profile) {
+            for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
+              if (r.has_value()) {
+                continue;
+              }
+              auto const dist = geo::distance(tt.locations_.coordinates_[l],
+                                              tt.locations_.coordinates_[n]);
+              auto const estimate = n::footpath{n, n::walk_duration(dist)};
+              auto const is_close = dist < kMaxMissingFootpathDistance;
+              if (mode.extend_missing_ && is_close) {
+                transfers[l].push_back(estimate);
+              } else if (is_default_profile &&
+                         (is_close || tt.locations_.get_root_idx(l) ==
+                                          tt.locations_.get_root_idx(n))) {
+                default_estimates[l].push_back(estimate);
+              }
+            }
           }
 
           utl::erase_if(transfers[l], [&](n::footpath fp) {
@@ -221,30 +199,26 @@ elevator_footpath_map_t compute_footpaths(
           pt->update_monotonic(n_done + i);
         });
 
-    auto transfers_in =
-        n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
-    transfers_in.resize(tt.n_locations());
-    for (auto const [i, out] : utl::enumerate(transfers)) {
-      auto const l = n::location_idx_t{i};
-      for (auto const fp : out) {
-        assert(fp.target() < tt.n_locations());
-        transfers_in[fp.target()].push_back(n::footpath{l, fp.duration()});
-      }
-    }
     for (auto const& x : transfers) {
       tt.locations_.footpaths_out_[mode.profile_idx_].emplace_back(x);
     }
-    for (auto const& x : transfers_in) {
-      tt.locations_.footpaths_in_[mode.profile_idx_].emplace_back(x);
-    }
 
-    n::loader::build_lb_graph<n::direction::kForward>(tt, mode.profile_idx_);
-    n::loader::build_lb_graph<n::direction::kBackward>(tt, mode.profile_idx_);
+    if (is_default_profile) {
+      walks.clear();
+      for (auto const [routed, estimates] :
+           utl::zip(transfers, default_estimates)) {
+        auto bucket = walks.emplace_back();
+        for (auto const fp : routed) {
+          bucket.push_back(fp);
+        }
+        for (auto const fp : estimates) {
+          bucket.push_back(fp);
+        }
+      }
+    }
 
     n_done += tt.n_locations();
   }
-
-  return elevator_in_paths;
 }
 
 }  // namespace motis

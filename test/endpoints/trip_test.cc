@@ -3,8 +3,10 @@
 #include "fmt/format.h"
 
 #include "utl/init_from.h"
+#include "utl/to_vec.h"
 
 #include "nigiri/common/parse_time.h"
+#include "nigiri/resolve.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_update.h"
@@ -51,6 +53,7 @@ R2,DB,R2,R2,,109
 route_id,service_id,trip_id,trip_headsign,block_id
 R1,S1,T1,Parent2 Express,
 R2,S1,T2,Parent2 Local,
+R2,S1,T3,Parent1,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type,stop_headsign
@@ -60,6 +63,13 @@ T1,11:00:00,11:00:00,Child2,3,0,0,Destination
 T2,12:00:00,12:00:00,Child1A,1,0,0,Origin
 T2,12:10:00,12:10:00,Child1B,2,0,0,Midway
 T2,13:00:00,13:00:00,Child2,3,0,0,Destination
+T3,11:05:00,11:05:00,Child2,1,0,0,
+T3,11:30:00,11:30:00,Child1A,2,0,0,
+
+# transfers.txt
+from_stop_id,to_stop_id,from_trip_id,to_trip_id,transfer_type,min_transfer_time
+Child2,Child2,,,2,120
+Child2,Child2,T1,,2,600
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -183,6 +193,14 @@ TEST(motis, trip_ticketing) {
              .street_routing_ = false};
   import(c, "test/data");
   auto d = data{"test/data", c};
+
+  // T1 -> any at Child2 takes 10 min (transfers.txt), T3 leaves after 5 min:
+  // T1 arrives at a virtual location, the ticketing data is Child2's.
+  ASSERT_TRUE(d.tt_->locations_.is_virt(
+      n::resolve(*d.tt_, nullptr, "T1", "20190501")[2U]
+          .get_stop()
+          .location_idx()))
+      << "precondition";
 
   auto const trip_ep = utl::init_from<ep::trip>(d).value();
 
@@ -461,8 +479,8 @@ TEST(motis, trip_ticketing_rt_added) {
     return date::sys_seconds{date::sys_days{2019_y / May / 1} +
                              std::chrono::hours{h} + std::chrono::minutes{m}};
   };
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto const stats = test::gtfsrt_update(
+      d,
       to_feed_msg({trip_update{
                       .trip_ = {.trip_id_ = "RT_ADDED", .route_id_ = {"R1"}},
                       .stop_updates_ = {{.stop_id_ = "S1", .time_ = t(12, 0)},
@@ -479,10 +497,11 @@ TEST(motis, trip_ticketing_rt_added) {
   EXPECT_FALSE(res.legs_[0].ticketUrls_.has_value());
 }
 
-// T1 runs S1 10:00 -> S5 10:40, the leg is S3 10:20 -> S4 10:30 (08:20 -
-// 08:30 UTC). A trip alert counts for the leg only if it is active in that
-// time, not at any other point of the run.
-TEST(motis, leg_alerts_leg_time) {
+// T1 (S1 10:00 -> S5 10:40) and T2 (S5 10:45 -> S7 11:00) share BLOCK1: one
+// transport, two trip sections. A trip alert counts for a leg only if it is
+// for the leg's trip and active during the leg, not at another point of the
+// run.
+TEST(motis, leg_alerts) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
 
@@ -503,73 +522,46 @@ TEST(motis, leg_alerts_leg_time) {
                          .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}},
                    alert{.header_ = "on board",
                          .description_ = "",
-                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}}},
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}},
+                   alert{.header_ = "T2",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T2"}}}}}},
                   date::sys_days{2019_y / May / 1} + 6h);
-  auto const set_period = [&](int const entity, int const h, int const m) {
+  auto const set_period = [&](int const entity, int const h, int const m,
+                              std::chrono::minutes const duration) {
     auto const start =
         date::sys_seconds{date::sys_days{2019_y / May / 1} +
                           std::chrono::hours{h} + std::chrono::minutes{m}};
     auto const p =
         msg.mutable_entity(entity)->mutable_alert()->add_active_period();
     p->set_start(static_cast<std::uint64_t>(start.time_since_epoch().count()));
-    p->set_end(
-        static_cast<std::uint64_t>((start + 5min).time_since_epoch().count()));
+    p->set_end(static_cast<std::uint64_t>(
+        (start + duration).time_since_epoch().count()));
   };
-  set_period(0, 8, 0);
-  set_period(1, 8, 22);
-  n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-                           msg);
+  set_period(0, 8, 0, 5min);
+  set_period(1, 8, 22, 1h);  // also active during the T2 leg
+  test::gtfsrt_update(d, msg);
 
   auto const routing_ep = utl::init_from<ep::routing>(d).value();
-  auto const res =
-      routing_ep("?fromPlace=test_S3&toPlace=test_S4&time=2019-05-01T08:00Z");
-  ASSERT_EQ(1, res.itineraries_.size());
+  auto const leg_alerts = [&](std::string_view const query) {
+    auto const res = routing_ep(query);
+    return res.itineraries_.size() == 1U &&
+                   res.itineraries_.front().legs_.size() == 1U &&
+                   res.itineraries_.front().legs_.front().alerts_.has_value()
+               ? utl::to_vec(*res.itineraries_.front().legs_.front().alerts_,
+                             [](api::Alert const& a) { return a.headerText_; })
+               : std::vector<std::string>{};
+  };
 
-  auto const& legs = res.itineraries_.front().legs_;
-  ASSERT_EQ(1, legs.size());
-  ASSERT_TRUE(legs[0].alerts_.has_value());
-  ASSERT_EQ(1U, legs[0].alerts_->size());
-  EXPECT_EQ("on board", legs[0].alerts_->front().headerText_);
-}
+  // T1 leg S3 10:20 -> S4 10:30 (08:20 - 08:30 UTC)
+  EXPECT_EQ(
+      std::vector<std::string>{"on board"},
+      leg_alerts("?fromPlace=test_S3&toPlace=test_S4&time=2019-05-01T08:00Z"));
 
-// T1 and T2 share BLOCK1 (one transport, two trip sections). A leg on T2 must
-// get T2's trip alerts, not those of the transport's first trip T1.
-TEST(motis, leg_alerts_second_trip_section) {
-  auto ec = std::error_code{};
-  std::filesystem::remove_all("test/data", ec);
-
-  auto const c =
-      config{.timetable_ =
-                 config::timetable{
-                     .first_day_ = "2019-05-01",
-                     .num_days_ = 2,
-                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
-             .street_routing_ = false};
-  import(c, "test/data");
-  auto d = data{"test/data", c};
-  d.init_rtt(date::sys_days{2019_y / May / 1});
-
-  auto const msg =
-      to_feed_msg({alert{.header_ = "T1",
-                         .description_ = "",
-                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}},
-                   alert{.header_ = "T2",
-                         .description_ = "",
-                         .entities_ = {{.trip_ = {{.trip_id_ = "T2"}}}}}},
-                  date::sys_days{2019_y / May / 1} + 6h);
-  n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-                           msg);
-
-  auto const routing_ep = utl::init_from<ep::routing>(d).value();
-  auto const res =
-      routing_ep("?fromPlace=test_S6&toPlace=test_S7&time=2019-05-01T08:45Z");
-  ASSERT_EQ(1, res.itineraries_.size());
-
-  auto const& legs = res.itineraries_.front().legs_;
-  ASSERT_EQ(1, legs.size());
-  ASSERT_TRUE(legs[0].alerts_.has_value());
-  ASSERT_EQ(1U, legs[0].alerts_->size());
-  EXPECT_EQ("T2", legs[0].alerts_->front().headerText_);
+  // T2 leg S6 10:50 -> S7 11:00 (08:50 - 09:00 UTC)
+  EXPECT_EQ(
+      std::vector<std::string>{"T2"},
+      leg_alerts("?fromPlace=test_S6&toPlace=test_S7&time=2019-05-01T08:45Z"));
 }
 
 constexpr auto kNetex = R"(
