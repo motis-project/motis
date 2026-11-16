@@ -1,6 +1,7 @@
 #include "motis/elevators/match_elevator.h"
 
 #include "utl/enumerate.h"
+#include "utl/lookup.h"
 #include "utl/parallel_for.h"
 
 #include "osr/ways.h"
@@ -70,9 +71,8 @@ osr::bitvec<osr::node_idx_t> get_blocked_elevators(
     if (ids != nullptr) {
       auto const id_it = ids->find(to_idx(w.node_to_osm_[n]));
       if (id_it != end(*ids)) {
-        auto const e_it = id_to_elevator.find(id_it->second);
-        if (e_it != end(id_to_elevator)) {
-          e = e_it->second;
+        if (auto const e_idx = utl::lookup(id_to_elevator, id_it->second)) {
+          e = *e_idx;
         }
       }
     }

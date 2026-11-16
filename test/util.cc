@@ -2,6 +2,8 @@
 
 #include "fmt/format.h"
 
+#include "utl/visit.h"
+
 #include "motis/data.h"
 #include "motis/rt_update.h"
 
@@ -61,83 +63,80 @@ transit_realtime::FeedMessage to_feed_msg(
           }
         };
 
-    std::visit(
-        utl::overloaded{
-            [&](trip_update const& u) {
-              set_trip(e->mutable_trip_update()->mutable_trip(), u.trip_,
-                       u.cancelled_, u.added_);
+    utl::visit(
+        x,
+        [&](trip_update const& u) {
+          set_trip(e->mutable_trip_update()->mutable_trip(), u.trip_,
+                   u.cancelled_, u.added_);
 
-              for (auto const& stop_upd : u.stop_updates_) {
-                auto* const upd =
-                    e->mutable_trip_update()->add_stop_time_update();
-                if (!stop_upd.stop_id_.empty()) {
-                  *upd->mutable_stop_id() = stop_upd.stop_id_;
-                }
-                if (stop_upd.seq_.has_value()) {
-                  upd->set_stop_sequence(*stop_upd.seq_);
-                }
-                if (stop_upd.stop_assignment_.has_value()) {
-                  upd->mutable_stop_time_properties()->set_assigned_stop_id(
-                      stop_upd.stop_assignment_.value());
-                }
-                if (stop_upd.time_.has_value()) {
-                  auto const t = to_unix(*stop_upd.time_);
-                  upd->mutable_arrival()->set_time(static_cast<signed>(t));
-                  upd->mutable_departure()->set_time(static_cast<signed>(t));
-                }
-                if (stop_upd.skip_) {
-                  upd->set_schedule_relationship(
-                      transit_realtime::
-                          TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED);
-                  continue;
-                }
-                if (stop_upd.time_.has_value()) {
-                  continue;
-                }
-                stop_upd.ev_type_ == ::nigiri::event_type::kDep
-                    ? upd->mutable_departure()->set_delay(
-                          stop_upd.delay_minutes_ * 60)
-                    : upd->mutable_arrival()->set_delay(
-                          stop_upd.delay_minutes_ * 60);
-              }
-            },
+          for (auto const& stop_upd : u.stop_updates_) {
+            auto* const upd = e->mutable_trip_update()->add_stop_time_update();
+            if (!stop_upd.stop_id_.empty()) {
+              *upd->mutable_stop_id() = stop_upd.stop_id_;
+            }
+            if (stop_upd.seq_.has_value()) {
+              upd->set_stop_sequence(*stop_upd.seq_);
+            }
+            if (stop_upd.stop_assignment_.has_value()) {
+              upd->mutable_stop_time_properties()->set_assigned_stop_id(
+                  stop_upd.stop_assignment_.value());
+            }
+            if (stop_upd.time_.has_value()) {
+              auto const t = to_unix(*stop_upd.time_);
+              upd->mutable_arrival()->set_time(static_cast<signed>(t));
+              upd->mutable_departure()->set_time(static_cast<signed>(t));
+            }
+            if (stop_upd.skip_) {
+              upd->set_schedule_relationship(
+                  transit_realtime::
+                      TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED);
+              continue;
+            }
+            if (stop_upd.time_.has_value()) {
+              continue;
+            }
+            stop_upd.ev_type_ == ::nigiri::event_type::kDep
+                ? upd->mutable_departure()->set_delay(stop_upd.delay_minutes_ *
+                                                      60)
+                : upd->mutable_arrival()->set_delay(stop_upd.delay_minutes_ *
+                                                    60);
+          }
+        },
 
-            [&](alert const& a) {
-              auto const alert = e->mutable_alert();
+        [&](alert const& a) {
+          auto const alert = e->mutable_alert();
 
-              auto const header =
-                  alert->mutable_header_text()->add_translation();
-              *header->mutable_text() = a.header_;
-              *header->mutable_language() = "en";
+          auto const header = alert->mutable_header_text()->add_translation();
+          *header->mutable_text() = a.header_;
+          *header->mutable_language() = "en";
 
-              auto const description =
-                  alert->mutable_description_text()->add_translation();
-              *description->mutable_text() = a.description_;
-              *description->mutable_language() = "en";
+          auto const description =
+              alert->mutable_description_text()->add_translation();
+          *description->mutable_text() = a.description_;
+          *description->mutable_language() = "en";
 
-              for (auto const& entity : a.entities_) {
-                auto const ie = alert->add_informed_entity();
-                if (entity.agency_id_) {
-                  *ie->mutable_agency_id() = *entity.agency_id_;
-                }
-                if (entity.route_id_) {
-                  *ie->mutable_route_id() = *entity.route_id_;
-                }
-                if (entity.direction_id_) {
-                  ie->set_direction_id(*entity.direction_id_);
-                }
-                if (entity.route_type_) {
-                  ie->set_route_type(*entity.route_type_);
-                }
-                if (entity.stop_id_) {
-                  ie->set_stop_id(*entity.stop_id_);
-                }
-                if (entity.trip_) {
-                  set_trip(ie->mutable_trip(), *entity.trip_);
-                }
-              }
-            }},
-        x);
+          for (auto const& entity : a.entities_) {
+            auto const ie = alert->add_informed_entity();
+            if (entity.agency_id_) {
+              *ie->mutable_agency_id() = *entity.agency_id_;
+            }
+            if (entity.route_id_) {
+              *ie->mutable_route_id() = *entity.route_id_;
+            }
+            if (entity.direction_id_) {
+              ie->set_direction_id(*entity.direction_id_);
+            }
+            if (entity.route_type_) {
+              ie->set_route_type(*entity.route_type_);
+            }
+            if (entity.stop_id_) {
+              ie->set_stop_id(*entity.stop_id_);
+            }
+            if (entity.trip_) {
+              set_trip(ie->mutable_trip(), *entity.trip_);
+            }
+          }
+        });
   }
 
   return msg;

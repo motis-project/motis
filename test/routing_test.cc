@@ -622,18 +622,20 @@ TEST(motis, routing) {
 
     ASSERT_TRUE(res.direct_.front().legs_.front().steps_.has_value());
     auto const& steps = *res.direct_.front().legs_.front().steps_;
-    ASSERT_GE(steps.size(), 2);
+    ASSERT_GE(steps.size(), 3);
 
-    // additional edge
     EXPECT_FALSE(steps[0].osmWay_.has_value());
     EXPECT_FALSE(steps[0].fromOsmNode_.has_value());
-    EXPECT_TRUE(steps[0].toOsmNode_.has_value());
-    EXPECT_EQ(533673, steps[0].toOsmNode_);
+    EXPECT_EQ(2624559589, steps[0].toOsmNode_);
 
-    EXPECT_FALSE(steps[1].osmWay_.has_value());
-    EXPECT_TRUE(steps[1].fromOsmNode_.has_value());
-    EXPECT_FALSE(steps[1].toOsmNode_.has_value());
-    EXPECT_EQ(533673, steps[1].fromOsmNode_);
+    EXPECT_EQ(150003465, steps[1].osmWay_);
+    EXPECT_EQ(2624559589, steps[1].fromOsmNode_);
+    EXPECT_EQ(533673, steps[1].toOsmNode_);
+
+    // additional edge
+    EXPECT_FALSE(steps[2].osmWay_.has_value());
+    EXPECT_EQ(533673, steps[2].fromOsmNode_);
+    EXPECT_FALSE(steps[2].toOsmNode_.has_value());
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=01:34, duration=00:09, transfers=0, legs=[
@@ -675,9 +677,9 @@ TEST(motis, routing) {
         "&numLegAlternatives=3");
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:22, end=02:15, duration=00:53, transfers=1, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:22, mode="WALK", trip="-", end=2019-05-01 01:22),
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:22, mode="RENTAL", trip="-", end=2019-05-01 01:24),
+        R"(date=2019-05-01, start=01:23, end=02:15, duration=00:52, transfers=1, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:23, mode="WALK", trip="-", end=2019-05-01 01:23),
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:23, mode="RENTAL", trip="-", end=2019-05-01 01:24),
     (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:24, mode="WALK", trip="-", end=2019-05-01 01:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 01:59),

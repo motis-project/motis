@@ -17,7 +17,7 @@ meta_t join_meta(auto&&... maps) {
 }
 
 constexpr auto const osr_version = []() {
-  return meta_entry_t{"osr_bin_ver", 38U};
+  return meta_entry_t{"osr_bin_ver", 39U};
 };
 constexpr auto const adr_version = []() {
   return meta_entry_t{"adr_bin_ver", 15U};
