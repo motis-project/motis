@@ -1767,6 +1767,11 @@ S1,20190501,1
 // the query's endpoint match mode - this fixture exercises that path through
 // the refresh endpoint. `L2_REG` arrives one minute before `L3` departs, so
 // it is a valid leg alternative but cannot itself form the main journey.
+// Transfer rules force virtual locations on both ends of the middle leg:
+// `L2_TIGHT` leaves B one minute after `L1` arrives and `L2_REG` reaches `L3`
+// in two minutes - both only allowed by their trip pair rule (B asks for two
+// minutes, C for three). So the alternatives have to start where `L1` arrives
+// and end where `L3` departs, not at B / C themselves.
 constexpr auto kLegAltIntermediateGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -1793,6 +1798,7 @@ L1_R,S1,L1,
 L2_MAIN_R,S1,L2_MAIN,
 L2_BUS_R,S1,L2_BUS,
 L2_REG_R,S1,L2_REG,
+L2_REG_R,S1,L2_TIGHT,
 L3_R,S1,L3,
 
 # stop_times.txt
@@ -1805,8 +1811,17 @@ L2_BUS,09:45:00,09:45:00,B,0
 L2_BUS,10:15:00,10:15:00,C,1
 L2_REG,10:00:00,10:00:00,B,0
 L2_REG,10:43:00,10:43:00,C,1
+L2_TIGHT,09:16:00,09:16:00,B,0
+L2_TIGHT,10:30:00,10:30:00,C,1
 L3,10:45:00,10:45:00,C,0
 L3,11:15:00,11:15:00,D,1
+
+# transfers.txt
+from_stop_id,to_stop_id,transfer_type,min_transfer_time,from_route_id,to_route_id,from_trip_id,to_trip_id
+B,B,2,120,,,,
+B,B,2,60,,,L1,L2_TIGHT
+C,C,2,180,,,,
+C,C,2,120,,,L2_REG,L3
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -2686,6 +2701,7 @@ TEST(motis, itinerary_id_refresh_transfer_after_elevator_outage) {
 TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
   auto const cfg = make_config(kLegAltIntermediateGtfs);
   auto d = import_test_data(cfg, "leg_alt_intermediate");
+  ASSERT_NE(0U, test::n_virts(*d.tt_)) << "precondition";
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   auto const plan = routing(
@@ -2703,6 +2719,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
   ASSERT_TRUE(plan_mid.alternatives_.has_value());
   ASSERT_FALSE(plan_mid.alternatives_->empty());
   EXPECT_TRUE(any_alt_trip_contains(plan_mid, "L2_REG"));
+  EXPECT_TRUE(any_alt_trip_contains(plan_mid, "L2_TIGHT"));
   EXPECT_FALSE(any_alt_trip_contains(plan_mid, "L2_BUS"));
 
   auto query = api::refreshItinerary_params{};
@@ -2716,6 +2733,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
 
   auto const& refresh_mid = *refresh_transit[1];
   EXPECT_TRUE(any_alt_trip_contains(refresh_mid, "L2_REG"));
+  EXPECT_TRUE(any_alt_trip_contains(refresh_mid, "L2_TIGHT"));
   EXPECT_FALSE(any_alt_trip_contains(refresh_mid, "L2_BUS"));
 
   // Every transit leg's alternatives match the plan response - including the
@@ -2724,80 +2742,6 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
     EXPECT_EQ(plan_transit[i]->alternatives_,
               refresh_transit[i]->alternatives_);
   }
-}
-
-// Transfer rules: FB3 leaves U one minute after FA arrives, which only the
-// FA -> FB3 rule allows (U asks for two minutes), so FA arrives at a virtual
-// location of U. FB3 is a leg alternative for FB in the plan and in the
-// refresh, whose alternatives start where FA arrives, not at U itself.
-constexpr auto kLegAltTransferRulesGtfs = R"(
-# agency.txt
-agency_id,agency_name,agency_url,agency_timezone
-DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
-
-# stops.txt
-stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
-U,U,55.0,13.0,0,
-L,L,55.1,13.0,0,
-M,M,55.2,13.0,0,
-
-# routes.txt
-route_id,agency_id,route_short_name,route_long_name,route_type
-RF1,DB,RF1,,3
-RF2,DB,RF2,,3
-
-# trips.txt
-route_id,service_id,trip_id
-RF1,S1,FA
-RF2,S1,FB
-RF2,S1,FB3
-
-# stop_times.txt
-trip_id,arrival_time,departure_time,stop_id,stop_sequence
-FA,10:00:00,10:00:00,L,0
-FA,10:30:00,10:30:00,U,1
-FB,10:33:00,10:33:00,U,0
-FB,11:00:00,11:00:00,M,1
-FB3,10:31:00,10:31:00,U,0
-FB3,11:05:00,11:05:00,M,1
-
-# transfers.txt
-from_stop_id,to_stop_id,transfer_type,min_transfer_time,from_route_id,to_route_id,from_trip_id,to_trip_id
-U,U,2,120,,,,
-U,U,2,60,,,FA,FB3
-
-# calendar_dates.txt
-service_id,date,exception_type
-S1,20190501,1
-)";
-
-TEST(motis, itinerary_id_refresh_leg_alternatives_follow_transfer_rules) {
-  auto const cfg = make_config(kLegAltTransferRulesGtfs);
-  auto d = import_test_data(cfg, "leg_alt_transfer_rules");
-  ASSERT_NE(0U, test::n_virts(*d.tt_)) << "precondition";
-
-  auto const routing = utl::init_from<ep::routing>(d).value();
-  auto const plan = routing(
-      "?fromPlace=test_L&toPlace=test_M"
-      "&time=2019-05-01T07:55Z&searchWindow=7200&detailedLegs=true"
-      "&numLegAlternatives=5");
-  ASSERT_FALSE(plan.itineraries_.empty());
-  auto const& plan_itin = plan.itineraries_.front();
-  auto const plan_transit = transit_legs(plan_itin);
-  ASSERT_EQ(2U, plan_transit.size());
-  auto const& plan_fb = *plan_transit[1];
-  EXPECT_TRUE(any_alt_trip_contains(plan_fb, "FB3"));
-
-  auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = plan_itin.id_;
-  query.numLegAlternatives_ = 5;
-  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
-  auto const refreshed = refresh(query.to_url("?"));
-  auto const refresh_transit = transit_legs(refreshed);
-  ASSERT_EQ(2U, refresh_transit.size());
-  auto const& refresh_fb = *refresh_transit[1];
-  EXPECT_TRUE(any_alt_trip_contains(refresh_fb, "FB3"));
-  EXPECT_EQ(plan_fb.alternatives_, refresh_fb.alternatives_);
 }
 
 // Cross-timezone journey with first/last mile WALK access. The first transit
