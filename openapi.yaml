@@ -4945,6 +4945,7 @@ components:
         - points
         - min
         - max
+        - size
       properties:
         points:
           description: |
@@ -5563,7 +5564,7 @@ components:
             polyline.
           $ref: '#/components/schemas/EncodedPolyline'
         elevationProfile:
-          description: Elevation profile for leg. Only for footpath legs.
+          description: Elevation profile for footpath leg.
           $ref: '#/components/schemas/ElevationProfile'
         steps:
           description: |

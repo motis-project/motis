@@ -1,6 +1,5 @@
 #include "motis/osr/street_routing.h"
 
-#include <cstddef>
 #include <optional>
 
 #include "cista/strong.h"
