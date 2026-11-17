@@ -180,10 +180,7 @@ std::vector<api::StepInstruction> get_step_instructions(
 }
 
 api::ElevationProfile get_elevation_profile(
-    osr::ways const& w,
-    std::span<osr::path::segment const> segments,
-    double distance,
-    unsigned steps) {
+    osr::ways const& w, std::span<osr::path::segment const> segments) {
   auto const profile =
       osr::elevation_profile{w, segments.subspan(1, segments.size() - 2)};
   auto points = std::vector<double>{};
@@ -196,12 +193,12 @@ api::ElevationProfile get_elevation_profile(
 
   return {.points_ = points,
           .size_ = static_cast<int64_t>(profile.elevation_.size()),
-          .resolution_ = distance / steps,
+          .resolution_ = 0,
           .median_ = to_idx(profile.median()),
-          .min_ = static_cast<double>(to_idx(profile.min_)),
-          .max_ = static_cast<double>(to_idx(profile.max_)),
-          .up_ = 0,
-          .down_ = 0};
+          .min_ = static_cast<int64_t>(to_idx(profile.min_)),
+          .max_ = static_cast<int64_t>(to_idx(profile.max_)),
+          .up_ = static_cast<int64_t>(to_idx(profile.up_)),
+          .down_ = static_cast<int64_t>(to_idx(profile.down_))};
 }
 
 api::Itinerary dummy_itinerary(api::Place const& from,
@@ -259,8 +256,8 @@ api::Itinerary street_routing(osr::ways const& w,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
                               bool const detailed_leg,
-                              std::chrono::seconds const max,
-                              unsigned elevation_samples) {
+                              bool const with_elevation_profile,
+                              std::chrono::seconds const max) {
   utl::verify(start_time.has_value() || end_time.has_value(),
               "either start_time or end_time must be set");
   auto const bound_time =
@@ -380,11 +377,11 @@ api::Itinerary street_routing(osr::ways const& w,
           leg.steps_ = get_step_instructions(w, elevations, from, to, range,
                                              api_version);
 
-          if (elevation_samples != 0) {
-            leg.elevationProfile_ =
-                get_elevation_profile(w, range, dist, elevation_samples);
-            leg.elevationProfile_->down_ = path->elevation_.down_.v_;
-            leg.elevationProfile_->up_ = path->elevation_.up_.v_;
+          if (with_elevation_profile) {
+            leg.elevationProfile_ = get_elevation_profile(w, range);
+            // currently to imprecise
+            // leg.elevationProfile_->down_ = path->elevation_.down_.v_;
+            // leg.elevationProfile_->up_ = path->elevation_.up_.v_;
           }
         }
 

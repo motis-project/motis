@@ -114,7 +114,7 @@ struct routing {
       double max_matching_distance,
       double fastest_direct_factor,
       bool detailed_legs,
-      unsigned elevation_profile_samples,
+      bool with_elevation_profile,
       unsigned api_version) const;
 
   config const& config_;

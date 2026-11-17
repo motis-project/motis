@@ -5,9 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  bits-ui:
-    hash: 564d024ee4e6e5e9477c216dbfc6497ac730186278435a2b6ad291a1cad3797f
-    path: patches/bits-ui.patch
+  bits-ui: 564d024ee4e6e5e9477c216dbfc6497ac730186278435a2b6ad291a1cad3797f
 
 importers:
 
@@ -73,6 +71,9 @@ importers:
       rbush:
         specifier: ^4.0.1
         version: 4.0.1
+      sv-popup:
+        specifier: ^0.5.3
+        version: 0.5.3
       svelte-radix:
         specifier: ^1.1.1
         version: 1.1.1(svelte@5.50.1)
@@ -1629,6 +1630,7 @@ packages:
   eslint@9.39.2:
     resolution: {integrity: sha512-LEyamqS7W5HB3ujJyvi0HQK/dtVINZvd5mAAp9eT5S/ujByGjiZLCzPcHVzuXbpJDJF/cxwHlfceVUDZ2lnSTw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -2530,6 +2532,9 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
+  sv-popup@0.5.3:
+    resolution: {integrity: sha512-i7sXWRDiubPrfmYIohqRYUcVFcoG1TaUNkzF4YfIShO5QXuPS3GU2i6xt4jGBuzjTAAjcv03hEelwRLgA1orqw==}
+
   svelte-check@4.3.6:
     resolution: {integrity: sha512-uBkz96ElE3G4pt9E1Tw0xvBfIUQkeH794kDQZdAUk795UVMr+NJZpuFSS62vcmO/DuSalK83LyOwhgWq8YGU1Q==}
     engines: {node: '>= 18.0.0'}
@@ -2557,6 +2562,10 @@ packages:
     engines: {node: '>=18', pnpm: '>=8.7.0'}
     peerDependencies:
       svelte: ^5.0.0
+
+  svelte@3.59.2:
+    resolution: {integrity: sha512-vzSyuGr3eEoAtT/A6bmajosJZIUWySzY2CzB3w2pgPvnkUjGqlDnsNnA0PMO+mMAhuyMul6C2uuZzY6ELSkzyA==}
+    engines: {node: '>= 8'}
 
   svelte@5.50.1:
     resolution: {integrity: sha512-/Jlom4ddkISyVHXpM2O5dXP9pYnaiFrVQzPbIL1/pEoOa77ZunCb6nDgUCTNCQ/X3t64z9ukrK6R+BbB3kPR3A==}
@@ -5088,6 +5097,10 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
+  sv-popup@0.5.3:
+    dependencies:
+      svelte: 3.59.2
+
   svelte-check@4.3.6(picomatch@4.0.3)(svelte@5.50.1)(typescript@5.9.3):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
@@ -5121,6 +5134,8 @@ snapshots:
       runed: 0.23.4(svelte@5.50.1)
       style-to-object: 1.0.14
       svelte: 5.50.1
+
+  svelte@3.59.2: {}
 
   svelte@5.50.1:
     dependencies:

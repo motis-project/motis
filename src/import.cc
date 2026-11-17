@@ -296,21 +296,22 @@ void import(config const& c,
     fs::remove(shape_cache_lock_path, ec);
   }
 
-  auto osr = task{
-      "osr",
-      {},
-      c.use_street_routing(),
-      [&]() {
-        osr::extract(
-            true, fs::path{*c.osm_}, data_path / "osr", elevation_dir,
-            {.stats_file_ = data_path / "osr" / "elevation_stats.txt",
-             .min_elevation =
-                 osr::preprocessing::elevation::elevation_meters_t{
-                     c.get_street_routing()->min_elevation_},
-             .min_rel_elevation = c.get_street_routing()->min_rel_elevation_,
-             .max_incline = c.get_street_routing()->max_incline_});
-      },
-      {osm_hash, osr_version(), elevation_dir_hash}};
+  auto osr =
+      task{"osr",
+           {},
+           c.use_street_routing(),
+           [&]() {
+             osr::extract(
+                 true, fs::path{*c.osm_}, data_path / "osr", elevation_dir,
+                 {.stats_file_ = data_path / "osr" / "elevation_stats.txt",
+                  .max_points_ = c.get_street_routing()->max_elevation_samples_,
+                  .min_elevation_ =
+                      osr::preprocessing::elevation::elevation_meters_t{
+                          c.get_street_routing()->min_elevation_},
+                  .min_incline_ = c.get_street_routing()->min_incline_,
+                  .max_incline_ = c.get_street_routing()->max_incline_});
+           },
+           {osm_hash, osr_version(), elevation_dir_hash}};
 
   auto adr = task{"adr",
                   {},

@@ -381,16 +381,14 @@ paths:
             type: boolean
             default: true
 
-        - name: elevationProfileSamples
+        - name: elevationProfile
           in: query
           required: false
           description: |
-            Optional. Determines the granularity of elevation profiles,
-            i.e. the number of evenly spaced sample points at which
-            elevation data is measured. Pass 0 to disable elevation profiles.
+            Optional. Compute elevation profiles of footpaths. Requires `detailedLegs`.
           schema:
-            type: integer
-            default: 0
+            type: boolean
+            default: false
 
         - name: joinInterlinedLegs
           in: query
@@ -4837,26 +4835,28 @@ components:
       properties:
         points:
           description: |
-            Flattend array of coordinates and elevation, [latitude, longitude, z, latitude, ...].
+            Array of coordinates with elevation [latitude, longitude, z, latitude, ...].
           type: array
           items:
             type: number
         size:
-          description: Number of sample points.
+          description: Number of coordinate triplets.
           type: integer
         resolution:
-          description: Resolution of each point.
+          description: Resolution used to extract elevation data. Does not correspond to distance between points.
           type: number
         median:
-          type: number
+          type: integer
         min:
-          type: number
+          type: integer
         max:
-          type: number
+          type: integer
         up:
-          type: number
+          description: incline in meters
+          type: integer
         down:
-          type: number
+          description: decline in meters
+          type: integer
 
     RentalFormFactor:
       type: string

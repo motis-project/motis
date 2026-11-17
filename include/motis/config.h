@@ -247,9 +247,13 @@ struct config {
   struct street_routing {
     bool operator==(street_routing const&) const = default;
     std::optional<std::filesystem::path> elevation_data_dir_;
+
+    // config for osr preprocessing
+    unsigned max_elevation_samples_{8U};
     std::uint32_t min_elevation_{1};
-    double min_rel_elevation_{0.1};  // unused
-    double max_incline_{0.45};
+    // incline as ratio (1.0 = 100% = 45 degrees)
+    double min_incline_{0.1};
+    double max_incline_{0.35};
   };
 
   std::optional<street_routing> get_street_routing() const;

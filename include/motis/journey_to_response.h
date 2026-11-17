@@ -78,6 +78,7 @@ api::Itinerary journey_to_response(
     bool join_interlined_legs,
     bool detailed_transfers,
     bool detailed_legs,
+    bool with_elevation_profile,
     bool with_fares,
     bool with_scheduled_skipped_stops,
     double timetable_max_matching_distance,
@@ -86,7 +87,6 @@ api::Itinerary journey_to_response(
     bool ignore_start_rental_return_constraints,
     bool ignore_dest_rental_return_constraints,
     std::optional<std::vector<std::string>> const& language,
-    unsigned elevation_profile_samples = 0,
     bool const set_itinerary_id_field = true,
     alternatives_context const& alternatives = {},
     std::chrono::nanoseconds* fares_time = nullptr);

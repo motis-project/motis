@@ -779,10 +779,10 @@ api::Itinerary reconstruct_itinerary(
                from_place, to_place, cache, &blocked, prf_idx == n::kCarProfile,
                flm.osr_params_, flm.pedestrian_profile_, flm.elevation_costs_,
                join_interlined_legs, detailed_transfers, detailed_legs,
+               /*with_elevation_profile=*/false,
                /*with_fares=*/false, with_scheduled_skipped_stops,
                stop_times_ep.config_.timetable_.value().max_matching_distance_,
                flm.max_matching_distance_, 6U, false, false, lang,
-               /*elevation_profile_samples=*/0,
                /*set_itinerary_id_field=*/false, alternatives)
         .legs_;
   };

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { type ElevationProfile } from '@motis-project/motis-client';
-	import { points } from '@turf/helpers';
 
 	let { profile }: { profile: ElevationProfile } = $props();
 
@@ -18,20 +17,11 @@
 	};
 
 	let maxDistance = 0;
-	let minResolution: number;
-	let maxResolution = 0;
 	const processData = (points: number[]): IResult[] => {
 		let res: IResult[] = [{ distance: 0, elevation: points[2] }];
 		for (let i = 3; i < points.length - 2; i += 3) {
 			const d = distance(points[i], points[i + 1], points[i - 3], points[i - 2]);
-			minResolution = minResolution ? Math.min(minResolution, d) : d;
-			maxResolution = Math.max(maxResolution, d);
 			maxDistance += d;
-			if (points[i - 1] < points[i + 2]) {
-				up += points[i + 2] - points[i - 1];
-			} else {
-				down += points[i - 1] - points[i + 2];
-			}
 			res.push({ distance: maxDistance, elevation: points[i + 2] });
 		}
 
@@ -43,14 +33,11 @@
 	const fontSize = 20;
 	const xPadding = Math.max(40, `${profile.max}m`.length * fontSize * 0.6 + 5);
 	const yPadding = 40;
-	const x0 = 0;
-	let up = 0;
-	let down = 0;
 	const xScale = (d: number): number => {
 		return (d / maxDistance) * (width - xPadding * 2) + xPadding;
 	};
 	const yScale = (d: number): number => {
-		return height - yPadding - ((d - x0) / (profile.max - x0)) * (height - yPadding * 2);
+		return height - yPadding - (d / profile.max) * (height - yPadding * 2);
 	};
 
 	let linePath = processData(profile.points).reduce(
@@ -61,10 +48,6 @@
 			return i == 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
 		},
 		''
-	);
-
-	console.log(
-		`minRes=${minResolution * 1000} | maxRes=${maxResolution * 1000} | avgRes=${(maxDistance / (profile.size || profile.points.length / 3)) * 1000} | targetRes=${profile.resolution}`
 	);
 </script>
 
@@ -118,7 +101,7 @@
 			y={height - yPadding}
 			font-size={fontSize}
 			fill="#64748b"
-			text-anchor="end">{x0}m</text
+			text-anchor="end">0m</text
 		>
 		<text
 			class="label"
@@ -141,7 +124,7 @@
 	</svg>
 	<div class="mt-2 text-center text-sm text-slate-500">
 		median={profile.median}m N={profile.size}
-		up={profile.up}m down={profile.down}m up2={up}m down2={down}m
+		up={profile.up}m down={profile.down}m
 	</div>
 </div>
 
