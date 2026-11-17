@@ -20,6 +20,7 @@
 		StepInstruction,
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
+	import DaySeparator from '$lib/DaySeparator.svelte';
 	import ReservationRequired from '$lib/ReservationRequired.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
@@ -29,7 +30,7 @@
 	import Alerts from '$lib/Alerts.svelte';
 	import { getModeName } from '$lib/getModeName';
 	import { language, t } from '$lib/i18n/translation';
-	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { isRealtime, onClickStop, onClickTrip } from '$lib/utils';
 	import { normalizedContains } from '$lib/normalizedContains';
 	import { formatDate, formatTime } from './toDateTime';
 	import { getModeLabel } from './map/getModeLabel';
@@ -124,16 +125,22 @@
 	p: Place,
 	mode: Mode,
 	isStartOrEnd: number,
+	prevScheduledTimestamp: string | undefined,
 	hidePlatform?: boolean
 )}
 	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
+	<DaySeparator
+		class="mb-2"
+		previous={prevScheduledTimestamp}
+		timestamp={scheduledTimestamp}
+		timeZone={p.tz}
+	/>
 	{@const textColor = isStartOrEnd == 0 ? '' : 'font-semibold'}
 	<div class="flex items-baseline justify-between w-full {textColor}">
 		<div class="flex justify-between">
 			<Time
 				variant="schedule"
 				class="w-14 md:w-16"
-				queriedTime={timestamp}
 				timeZone={p.tz}
 				{isRealtime}
 				{timestamp}
@@ -164,9 +171,7 @@
 							{p.name}
 						</Button>
 
-						{#if isStartOrEnd != 0}
-							<Alerts alerts={p.alerts} tz={p.tz} variant="icon" />
-						{/if}
+						<Alerts alerts={p.alerts} tz={p.tz} variant="icon" />
 					</div>
 					{#if p.track && !hidePlatform}
 						{@const fullName =
@@ -397,7 +402,15 @@
 			</div>
 
 			<div class="pt-4 pb-2 pl-4 sm:pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
+				{@render stopTimes(
+					l.startTime,
+					l.scheduledStartTime,
+					isRealtime(l.from.departureTimestampReason, l.realTime),
+					l.from,
+					l.mode,
+					-1,
+					pred?.scheduledEndTime
+				)}
 				<div class="flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">
@@ -570,14 +583,30 @@
 						</summary>
 						<div class="grid gap-2 items-start content-start pb-2">
 							{#each l.intermediateStops! as s, i (i)}
-								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, l.mode, 0)}
+								{@render stopTimes(
+									s.arrival!,
+									s.scheduledArrival!,
+									isRealtime(s.arrivalTimestampReason, l.realTime),
+									s,
+									l.mode,
+									0,
+									undefined
+								)}
 							{/each}
 						</div>
 					</details>
 				{/if}
 
 				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
-					{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to, l.mode, 1)}
+					{@render stopTimes(
+						l.endTime!,
+						l.scheduledEndTime!,
+						isRealtime(l.to.arrivalTimestampReason, l.realTime),
+						l.to,
+						l.mode,
+						1,
+						l.scheduledStartTime
+					)}
 				{/if}
 
 				{#if isLast || (isLastPred && !isRelevantLeg(next!))}
@@ -588,7 +617,16 @@
 		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !isTransitLeg(next) || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-2 pb-2 pl-4 sm:pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1, true)}
+				{@render stopTimes(
+					l.startTime,
+					l.scheduledStartTime,
+					l.realTime,
+					l.from,
+					l.mode,
+					-1,
+					pred?.scheduledEndTime,
+					true
+				)}
 				{#if l.mode == 'FLEX'}
 					<div class="mt-2 flex items-center leading-none">
 						<span class="ml-1 text-sm">
@@ -599,7 +637,16 @@
 				{/if}
                 {@render streetLeg(l)}
 				{#if !isLast}
-					{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, l.mode, 1, true)}
+					{@render stopTimes(
+						l.endTime,
+						l.scheduledEndTime,
+						l.realTime,
+						l.to,
+						l.mode,
+						1,
+						l.scheduledStartTime,
+						true
+					)}
 				{/if}
 			</div>
 		{/if}
@@ -613,10 +660,11 @@
 			{@render stopTimes(
 				lastLeg!.endTime,
 				lastLeg!.scheduledEndTime,
-				lastLeg!.realTime,
+				isRealtime(lastLeg!.to.arrivalTimestampReason, lastLeg!.realTime),
 				lastLeg!.to,
 				lastLeg!.mode,
-				1
+				1,
+				lastLeg!.scheduledStartTime
 			)}
 		</div>
 	</div>

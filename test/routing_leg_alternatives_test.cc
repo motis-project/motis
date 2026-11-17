@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 #include "date/date.h"
@@ -14,14 +15,14 @@
 #include "nigiri/rt/gtfsrt_update.h"
 
 #include "motis-api/motis-api.h"
-#include "motis/compute_footpaths.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
+#include "motis/elevators/update_elevators.h"
 #include "motis/endpoints/routing.h"
 #include "motis/import.h"
-#include "motis/update_rtt_td_footpaths.h"
+#include "motis/rt_update.h"
 
 #include "./util.h"
 
@@ -43,18 +44,17 @@ void apply_one_min_delay(data& d,
                          std::string_view const last_stop_id,
                          std::uint32_t const last_stop_seq,
                          std::optional<std::string> start_time = std::nullopt) {
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      test::to_feed_msg(
-          {test::trip_update{
-              .trip_ = {.trip_id_ = std::string{trip_id},
-                        .start_time_ = std::move(start_time),
-                        .date_ = std::string{"20190501"}},
-              .stop_updates_ = {{.stop_id_ = std::string{last_stop_id},
-                                 .seq_ = std::optional{last_stop_seq},
-                                 .ev_type_ = n::event_type::kArr,
-                                 .delay_minutes_ = 1}}}},
-          date::sys_days{2019_y / May / 1} + 9h));
+  auto const stats = test::gtfsrt_update(
+      d, test::to_feed_msg(
+             {test::trip_update{
+                 .trip_ = {.trip_id_ = std::string{trip_id},
+                           .start_time_ = std::move(start_time),
+                           .date_ = std::string{"20190501"}},
+                 .stop_updates_ = {{.stop_id_ = std::string{last_stop_id},
+                                    .seq_ = std::optional{last_stop_seq},
+                                    .ev_type_ = n::event_type::kArr,
+                                    .delay_minutes_ = 1}}}},
+             date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats.total_entities_success_);
 }
 
@@ -394,6 +394,68 @@ BUS T3 C 08:30->D 09:00
     ASSERT_EQ(res.itineraries_.size(), 1U);
     EXPECT_EQ(expected, to_str(res.itineraries_.front()));
   }
+}
+
+// arriveBy alternatives are computed with a direction-flipped query, so the
+// special stations of the alternative journeys refer to the opposite places.
+// Their access/egress legs have to be rendered from the query's own
+// coordinates with a real street path (not a dummy leg from the other end).
+TEST(motis, routing_leg_alternatives_arrive_by_access_legs) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_leg_alts_arrive_by", ec);
+
+  auto const c = make_base_config(/*with_osr=*/true);
+  import(c, "test/data_leg_alts_arrive_by");
+  auto d = data{"test/data_leg_alts_arrive_by", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+  auto const routing = utl::init_from<ep::routing>(d).value();
+
+  constexpr auto const kFromLat = 49.87526849014631,
+                       kFromLon = 8.62771903392948;
+  constexpr auto const kToLat = 50.11347, kToLon = 8.67664;
+  auto const res = routing(
+      "?fromPlace=49.87526849014631,8.62771903392948"
+      "&toPlace=50.11347,8.67664"
+      "&time=2019-05-01T09:02Z"
+      "&searchWindow=7200"
+      "&preTransitModes=BIKE"
+      "&postTransitModes=BIKE"
+      "&requireBikeTransport=true"
+      "&arriveBy=true"
+      "&numLegAlternatives=5");
+  ASSERT_EQ(res.itineraries_.size(), 1U);
+
+  auto const expect_routed = [](api::Leg const& l) {
+    EXPECT_EQ(api::ModeEnum::BIKE, l.mode_);
+    EXPECT_GT(l.distance_, 0.0);
+    EXPECT_GT(l.legGeometry_.length_, 0);
+    EXPECT_FALSE(l.legGeometry_.points_.empty());
+  };
+
+  auto n_access = 0U, n_egress = 0U;
+  for (auto const& leg : res.itineraries_.front().legs_) {
+    if (!is_transit(leg)) {
+      continue;
+    }
+    ASSERT_TRUE(leg.alternatives_.has_value());
+    for (auto const& alt : *leg.alternatives_) {
+      ASSERT_FALSE(alt.empty());
+      if (alt.front().from_.name_ == "START") {
+        ++n_access;
+        EXPECT_DOUBLE_EQ(kFromLat, alt.front().from_.lat_);
+        EXPECT_DOUBLE_EQ(kFromLon, alt.front().from_.lon_);
+        expect_routed(alt.front());
+      }
+      if (alt.back().to_.name_ == "END") {
+        ++n_egress;
+        EXPECT_DOUBLE_EQ(kToLat, alt.back().to_.lat_);
+        EXPECT_DOUBLE_EQ(kToLon, alt.back().to_.lon_);
+        expect_routed(alt.back());
+      }
+    }
+  }
+  EXPECT_EQ(3U, n_access);
+  EXPECT_EQ(2U, n_egress);
 }
 
 // Block-id-concatenated trip: T_PART1 (A → MID) and T_PART2 (MID → B)
@@ -798,21 +860,15 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   import(c, "test/data_leg_alts_td_footpath_blocked");
   auto d = data{"test/data_leg_alts_td_footpath_blocked", c};
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
-                                          parse_fasta(kElevatorBlockedFasta));
+                                          parse_fasta(std::string_view{"[]"}));
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
-  // Rebuild the rt_timetable's td_footpaths from the elevator state.
-  // Mirrors what `update_elevators` does in production: the
-  // elevator-footpath map (one entry per OSR-routed footpath that
-  // traverses an elevator node, written to disk by `import()`) tells
-  // `update_rtt_td_footpaths` which (from, to) stop pairs to refresh
-  // for the wheelchair profile.
-  auto const elevator_footpath_map = cista::read<elevator_footpath_map_t>(
-      "test/data_leg_alts_td_footpath_blocked/elevator_footpath_map.bin");
-  update_rtt_td_footpaths(
-      *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtree_, *d.rt_->e_,
-      *elevator_footpath_map, *d.matches_, *d.rt_->rtt_,
-      std::chrono::seconds{c.timetable_->max_footpath_length_ * 60});
+  // The elevator update as in production: the stops near an elevator that is
+  // not always working get their wheelchair walks routed again.
+  auto new_rtt = std::make_unique<n::rt_timetable>(*d.rt_->rtt_);
+  d.rt_->e_ = update_elevators(d.config_, d, kElevatorBlockedFasta, *new_rtt);
+  finalize_rtt(*d.tt_, *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
 
   // Delay the LOCAL 00:35 ICE alt by 1 min — this is a frequency-
   // expanded trip instance, so trip_id stays "ICE" and start_time
@@ -824,9 +880,9 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   // === Scenario A: DA → FFM_HAUPT (transfer / rt_timetable td) ===
   // The chosen wheelchair journey transfers at FFM via the elevator-
   // routed td footpath FFM_10 → FFM_101. The S3 02:15 / 03:15 alts
-  // would naively walk through the outage; they still surface but
-  // with the inflated `get_td_duration` walk (start before the
-  // outage and idle on the platform until boarding) — see the
+  // would naively walk through the outage; they still surface by
+  // starting the walk before the outage and waiting on the platform
+  // until boarding (the wait is not part of the WALK leg) — see the
   // file-level "raptor 1:1" note above. Only alts whose required
   // walk window is entirely blocked (no pre-outage start time fits)
   // would be omitted.
@@ -844,11 +900,11 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   ASSERT_FALSE(res_a.itineraries_.empty());
   EXPECT_EQ(R"(
 HIGHSPEED_RAIL ICE DA Hbf 00:35->FFM Hbf 00:45
-  alt [HIGHSPEED_RAIL ICE DA Hbf 23:35->FFM Hbf 23:45 | WALK FFM Hbf 23:45->FFM Hbf 23:52]
-  alt [HIGHSPEED_RAIL ICE DA Hbf 22:35->FFM Hbf 22:46 | WALK FFM Hbf 22:46->FFM Hbf 22:53]
+  alt [HIGHSPEED_RAIL ICE DA Hbf 23:35->FFM Hbf 23:45 | WALK FFM Hbf 23:45->FFM Hbf 23:53]
+  alt [HIGHSPEED_RAIL ICE DA Hbf 22:35->FFM Hbf 22:46 | WALK FFM Hbf 22:46->FFM Hbf 22:54]
 METRO S3 FFM Hbf 01:15->FFM Hauptwache 01:20
-  alt [WALK FFM Hbf 01:23->FFM Hbf 02:15 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
-  alt [WALK FFM Hbf 01:23->FFM Hbf 03:15 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
+  alt [WALK FFM Hbf 01:22->FFM Hbf 01:30 | METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20]
+  alt [WALK FFM Hbf 01:22->FFM Hbf 01:30 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20]
 )",
             to_str(res_a.itineraries_.front()));
 
@@ -1189,8 +1245,8 @@ TEST(motis, routing_leg_alternatives_rt_filtered) {
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   // Apply two delays via a single FeedMessage (one entity each).
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto const stats = test::gtfsrt_update(
+      d,
       test::to_feed_msg(
           {test::trip_update{.trip_ = {.trip_id_ = "T1_EARLY",
                                        .start_time_ = std::nullopt,

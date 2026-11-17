@@ -3,14 +3,16 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <memory>
 #include <set>
 #include <utility>
 #include <vector>
 
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
-#include "utl/overloaded.h"
+#include "utl/lookup.h"
 #include "utl/to_vec.h"
+#include "utl/visit.h"
 
 #include "geo/box.h"
 #include "geo/polyline.h"
@@ -35,12 +37,12 @@ api::rentals_response rental::operator()(
   };
   auto const parse_place_pos = [&](std::string_view const sv) {
     auto const place = get_place(tt_, tags_, sv);
-    return std::visit(
-        utl::overloaded{[&](osr::location const& l) { return l.pos_; },
-                        [&](tt_location const tt_l) {
-                          return tt_->locations_.coordinates_.at(tt_l.l_);
-                        }},
-        place);
+    return utl::visit(
+        place,  //
+        [&](osr::location const& l) { return l.pos_; },
+        [&](tt_location const tt_l) {
+          return tt_->locations_.coordinates_.at(tt_l.l_);
+        });
   };
 
   auto const query = api::rentals_params{url.params()};
@@ -55,7 +57,7 @@ api::rentals_response rental::operator()(
   auto const filter_groups =
       query.providerGroups_.has_value() && !query.providerGroups_->empty();
 
-  auto gbfs = gbfs_;
+  auto gbfs = std::atomic_load(&gbfs_);
   auto res = api::rentals_response{};
 
   if (gbfs == nullptr) {
@@ -286,9 +288,8 @@ api::rentals_response rental::operator()(
   } else if (filter_providers || filter_groups) {
     if (filter_providers) {
       for (auto const& id : *query.providers_) {
-        if (auto const it = gbfs->provider_by_id_.find(id);
-            it != end(gbfs->provider_by_id_)) {
-          auto const& provider = gbfs->providers_.at(it->second);
+        if (auto const idx = utl::lookup(gbfs->provider_by_id_, id)) {
+          auto const& provider = gbfs->providers_.at(*idx);
           if (provider != nullptr) {
             providers.insert(provider.get());
             provider_groups.insert(provider->group_id_);
@@ -390,6 +391,8 @@ api::rentals_response rental::operator()(
             .formFactors_ = sorted_form_factors,
             .vehicleTypesAvailable_ = std::move(types_available),
             .vehicleDocksAvailable_ = std::move(docks_available),
+            .capacity_ = st.info_.capacity_,
+            .numDocksAvailable_ = st.status_.num_docks_available_,
             .stationArea_ = st.info_.station_area_ != nullptr
                                 ? std::optional{multipoly_to_api(
                                       st.info_.station_area_.get())}

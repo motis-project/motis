@@ -46,6 +46,7 @@ struct config {
     unsigned gpu_states_{2U};
     std::optional<std::string> data_attribution_link_{};
     std::optional<std::vector<std::string>> lbs_{};
+    bool when_unhealthy_return_error_{false};
   };
   std::optional<server> server_{};
 
@@ -150,6 +151,7 @@ struct config {
     std::optional<std::filesystem::path> assistance_times_{};
     std::optional<route_shapes> route_shapes_{};
   };
+  timetable const& get_timetable() const;
   std::optional<timetable> timetable_{};
 
   struct gbfs {
@@ -217,6 +219,7 @@ struct config {
     unsigned http_timeout_{30};
     unsigned cache_size_{50};
     std::optional<std::string> proxy_{};
+    std::optional<bool> use_connect_{false};
     std::optional<ttl> ttl_{};
   };
   std::optional<gbfs> gbfs_{};

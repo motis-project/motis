@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import type { Mode } from '@motis-project/motis-client';
 import { getModeStyle, type LegLike } from '$lib/modeStyle';
 

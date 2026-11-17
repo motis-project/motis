@@ -112,6 +112,41 @@ bool allows_free_floating_return_at(gbfs_provider const& provider,
          !restrictions.station_parking_.value_or(false);
 }
 
+bool allows_return_at(gbfs_provider const& provider,
+                      provider_products const& product,
+                      geo::latlng const& pos,
+                      bool const ignore_return_constraints) {
+  return allows_free_floating_return_at(provider, product, pos,
+                                        ignore_return_constraints) ||
+         utl::any_of(provider.stations_, [&](auto const& entry) {
+           auto const& st = entry.second;
+           return st.info_.station_area_ &&
+                  multipoly_contains_point(st.info_.station_area_.get(), pos) &&
+                  station_allows_return(st, product);
+         });
+}
+
+bool station_allows_return(station const& st,
+                           provider_products const& product) {
+  if (!st.status_.is_returning_) {
+    return false;
+  }
+  // if the station lists free docks by type, at least one of the vehicle
+  // types included in the product segment must have a free dock
+  if (!st.status_.vehicle_docks_available_.empty()) {
+    return utl::any_of(
+        st.status_.vehicle_docks_available_, [&](auto const& vt) {
+          return vt.second != 0 && product.includes_vehicle_type(vt.first);
+        });
+  }
+  // no counts per vehicle type: fall back to the published total,
+  // but only for stations that declare physical docks
+  if (st.status_.num_docks_available_ && st.info_.capacity_.value_or(0U) > 0U) {
+    return *st.status_.num_docks_available_ != 0;
+  }
+  return true;
+}
+
 bool vehicle_is_rentable(gbfs_provider const& provider,
                          provider_products const& product,
                          vehicle_status const& vehicle) {

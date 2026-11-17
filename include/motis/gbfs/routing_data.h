@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <memory>
 
+#include "nigiri/routing/query.h"
+
 #include "motis/fwd.h"
 #include "motis/gbfs/data.h"
 #include "motis/types.h"
@@ -27,8 +29,9 @@ struct gbfs_routing_data {
 
   provider_products const& get_products(gbfs_products_ref);
 
-  nigiri::transport_mode_id_t get_transport_mode(gbfs_products_ref);
-  gbfs_products_ref get_products_ref(nigiri::transport_mode_id_t) const;
+  nigiri::routing::transport_mode_t get_transport_mode(gbfs_products_ref);
+  gbfs_products_ref get_products_ref(
+      nigiri::routing::transport_mode_t::payload_t) const;
 
   osr::ways const* w_{};
   osr::lookup const* l_{};
@@ -36,8 +39,8 @@ struct gbfs_routing_data {
 
   hash_map<gbfs_products_ref, std::shared_ptr<products_routing_data>> products_;
   std::vector<gbfs_products_ref> products_refs_;
-  hash_map<gbfs_products_ref, nigiri::transport_mode_id_t>
-      products_ref_to_transport_mode_;
+  hash_map<gbfs_products_ref, nigiri::routing::transport_mode_t::payload_t>
+      products_ref_to_payload_;
 };
 
 std::shared_ptr<provider_routing_data> compute_provider_routing_data(

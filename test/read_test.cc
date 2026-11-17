@@ -21,7 +21,7 @@ TEST(motis, parse_location_no_level) {
 }
 
 TEST(motis, parse_cursor_earlier) {
-  auto const q = cursor_to_query("EARLIER|1720036560");
+  auto const q = cursor_to_query("EARLIER|1720036560", n::duration_t{120});
 
   ASSERT_TRUE(
       std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_));
@@ -32,7 +32,7 @@ TEST(motis, parse_cursor_earlier) {
 }
 
 TEST(motis, parse_cursor_later) {
-  auto const q = cursor_to_query("LATER|1720036560");
+  auto const q = cursor_to_query("LATER|1720036560", n::duration_t{120});
 
   ASSERT_TRUE(
       std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_));

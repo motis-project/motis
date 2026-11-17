@@ -140,13 +140,12 @@ TEST(motis, trip_cancelled_first_and_last_stop) {
   }
 
   // Skip the first (S0) and the last (S4) stop of the middle trip T_MID.
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      to_feed_msg(
-          {trip_update{.trip_ = {.trip_id_ = "T_MID", .date_ = {"20190501"}},
-                       .stop_updates_ = {{.stop_id_ = "S0", .skip_ = true},
-                                         {.stop_id_ = "S4", .skip_ = true}}}},
-          date::sys_days{2019_y / May / 1} + 9h));
+  auto const stats = test::gtfsrt_update(
+      d, to_feed_msg({trip_update{
+                         .trip_ = {.trip_id_ = "T_MID", .date_ = {"20190501"}},
+                         .stop_updates_ = {{.stop_id_ = "S0", .skip_ = true},
+                                           {.stop_id_ = "S4", .skip_ = true}}}},
+                     date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats.total_entities_success_);
 
   // Now the first served stop of T_MID is S1 and the last served stop is S3.
@@ -162,16 +161,15 @@ TEST(motis, trip_all_stops_cancelled) {
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
 
   // Skip every stop of the middle trip T_MID (S0 .. S4).
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      to_feed_msg(
-          {trip_update{.trip_ = {.trip_id_ = "T_MID", .date_ = {"20190501"}},
-                       .stop_updates_ = {{.stop_id_ = "S0", .skip_ = true},
-                                         {.stop_id_ = "S1", .skip_ = true},
-                                         {.stop_id_ = "S2", .skip_ = true},
-                                         {.stop_id_ = "S3", .skip_ = true},
-                                         {.stop_id_ = "S4", .skip_ = true}}}},
-          date::sys_days{2019_y / May / 1} + 9h));
+  auto const stats = test::gtfsrt_update(
+      d, to_feed_msg({trip_update{
+                         .trip_ = {.trip_id_ = "T_MID", .date_ = {"20190501"}},
+                         .stop_updates_ = {{.stop_id_ = "S0", .skip_ = true},
+                                           {.stop_id_ = "S1", .skip_ = true},
+                                           {.stop_id_ = "S2", .skip_ = true},
+                                           {.stop_id_ = "S3", .skip_ = true},
+                                           {.stop_id_ = "S4", .skip_ = true}}}},
+                     date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats.total_entities_success_);
 
   // S2 itself is now skipped, so it only shows up with `withScheduledSkipped`.
@@ -197,8 +195,8 @@ TEST(motis, trip_added_cancelled_first_and_last_stop) {
     return date::sys_seconds{date::sys_days{2019_y / May / 1} + 8h +
                              std::chrono::minutes{m}};
   };
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  auto const stats = test::gtfsrt_update(
+      d,
       to_feed_msg(
           {trip_update{.trip_ = {.trip_id_ = "ADDED_ICE", .route_id_ = {"ICE"}},
                        .stop_updates_ =

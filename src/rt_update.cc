@@ -1,10 +1,12 @@
 #include "motis/rt_update.h"
 
 #include <filesystem>
+#include <variant>
 
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
 #include "boost/asio/experimental/parallel_group.hpp"
+#include "boost/asio/io_context.hpp"
 #include "boost/asio/this_coro.hpp"
 #include "boost/asio/use_awaitable.hpp"
 #include "boost/beast/core/buffers_to_string.hpp"
@@ -12,10 +14,12 @@
 #include "utl/read_file.h"
 #include "utl/timer.h"
 #include "utl/verify.h"
+#include "utl/visit.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
+#include "nigiri/rt/rt_transfer_rules.h"
 
 #if defined(NIGIRI_CUDA)
 #include "nigiri/routing/gpu/raptor.h"
@@ -87,20 +91,20 @@ using endpoints_t = std::vector<std::variant<gtfs_rt_endpoint, auser_endpoint>>;
 
 using stats_t = std::variant<n::rt::statistics, n::rt::vdv_aus::statistics>;
 
-void upload_gpu_rtt([[maybe_unused]] data const& d,
-                    [[maybe_unused]] n::rt_timetable& rtt) {
+bool finalize_rtt(n::timetable const& tt, n::rt_timetable& rtt) {
+  n::rt::resolve_conflicts(tt, rtt);
+  rtt.update_lbs(tt);
 #if defined(NIGIRI_CUDA)
-  utl::verify(d.gpu_tt_ != nullptr, "upload_gpu_rtt: gpu timetable missing");
   try {
-    rtt.gpu_rtt_.ptr_ = n::routing::gpu::make_gpu_rtt(*d.tt_, rtt);
-    d.metrics_->gpu_rt_timetable_.Set(1);
+    rtt.gpu_rtt_.ptr_ = n::routing::gpu::make_gpu_rtt(tt, rtt);
+    return true;
   } catch (std::exception const& e) {
     n::log(n::log_lvl::error, "motis.rt", "GPU rt timetable upload failed: {}",
            e.what());
     rtt.gpu_rtt_.ptr_.reset();
-    d.metrics_->gpu_rt_timetable_.Set(0);
   }
 #endif
+  return false;
 }
 
 endpoints_t make_endpoints(config const& c, data& d) {
@@ -272,60 +276,52 @@ awaitable<void> update_rt(config const& c,
 
     //  Print statistics.
     for (auto const [ep, ex, s] : utl::zip(endpoints, exceptions, stats)) {
-      std::visit(
-          utl::overloaded{
-              [&](gtfs_rt_endpoint const& g) {
-                try {
-                  if (ex) {
-                    std::rethrow_exception(ex);
-                  }
+      utl::visit(
+          ep,
+          [&](gtfs_rt_endpoint const& g) {
+            try {
+              if (ex) {
+                std::rethrow_exception(ex);
+              }
 
-                  g.metrics_.updates_successful_.Increment();
-                  g.metrics_.last_update_timestamp_.SetToCurrentTime();
-                  g.metrics_.update(std::get<n::rt::statistics>(s));
+              g.metrics_.updates_successful_.Increment();
+              g.metrics_.last_update_timestamp_.SetToCurrentTime();
+              g.metrics_.update(std::get<n::rt::statistics>(s));
 
-                  n::log(n::log_lvl::info, "motis.rt",
-                         "GTFS-RT update stats for tag={}, url={}: {}", g.tag_,
-                         g.ep_.url_,
-                         fmt::streamed(std::get<n::rt::statistics>(s)));
-                } catch (std::exception const& e) {
-                  g.metrics_.updates_error_.Increment();
-                  n::log(n::log_lvl::error, "motis.rt",
-                         "GTFS-RT update failed: tag={}, url={}, error={}",
-                         g.tag_, g.ep_.url_, e.what());
-                }
-              },
-              [&](auser_endpoint const& a) {
-                try {
-                  if (ex) {
-                    std::rethrow_exception(ex);
-                  }
+              n::log(n::log_lvl::info, "motis.rt",
+                     "GTFS-RT update stats for tag={}, url={}: {}", g.tag_,
+                     g.ep_.url_, fmt::streamed(std::get<n::rt::statistics>(s)));
+            } catch (std::exception const& e) {
+              g.metrics_.updates_error_.Increment();
+              n::log(n::log_lvl::error, "motis.rt",
+                     "GTFS-RT update failed: tag={}, url={}, error={}", g.tag_,
+                     g.ep_.url_, e.what());
+            }
+          },
+          [&](auser_endpoint const& a) {
+            try {
+              if (ex) {
+                std::rethrow_exception(ex);
+              }
 
-                  a.metrics_.updates_successful_.Increment();
-                  a.metrics_.last_update_timestamp_.SetToCurrentTime();
-                  a.metrics_.update(std::get<n::rt::vdv_aus::statistics>(s));
+              a.metrics_.updates_successful_.Increment();
+              a.metrics_.last_update_timestamp_.SetToCurrentTime();
+              a.metrics_.update(std::get<n::rt::vdv_aus::statistics>(s));
 
-                  n::log(
-                      n::log_lvl::info, "motis.rt",
-                      "VDV AUS update stats for tag={}, url={}:\n{}", a.tag_,
-                      a.ep_.url_,
-                      fmt::streamed(std::get<n::rt::vdv_aus::statistics>(s)));
-                } catch (std::exception const& e) {
-                  a.metrics_.updates_error_.Increment();
-                  n::log(n::log_lvl::error, "motis.rt",
-                         "VDV AUS update failed: tag={}, url={}, error={}",
-                         a.tag_, a.ep_.url_, e.what());
-                }
-              }},
-          ep);
+              n::log(n::log_lvl::info, "motis.rt",
+                     "VDV AUS update stats for tag={}, url={}:\n{}", a.tag_,
+                     a.ep_.url_,
+                     fmt::streamed(std::get<n::rt::vdv_aus::statistics>(s)));
+            } catch (std::exception const& e) {
+              a.metrics_.updates_error_.Increment();
+              n::log(n::log_lvl::error, "motis.rt",
+                     "VDV AUS update failed: tag={}, url={}, error={}", a.tag_,
+                     a.ep_.url_, e.what());
+            }
+          });
     }
   }
 
-  // Update lbs.
-  rtt->update_lbs(*d.tt_);
-
-  // Update real-time timetable shared pointer.
-  auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
   auto elevators = std::unique_ptr<motis::elevators>{};
   if (c.has_elevators() && c.get_elevators()->url_) {
     try {
@@ -339,8 +335,10 @@ awaitable<void> update_rt(config const& c,
   } else {
     elevators = std::move(d.rt_->e_);
   }
+  d.metrics_->gpu_rt_timetable_.Set(finalize_rtt(*d.tt_, *rtt) ? 1.0 : 0.0);
 
-  upload_gpu_rtt(d, *rtt);
+  // Update real-time timetable shared pointer.
+  auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
   auto new_rt = std::make_shared<rt>(std::move(rtt), std::move(elevators),
                                      std::move(railviz_rt));
   std::atomic_store(&d.rt_, std::move(new_rt));
@@ -348,15 +346,14 @@ awaitable<void> update_rt(config const& c,
   d.metrics_->last_update_rt_.SetToCurrentTime();
 }
 
-void apply_canned_rt_update(config const& c, data& d) {
+void apply_canned_rt_update(config const& c,
+                            data& d,
+                            date::sys_days const day) {
   auto const endpoints = make_endpoints(c, d);
-  auto const today = std::chrono::time_point_cast<date::days>(
-      std::chrono::system_clock::now());
   auto rtt = std::make_unique<n::rt_timetable>(
-      n::rt::create_rt_timetable(*d.tt_, today));
+      n::rt::create_rt_timetable(*d.tt_, day));
   apply_canned(d, endpoints, *rtt);
-  rtt->update_lbs(*d.tt_);
-  upload_gpu_rtt(d, *rtt);
+  d.metrics_->gpu_rt_timetable_.Set(finalize_rtt(*d.tt_, *rtt) ? 1.0 : 0.0);
 
   auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
   auto new_rt = std::make_shared<rt>(std::move(rtt), std::move(d.rt_->e_),

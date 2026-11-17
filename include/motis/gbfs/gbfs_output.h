@@ -20,6 +20,7 @@ struct gbfs_output final : public output {
   transport_mode_t get_cache_key() const override;
 
   osr::sharing_data const* get_sharing_data() const override;
+  bool allows_return_at(geo::latlng const&) const override;
 
   void annotate_leg(nigiri::lang_t const&,
                     osr::node_idx_t const from_node,
@@ -41,6 +42,7 @@ private:
   gbfs::provider_products const& products_;
   gbfs::products_routing_data const* prod_rd_;
   osr::sharing_data sharing_data_;
+  bool ignore_rental_return_constraints_{};
   api::Rental rental_;
 };
 

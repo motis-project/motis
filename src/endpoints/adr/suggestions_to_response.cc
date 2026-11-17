@@ -84,7 +84,7 @@ api::geocode_response suggestions_to_response(
             category = to_str(t.place_type_[p]);
             id = fmt::format("{}/{}",
                              t.place_is_way_[to_idx(p)] ? "way" : "node",
-                             t.place_osm_ids_[p]);
+                             t.place_osm_ids_[p][0]);
           }
           return std::string{t.strings_[s.str_].view()};
         },
@@ -152,10 +152,10 @@ api::geocode_response suggestions_to_response(
         .level_ = level,
         .street_ = std::move(street),
         .houseNumber_ = std::move(house_number),
-        .country_ = country_code.and_then(
-            [](std::string_view s) { return std::optional{std::string{s}}; }),
-        .zip_ = s.zip_area_idx_.and_then([&](unsigned const zip_area_idx) {
-          return std::optional<std::string>{
+        .country_ = country_code.transform(
+            [](std::string_view s) { return std::string{s}; }),
+        .zip_ = s.zip_area_idx_.transform([&](unsigned const zip_area_idx) {
+          return std::string{
               t.strings_[t.area_names_[areas[zip_area_idx]][a::kDefaultLangIdx]]
                   .view()};
         }),

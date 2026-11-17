@@ -2,14 +2,19 @@
 
 import argparse
 import atexit
+import datetime
 import json
 import os
+import random
+import re
 import shlex
 import shutil
 import signal
 import subprocess
 import sys
 import time
+
+from transfer_rules import Checker, format_violation
 
 ALL_MODES = ["AIRPLANE", "HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH",
              "NIGHT_RAIL", "RIDE_SHARING", "REGIONAL_RAIL", "SUBURBAN",
@@ -22,6 +27,11 @@ SANITIZER_MARKERS = ("AddressSanitizer", "UndefinedBehaviorSanitizer",
                      "LeakSanitizer", "ThreadSanitizer", "runtime error:",
                      "COMPUTE-SANITIZER")
 
+# Routing errors the server recovers from silently (PONG falls back to RAPTOR,
+# a journey whose reconstruction fails is dropped). The comparison can still
+# pass, so the batch output is checked for them.
+ROUTING_ERROR_MARKERS = ("PONG EXCEPTION", "reconstruct failed")
+
 def run(cmd, cwd=None):
     # Both streams are kept and echoed on failure: for a sanitizer build the
     # report is the whole point, and discarding it would leave only an exit
@@ -33,11 +43,12 @@ def run(cmd, cwd=None):
             sys.stderr.write(stream.decode("utf-8", "replace"))
         sys.exit("validate: '%s' failed with exit code %d"
                  % (" ".join(cmd), p.returncode))
+    return (p.stdout + p.stderr).decode("utf-8", "replace")
 
 
 def generate(motis, data, n, date, work, modes=None, bounds=None):
     cmd = [motis, "generate", "-d", data, "-n", str(n), "--lb_rank", "0",
-           "--first_day", date, "--last_day", date]
+           "--first_day", date, "--n_days", "1"]
     if modes:
         cmd += ["-m", modes]
     if bounds:
@@ -61,8 +72,78 @@ def batch(motis, data, qfile, out, rt_dir, gbfs_dir=None, n_threads=None,
     t0 = time.perf_counter()
     # Both dump_rt/ and dump_gbfs/ are resolved relative to the working
     # directory, so a run needing both wants them side by side in one dir.
-    run(cmd, cwd=gbfs_dir or rt_dir)
-    return time.perf_counter() - t0  # wall time (whole batch, all cases)
+    output = run(cmd, cwd=gbfs_dir or rt_dir)
+    return time.perf_counter() - t0, output  # wall time (whole batch)
+
+
+def routing_errors(output):
+    return [ln for ln in output.splitlines()
+            if any(m in ln for m in ROUTING_ERROR_MARKERS)]
+
+
+def random_outages(fasta_in, date, seed, out):
+    # Random maintenance windows for half of the working elevators: on the
+    # query day mostly short, some for hours, a few for longer than
+    # footpath::kMax (4:14h). Many last for weeks and start up to 60
+    # days before or after the query day: broken and working periods both
+    # exceed routing::kMaxTravelTime and the 16 bit duration_t.
+    rng = random.Random(seed)
+    with open(fasta_in) as f:
+        elevators = json.load(f)
+    day = datetime.datetime.strptime(date, "%Y-%m-%d")
+    fmt = "%Y-%m-%dT%H:%M:%S"
+    n_elevators = n_windows = 0
+    for e in elevators:
+        if (e.get("type") != "ELEVATOR" or e.get("state") != "ACTIVE" or
+                "geocoordX" not in e or rng.random() >= 0.5):
+            continue
+        windows = []
+        for _ in range(rng.randint(1, 3)):
+            r = rng.random()
+            if r < 0.80:
+                minutes = (rng.randint(10, 120) if r < 0.50 else
+                           rng.randint(120, 360) if r < 0.75 else
+                           rng.randint(540, 720))
+                start = day + datetime.timedelta(
+                    minutes=rng.randint(3 * 60, 21 * 60))
+            else:
+                minutes = rng.randint(30, 60) * 24 * 60
+                start = day + datetime.timedelta(
+                    days=rng.randint(-60, 60), minutes=rng.randint(0, 24 * 60))
+            windows.append([start, start + datetime.timedelta(minutes=minutes)])
+        windows.sort()
+        merged = []
+        for start, end in windows:
+            if merged and start <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], end)
+            else:
+                merged.append([start, end])
+        # With windows, motis ignores the state: working outside the windows.
+        e["outOfService"] = [[s.strftime(fmt), t.strftime(fmt)]
+                             for s, t in merged]
+        n_elevators += 1
+        n_windows += len(merged)
+    with open(out, "w") as f:
+        json.dump(elevators, f)
+    print("elevators: %d outages on %d elevators (seed %d)"
+          % (n_windows, n_elevators, seed))
+
+
+def elevator_data(data, fasta, work):
+    # Same data, but with the elevators initialized from `fasta` (td footpaths
+    # for the wheelchair profile). Only config.yml differs, the rest is linked.
+    overlay = os.path.join(work, "data-elevators")
+    os.makedirs(overlay)
+    for entry in os.listdir(data):
+        if entry != "config.yml":
+            os.symlink(os.path.join(data, entry), os.path.join(overlay, entry))
+    with open(os.path.join(data, "config.yml")) as f:
+        config = f.read()
+    config = re.sub(r"^elevators:.*\n(?:[ \t]+.*\n)*", "", config, flags=re.M)
+    config += "elevators:\n  init: %s\n" % json.dumps(fasta)
+    with open(os.path.join(overlay, "config.yml"), "w") as f:
+        f.write(config)
+    return overlay
 
 
 def pct(vals, p):
@@ -183,7 +264,8 @@ def compare(motis, qlines, responses, work, label):
 
 
 def suffix(case):
-    s = "&algorithm=" + case["algorithm"]
+    s = ("&joinInterlinedLegs=false&maxDirectTime=0&algorithm="
+         + case["algorithm"])
     if case["arrive_by"]:
         s += "&arriveBy=true"
     if case["clasz"]:
@@ -318,6 +400,21 @@ def main():
     ap.add_argument("--exclude-transit-modes",
                     help="API transit modes dropped for the clasz-filter cases, "
                          "comma-separated (e.g. COACH or HIGHSPEED_RAIL,COACH)")
+    ap.add_argument("--only",
+                    help="only run cases whose label contains one of these "
+                         "comma-separated strings. Labels are "
+                         "<type>-<algorithm>-<direction>[-<variant>][-rt] "
+                         "with type station, intermodal, flex or rental, "
+                         "algorithm pong or raptor and direction fwd or bwd. "
+                         "Only station and intermodal have variants: clasz, "
+                         "wheelchair and car with pong, routed, bike and tts "
+                         "with pong and raptor-fwd.")
+    ap.add_argument("--elevators",
+                    help="FaSta elevator snapshot: adds random maintenance "
+                         "windows on --date and routes with these elevators "
+                         "(td footpaths for --wheelchair)")
+    ap.add_argument("--elevator-seed", type=int, default=42,
+                    help="seed for the random maintenance windows")
     ap.add_argument("--launcher",
                     help="command prefixing 'motis batch' (e.g. "
                          "'compute-sanitizer --tool memcheck --error-exitcode 1')")
@@ -325,6 +422,10 @@ def main():
     ap.add_argument("--n_threads", type=int,
                     help="'motis batch' worker threads (default: hardware "
                          "concurrency); lower it if the batch runs out of RAM")
+    ap.add_argument("--feed-dir",
+                    help="where the dataset paths of the data dir's config.yml "
+                         "are rooted, for the transfer rule check (default: "
+                         "the parent of --data, where the import ran)")
     ap.add_argument("--date", required=True,
                     help="pinned query day; pick the heaviest day class (e.g. "
                          "a Friday) and capture the rt dump on that same day")
@@ -337,6 +438,12 @@ def main():
     gbfs_dir = os.path.abspath(a.gbfs_dir) if a.gbfs_dir else None
     if a.rental and gbfs_dir is None:
         sys.exit("validate: --rental needs --gbfs-dir (dir containing dump_gbfs/)")
+
+    # Journeys on the default profile have to obey the feeds' transfer rules.
+    config = os.path.join(data, "config.yml")
+    checker = Checker.from_config(
+        config, os.path.abspath(a.feed_dir) if a.feed_dir
+        else os.path.dirname(data)) if os.path.exists(config) else None
 
     # One folder per PID -> don't interfere with parallel runs.
     work = os.path.abspath("validate-%d" % os.getpid())
@@ -353,6 +460,13 @@ def main():
         sys.stdout.reconfigure(line_buffering=True)
 
     print("== %s ==" % a.name)
+
+    if a.elevators:
+        fasta = os.path.join(work, "fasta.json")
+        random_outages(os.path.abspath(a.elevators), a.date, a.elevator_seed,
+                       fasta)
+        data = elevator_data(data, fasta, work)
+
     labels = bin_labels(bins)
 
     bases = {}
@@ -377,6 +491,9 @@ def main():
                  "--station / --intermodal / --flex / --rental)")
     cases = build_cases(bases, restricted, rt_dir is not None, a.routed_footpaths,
                         a.wheelchair, a.bike, a.car, a.tts)
+    if a.only:
+        only = a.only.split(",")
+        cases = [c for c in cases if any(o in c["label"] for o in only)]
 
     results = []
     lat = []  # (case_label, per-binary [execute_time ms] lists)
@@ -410,9 +527,10 @@ def main():
             o = "%s.%d" % (combined, i)
             print("[rt=%d rental=%d] batching %d queries on %s..." %
                   (rt, rental, offsets, labels[i]))
-            wall[i] += batch(b, data, combined, o, rt_dir if rt else None,
-                             gbfs_dir if rental else None, a.n_threads,
-                             launcher)
+            t, output = batch(b, data, combined, o, rt_dir if rt else None,
+                              gbfs_dir if rental else None, a.n_threads,
+                              launcher)
+            wall[i] += t
             print("[rt=%d rental=%d]   %s done in %.0fs" %
                   (rt, rental, labels[i], wall[i]))
             with open(o) as f:
@@ -428,6 +546,11 @@ def main():
                          "is a CUDA build. With a sanitizer build this usually "
                          "means ASAN_OPTIONS is missing protect_shadow_gap=0."
                          % (labels[i], n_cpu))
+
+            errors = routing_errors(output)
+            if errors:
+                sys.exit("validate: %s reported %d routing error(s), first: %s"
+                         % (labels[i], len(errors), errors[0]))
 
             neg = invalid_durations(outs[-1])
             if neg:
@@ -450,6 +573,26 @@ def main():
             #              % (labels[i], len(dummies), ", ".join(modes),
             #                 dummies[0][0] + 1))
 
+        # TRANSFER RULES: one pass over the responses of all binaries, so every
+        # feed is read once per group. The routed, wheelchair and tts cases
+        # route on profiles that ignore transfers.txt.
+        rule_violations = {}  # (binary, case label) -> violations
+        if checker is not None:
+            lines, owner = [], []
+            for i, o in enumerate(outs):
+                for c, (label, _, start, count) in zip(group, spans):
+                    if c["routed"] or c["wheelchair"] or c["tts"]:
+                        continue
+                    lines += o[start:start + count]
+                    owner += [(i, label, q) for q in range(count)]
+            summary, violations = checker.check(lines)
+            print("[rt=%d rental=%d] transfer rules: %s, %d violation(s)"
+                  % (rt, rental, summary, len(violations)))
+            for v in violations:
+                i, label, q = owner[v[0]]
+                rule_violations.setdefault((i, label), []).append(
+                    (q,) + tuple(v[1:]))
+
         # COMPARE REF VS ALL (print each verdict as it completes)
         for label, qlines, start, count in spans:
             responses = [o[start:start + count] for o in outs]
@@ -458,8 +601,16 @@ def main():
             fell_back = next(((i, sum(1 for ln in r if '"gpu_used":0' in ln))
                               for i, r in enumerate(responses)
                               if any('"gpu_used":0' in ln for ln in r)), None)
+            violated = next(((i, rule_violations[(i, label)])
+                             for i in range(len(bins))
+                             if (i, label) in rule_violations), None)
             if not compare(bins[0], qlines, responses, work, label):
                 ok, detail = False, "mismatch (motis compare)"
+            elif violated is not None:
+                i, vs = violated
+                ok, detail = False, ("%s: %d transfer rule violation(s), first: %s"
+                                     % (labels[i], len(vs),
+                                        format_violation(vs[0])))
             elif fell_back is not None:
                 ok, detail = False, ("bin%d fell back to CPU on %d/%d queries"
                                      % (fell_back[0], fell_back[1], count))

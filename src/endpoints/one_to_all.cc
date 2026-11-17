@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <memory>
 #include <vector>
 
 #include "utl/verify.h"
@@ -22,6 +23,7 @@
 #include "motis/place.h"
 #include "motis/server.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
+#include "motis/timetable/transfer_time_settings.h"
 
 namespace motis::ep {
 
@@ -88,11 +90,17 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
+  auto const rt = std::atomic_load(&rt_);
+  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::REALTIME
+                       ? rt->rtt_.get()
+                       : nullptr;
+  auto const e = rt->e_.get();
+
   auto const r = routing{
       config_, w_,        l_,      pl_,      elevations_,  &tt_,    nullptr,
       &tags_,  loc_tree_, fa_,     matches_, way_matches_, rt_,     nullptr,
       gbfs_,   nullptr,   nullptr, nullptr,  nullptr,      metrics_};
-  auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
+  auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, std::atomic_load(&gbfs_)};
 
   auto const osr_params = get_osr_parameters(query);
   auto prepare_stats = std::map<std::string, std::uint64_t>{};
@@ -101,50 +109,33 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .start_match_mode_ = r.is_osr_loaded()
                                ? n::routing::location_match_mode::kIntermodal
                                : n::routing::location_match_mode::kEquivalent,
-      .start_ = r.get_offsets(
-          nullptr, one, one_dir, one_modes, rental_options{}, osr_params,
-          query.pedestrianProfile_, query.elevationCosts_, one_max_time,
-          max_matching_distance, gbfs_rd, prepare_stats),
+      .start_ = r.get_offsets(rtt, one, one_dir, one_modes, rental_options{},
+                              osr_params, query.pedestrianProfile_,
+                              query.elevationCosts_, one_max_time,
+                              max_matching_distance, gbfs_rd, prepare_stats),
       .td_start_ = r.get_td_offsets(
-          nullptr, nullptr, one, one_dir, one_modes, osr_params,
-          query.pedestrianProfile_, query.elevationCosts_,
-          max_matching_distance, one_max_time, time, prepare_stats),
+          rtt, e, one, one_dir, one_modes, osr_params, query.pedestrianProfile_,
+          query.elevationCosts_, max_matching_distance, one_max_time, time,
+          prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,
-      .prf_idx_ = static_cast<n::profile_idx_t>(
-          query.useRoutedTransfers_
-              ? (query.pedestrianProfile_ ==
-                         api::PedestrianProfileEnum::WHEELCHAIR
-                     ? 2U
-                     : 1U)
-              : 0U),
+      .prf_idx_ = get_profile_idx(tt_, query),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .no_compulsory_reservation_ = query.noCompulsoryReservation_,
-      .transfer_time_settings_ =
-          n::routing::transfer_time_settings{
-              .default_ = (query.minTransferTime_ == 0 &&
-                           query.additionalTransferTime_ == 0 &&
-                           query.transferTimeFactor_ == 1.0),
-              .min_transfer_time_ = n::duration_t{query.minTransferTime_},
-              .additional_time_ = n::duration_t{query.additionalTransferTime_},
-              .factor_ = static_cast<float>(query.transferTimeFactor_)},
+      .transfer_time_settings_ = get_transfer_time_settings(query),
   };
-
-  if (tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
-    q.prf_idx_ = 0U;
-  }
 
   auto const state =
       query.arriveBy_
-          ? n::routing::one_to_all<n::direction::kBackward>(tt_, nullptr, q)
-          : n::routing::one_to_all<n::direction::kForward>(tt_, nullptr, q);
+          ? n::routing::one_to_all<n::direction::kBackward>(tt_, rtt, q)
+          : n::routing::one_to_all<n::direction::kForward>(tt_, rtt, q);
 
   auto reachable = nigiri::bitvec{tt_.n_locations()};
   for (auto i = 0U; i != tt_.n_locations(); ++i) {
-    if (state.get_best<0>()[i][0] != unreachable) {
+    if (state.template get_best<0>()[i][0] != unreachable) {
       reachable.set(i);
     }
   }

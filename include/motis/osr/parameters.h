@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
+
+#include "geo/latlng.h"
 
 #include "osr/routing/parameters.h"
 #include "osr/routing/profile.h"
@@ -59,6 +62,8 @@ osr_parameters get_osr_parameters(api::oneToManyIntermodal_params const&);
 
 osr_parameters get_osr_parameters(api::OneToManyIntermodalParams const&);
 
-osr::profile_parameters to_profile_parameters(osr::search_profile,
-                                              osr_parameters const&);
+osr::profile_parameters to_profile_parameters(
+    osr::search_profile,
+    osr_parameters const&,
+    std::function<bool(geo::latlng const&)> vehicle_return_allowed = {});
 }  // namespace motis

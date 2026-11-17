@@ -8,6 +8,7 @@
 namespace motis {
 
 api::ModeEnum to_mode(osr::mode);
+api::ModeEnum to_mode(osr::search_profile);
 osr::search_profile to_profile(api::ModeEnum,
                                api::PedestrianProfileEnum,
                                api::ElevationCostsEnum);

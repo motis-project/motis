@@ -44,8 +44,11 @@ export type Translations = {
 	duration: string;
 	later: string;
 	earlier: string;
+	onDate: (date: string) => string;
 	arrivals: string;
+	arrivalsAt: (stop: string) => string;
 	departures: string;
+	departuresAt: (stop: string) => string;
 	connections: string;
 	switchToArrivals: string;
 	switchToDepartures: string;
@@ -198,12 +201,12 @@ export type Translations = {
 	pageTitle: {
 		default: string;
 		fromTo: (from: string, to: string) => string;
-		departuresAt: (stop: string) => string;
-		arrivalsAt: (stop: string) => string;
 		isochronesFrom: (place: string) => string;
 	};
 	tickets: string;
 	routeInformation: string;
+	history: string;
+	clearHistory: string;
 };
 
 const translations: Map<string, Translations> = new Map(

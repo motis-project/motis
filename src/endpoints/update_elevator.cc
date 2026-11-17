@@ -4,16 +4,12 @@
 
 #include "nigiri/rt/create_rt_timetable.h"
 
-#if defined(NIGIRI_CUDA)
-#include "nigiri/logging.h"
-#include "nigiri/routing/gpu/raptor.h"
-#endif
-
 #include "motis/constants.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/get_loc.h"
 #include "motis/railviz.h"
+#include "motis/rt_update.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace json = boost::json;
@@ -44,29 +40,19 @@ json::value update_elevator::operator()(json::value const& query) const {
   it->state_changes_ =
       intervals_to_state_changes(it->out_of_service_, it->status_);
 
-  auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
+  auto tasks = hash_set<n::location_idx_t>{};
   loc_rtree_.in_radius(it->pos_, kElevatorUpdateRadius,
-                       [&](n::location_idx_t const l) {
-                         tasks.emplace(l, osr::direction::kForward);
-                         tasks.emplace(l, osr::direction::kBackward);
-                       });
+                       [&](n::location_idx_t const l) { tasks.emplace(l); });
 
   auto new_e =
       elevators{w_, elevator_ids_, elevator_nodes_, std::move(elevators_copy)};
-  auto new_rtt = n::rt::create_rt_timetable(tt_, rtt->base_day_);
+  // keep the real-time data, only the walks change
+  auto new_rtt = n::rt_timetable{*rtt};
   update_rtt_td_footpaths(
       w_, l_, pl_, tt_, loc_rtree_, new_e, matches_, tasks, rtt, new_rtt,
       std::chrono::seconds{c_.timetable_.value().max_footpath_length_ * 60});
 
-#if defined(NIGIRI_CUDA)
-  try {
-    new_rtt.gpu_rtt_.ptr_ = n::routing::gpu::make_gpu_rtt(tt_, new_rtt);
-  } catch (std::exception const& ex) {
-    n::log(n::log_lvl::error, "motis.elevators",
-           "GPU rt timetable upload failed: {}", ex.what());
-    new_rtt.gpu_rtt_.ptr_.reset();
-  }
-#endif
+  finalize_rtt(tt_, new_rtt);
 
   auto new_rt = std::make_shared<rt>(
       std::make_unique<n::rt_timetable>(std::move(new_rtt)),

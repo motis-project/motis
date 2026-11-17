@@ -2,8 +2,11 @@
 
 #include "net/too_many_exception.h"
 
+#include "utl/visit.h"
+
 #include "osr/geojson.h"
 
+#include "motis/config.h"
 #include "motis/location_routes.h"
 #include "motis/match_platforms.h"
 #include "motis/tag_lookup.h"
@@ -44,15 +47,14 @@ json::value matches::operator()(json::value const& query) const {
                     {"level", pl_.get_level(w_, p).to_float()},
                     {"platform_names", fmt::format("{}", get_names(pl_, p))}}
             .as_object();
-    std::visit(utl::overloaded{[&](osr::way_idx_t x) {
-                                 platform_data.emplace(
-                                     "osm_way_id", to_idx(w_.way_osm_idx_[x]));
-                               },
-                               [&](osr::node_idx_t x) {
-                                 platform_data.emplace(
-                                     "osm_node_id", to_idx(w_.node_to_osm_[x]));
-                               }},
-               osr::to_ref(pl_.platform_ref_[p][0]));
+    utl::visit(
+        osr::to_ref(pl_.platform_ref_[p][0]),
+        [&](osr::way_idx_t x) {
+          platform_data.emplace("osm_way_id", to_idx(w_.way_osm_idx_[x]));
+        },
+        [&](osr::node_idx_t x) {
+          platform_data.emplace("osm_node_id", to_idx(w_.node_to_osm_[x]));
+        });
 
     matches.emplace_back(json::value{
         {"type", "Feature"},
@@ -65,7 +67,8 @@ json::value matches::operator()(json::value const& query) const {
                                          "too many items");
 
     auto const pos = tt_.locations_.coordinates_[l];
-    auto const match = get_match(tt_, pl_, w_, l);
+    auto const match = get_match(tt_, pl_, w_, l_, l,
+                                 config_.timetable_->max_matching_distance_);
     auto props =
         json::value{
             {"name", tt_.get_default_translation(tt_.locations_.names_[l])},
@@ -79,20 +82,18 @@ json::value matches::operator()(json::value const& query) const {
     if (match == osr::platform_idx_t::invalid()) {
       props.emplace("level", "-");
     } else {
-      std::visit(utl::overloaded{
-                     [&](osr::way_idx_t x) {
-                       props.emplace("osm_way_id", to_idx(w_.way_osm_idx_[x]));
-                       props.emplace(
-                           "level",
-                           w_.r_->way_properties_[x].from_level().to_float());
-                     },
-                     [&](osr::node_idx_t x) {
-                       props.emplace("osm_node_id", to_idx(w_.node_to_osm_[x]));
-                       props.emplace(
-                           "level",
-                           w_.r_->node_properties_[x].from_level().to_float());
-                     }},
-                 osr::to_ref(pl_.platform_ref_[match][0]));
+      utl::visit(
+          osr::to_ref(pl_.platform_ref_[match][0]),
+          [&](osr::way_idx_t x) {
+            props.emplace("osm_way_id", to_idx(w_.way_osm_idx_[x]));
+            props.emplace("level",
+                          w_.r_->way_properties_[x].from_level().to_float());
+          },
+          [&](osr::node_idx_t x) {
+            props.emplace("osm_node_id", to_idx(w_.node_to_osm_[x]));
+            props.emplace("level",
+                          w_.r_->node_properties_[x].from_level().to_float());
+          });
     }
     matches.emplace_back(
         json::value{{"type", "Feature"},

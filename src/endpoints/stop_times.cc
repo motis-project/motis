@@ -549,12 +549,8 @@ api::stoptimes_response stop_times::operator()(
             auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
                                   query.language_, s);
             if (query.withAlerts_) {
-              place.alerts_ =
-                  get_alerts(fr,
-                             std::pair{s, fr.stop_range_.from_ != 0U
-                                              ? n::event_type::kArr
-                                              : n::event_type::kDep},
-                             true, query.language_);
+              place.alerts_ = get_alerts(
+                  fr, n::alert_stop_match::kStopMatchOrNoStop, query.language_);
             }
             if (fr.stop_range_.from_ != 0U) {
               place.arrival_ = {s.time(n::event_type::kArr)};
@@ -591,7 +587,7 @@ api::stoptimes_response stop_times::operator()(
             return {
                 .place_ = bwd_compat_lvl_adjust(std::move(place), api_version),
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
-                .realTime_ = fr.is_rt(),
+                .realTime_ = s.has_rt_data(ev_type),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
                 .tripFrom_ = bwd_compat_lvl_adjust(
                     to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
@@ -612,10 +608,8 @@ api::stoptimes_response stop_times::operator()(
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
                 .tripId_ = trip_id,
-                .routeType_ =
-                    s.route_type(ev_type).and_then([](n::route_type_t const x) {
-                      return std::optional{to_idx(x)};
-                    }),
+                .routeType_ = s.route_type(ev_type).transform(
+                    [](n::route_type_t const x) { return to_idx(x); }),
                 .routeShortName_ =
                     std::string{api_version < 4
                                     ? s.display_name(ev_type, lang)

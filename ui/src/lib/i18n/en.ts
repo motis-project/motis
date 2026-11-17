@@ -38,9 +38,12 @@ const translations: Translations = {
 	connections: 'Connections',
 	duration: 'Duration',
 	arrivals: 'Arrivals',
+	arrivalsAt: (stop) => `Arrivals at ${stop}`,
 	later: 'later',
 	earlier: 'earlier',
+	onDate: (date: string) => `on ${date}`,
 	departures: 'Departures',
+	departuresAt: (stop) => `Departures at ${stop}`,
 	switchToArrivals: 'Switch to arrivals',
 	switchToDepartures: 'Switch to departures',
 	track: 'Platform',
@@ -210,12 +213,12 @@ const translations: Translations = {
 	pageTitle: {
 		default: 'MOTIS',
 		fromTo: (from, to) => `${from} to ${to}`,
-		departuresAt: (stop) => `Departures in ${stop}`,
-		arrivalsAt: (stop) => `Arrivals in ${stop}`,
 		isochronesFrom: (place) => `Isochrones from ${place}`
 	},
 	tickets: 'Tickets',
-	routeInformation: 'More Information'
+	routeInformation: 'More Information',
+	history: 'History',
+	clearHistory: 'Clear history'
 };
 
 export default translations;

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import maplibregl, { type MapGeoJSONFeature } from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
+	import type { MapGeoJSONFeature } from 'maplibre-gl';
 	import { untrack } from 'svelte';
 	import { stops, type Mode } from '@motis-project/motis-client';
 	import { lngLatToStr } from '$lib/lngLatToStr';

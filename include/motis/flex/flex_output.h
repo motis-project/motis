@@ -2,8 +2,7 @@
 
 #include "motis/adr_extend_tt.h"
 #include "motis/flex/flex_routing_data.h"
-#include "motis/flex/mode_id.h"
-#include "motis/match_platforms.h"
+#include "motis/flex/mode_payload.h"
 #include "motis/osr/street_routing.h"
 
 namespace motis::flex {
@@ -17,15 +16,17 @@ std::string_view get_flex_id(nigiri::timetable const&,
 
 struct flex_output : public output {
   flex_output(osr::ways const&,
-              osr::lookup const&,
               osr::platforms const*,
               platform_matches_t const*,
               adr_ext const*,
               tz_map_t const*,
               tag_lookup const&,
               nigiri::timetable const&,
+              nigiri::rt_timetable const*,
               flex_areas const&,
-              mode_id);
+              mode_payload,
+              flex_additional_nodes const&,
+              osr::sharing_data);
   ~flex_output() override;
 
   api::ModeEnum get_mode() const override;
@@ -51,11 +52,12 @@ private:
   adr_ext const* ae_;
   tz_map_t const* tz_;
   nigiri::timetable const& tt_;
+  nigiri::rt_timetable const* rtt_;
   tag_lookup const& tags_;
   flex_areas const& fa_;
-  flex::flex_routing_data flex_routing_data_;
+  flex_additional_nodes const& additional_nodes_;
   osr::sharing_data sharing_data_;
-  mode_id mode_id_;
+  mode_payload mode_payload_;
 };
 
 }  // namespace motis::flex

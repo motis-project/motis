@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { posToLocation, type Location } from '$lib/Location';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import { getContext, onDestroy } from 'svelte';
 
 	let ctx: { map: maplibregl.Map | null } = getContext('map'); // from Map component

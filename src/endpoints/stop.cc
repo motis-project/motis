@@ -119,10 +119,8 @@ api::stopInfo_response stop::operator()(
                .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
                .routeColor_ = n::to_str(color.color_),
                .routeTextColor_ = n::to_str(color.text_color_),
-               .routeType_ =
-                   rs.route_type(ev).and_then([](n::route_type_t const x) {
-                     return std::optional{to_idx(x)};
-                   })});
+               .routeType_ = rs.route_type(ev).transform(
+                   [](n::route_type_t const x) { return to_idx(x); })});
         }
       }
     }

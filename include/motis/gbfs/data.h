@@ -124,17 +124,21 @@ struct station_information {
   std::string address_{};
   std::string cross_street_{};
   rental_uris rental_uris_{};
+  // Number of docks or parking spots, if published by the feed. Gates the
+  // num_docks_available fallback: stations that declare no capacity report
+  // 0 free docks without being full.
+  std::optional<unsigned> capacity_{};
 
   std::shared_ptr<tg_geom> station_area_{};
 
   geo::box bounding_box() const {
+    auto bb = geo::box{pos_, pos_};
     if (station_area_) {
       auto const rect = tg_geom_rect(station_area_.get());
-      return geo::box{geo::latlng{rect.min.y, rect.min.x},
-                      geo::latlng{rect.max.y, rect.max.x}};
-    } else {
-      return geo::box{pos_, pos_};
+      bb.extend(geo::box{geo::latlng{rect.min.y, rect.min.x},
+                         geo::latlng{rect.max.y, rect.max.x}});
     }
+    return bb;
   }
 };
 
@@ -142,6 +146,10 @@ struct station_status {
   unsigned num_vehicles_available_{};
   hash_map<vehicle_type_idx_t, unsigned> vehicle_types_available_{};
   hash_map<vehicle_type_idx_t, unsigned> vehicle_docks_available_{};
+  // Total number of free docks for feeds that publish the total instead of
+  // per vehicle type counts. std::nullopt if the feed does not publish
+  // num_docks_available; not computed from vehicle_docks_available.
+  std::optional<unsigned> num_docks_available_{};
   bool is_renting_{true};
   bool is_returning_{true};
 };

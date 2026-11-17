@@ -1,5 +1,5 @@
 <script lang="ts">
-	import maplibregl from 'maplibre-gl';
+	import type * as maplibregl from 'maplibre-gl';
 	import { onDestroy, getContext, setContext, type Snippet } from 'svelte';
 	import type { MapMouseEvent, MapGeoJSONFeature } from 'maplibre-gl';
 
@@ -222,10 +222,12 @@
 			map!.setFilter(id, nextFilter);
 		}
 		if (currLayout != nextLayout) {
+			// @ts-expect-error not assignable
 			applyProperties(currLayout, nextLayout, (k, v) => map!.setLayoutProperty(id, k, v));
 			currLayout = nextLayout;
 		}
 		if (currPaint != nextPaint) {
+			// @ts-expect-error not assignable
 			applyProperties(currPaint, nextPaint, (k, v) => map!.setPaintProperty(id, k, v));
 			currPaint = nextPaint;
 		}

@@ -17,6 +17,9 @@ export default defineConfig({
 	},
 	build: {
 		sourcemap: true,
+		license: {
+			fileName: 'THIRD_PARTY_LICENSES.md'
+		},
 		rollupOptions: {
 			output: {
 				manualChunks: (id) => {

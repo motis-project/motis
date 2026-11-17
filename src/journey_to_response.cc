@@ -13,7 +13,8 @@
 
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
-#include "utl/overloaded.h"
+#include "utl/lookup.h"
+#include "utl/verify.h"
 #include "utl/visit.h"
 
 #include "adr/typeahead.h"
@@ -37,7 +38,9 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/itinerary_id.h"
 #include "motis/odm/odm.h"
+#include "motis/osr/default_output.h"
 #include "motis/osr/mode_to_profile.h"
+#include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/street_routing.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
@@ -45,51 +48,11 @@
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
 #include "motis/to_alert.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 namespace n = nigiri;
 
 namespace motis {
-
-api::ModeEnum to_mode(osr::search_profile const m) {
-  switch (m) {
-    case osr::search_profile::kCarParkingWheelchair: [[fallthrough]];
-    case osr::search_profile::kCarParking: return api::ModeEnum::CAR_PARKING;
-    case osr::search_profile::kCarDropOffWheelchair: [[fallthrough]];
-    case osr::search_profile::kCarDropOff: return api::ModeEnum::CAR_DROPOFF;
-    case osr::search_profile::kFoot: [[fallthrough]];
-    case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
-    case osr::search_profile::kCar: return api::ModeEnum::CAR;
-    case osr::search_profile::kHgv: return api::ModeEnum::HGV;
-    case osr::search_profile::kBikeElevationLow: [[fallthrough]];
-    case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
-    case osr::search_profile::kBikeFast: [[fallthrough]];
-    case osr::search_profile::kBike: return api::ModeEnum::BIKE;
-    case osr::search_profile::kBikeSharing: [[fallthrough]];
-    case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
-    case osr::search_profile::kBus: return api::ModeEnum::DEBUG_BUS_ROUTE;
-    case osr::search_profile::kRailway:
-      return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
-    case osr::search_profile::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
-  }
-  std::unreachable();
-}
-
-api::ModeEnum to_mode(n::transport_mode_id_t const id) {
-  if (id == kOdmTransportModeId) {
-    return api::ModeEnum::ODM;
-  }
-  if (id == kRideSharingTransportModeId) {
-    return api::ModeEnum::RIDE_SHARING;
-  }
-  if (flex::mode_id::is_flex(id)) {
-    return api::ModeEnum::FLEX;
-  }
-  if (id >= kGbfsTransportModeIdOffset) {
-    return api::ModeEnum::RENTAL;
-  }
-  return to_mode(static_cast<osr::search_profile>(id));
-}
 
 void cleanup_intermodal(api::Itinerary& i) {
   if (i.legs_.front().from_.name_ == "END") {
@@ -129,8 +92,7 @@ std::optional<fare_indices> get_fare_indices(
 
 std::optional<std::vector<api::Alert>> get_alerts(
     n::rt::frun const& fr,
-    std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s,
-    bool const fuzzy_stop,
+    n::alert_stop_match const match,
     std::optional<std::vector<std::string>> const& language) {
   if (fr.rtt_ == nullptr || !fr.is_scheduled()) {  // TODO added
     return std::nullopt;
@@ -143,22 +105,9 @@ std::optional<std::vector<api::Alert>> get_alerts(
     return to_alert(rtt->alerts_, x, language);
   };
 
-  auto const x =
-      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs_ev) {
-         auto const& [rs, ev_type] = rs_ev;
-         return std::optional{rs.get_trip_idx(ev_type)};
-       }).value_or(fr.trip_idx());
-  auto const l =
-      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs) {
-         return std::optional{rs.first.get_location_idx()};
-       }).value_or(n::location_idx_t::invalid());
   auto alerts = std::vector<api::Alert>{};
-  for (auto const& t : tt.trip_ids_[x]) {
-    auto const src = tt.trip_id_src_[t];
-    for (auto const& a :
-         rtt->alerts_.get_alerts(tt, src, x, fr.rt_, l, fuzzy_stop)) {
-      alerts.emplace_back(call_to_alert(a));
-    }
+  for (auto const& a : rtt->alerts_.get_alerts(tt, *rtt, fr, match)) {
+    alerts.emplace_back(call_to_alert(a));
   }
 
   return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
@@ -199,8 +148,7 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     n::source_idx_t src,
     tag_lookup const& tags,
     n::rt::run_stop const& enter_stop,
-    n::rt::run_stop const& exit_stop,
-    n::interval<n::stop_idx_t> const trip_range) {
+    n::rt::run_stop const& exit_stop) {
   if (!enter_stop.fr_->is_scheduled()) {
     return std::nullopt;
   }
@@ -211,9 +159,8 @@ std::optional<api::TicketUrls> get_ticketing_urls(
   }
 
   if (tt.locations_.ticketing_unavailable_.test(
-          enter_stop.get_stop().location_idx()) ||
-      tt.locations_.ticketing_unavailable_.test(
-          exit_stop.get_stop().location_idx())) {
+          enter_stop.get_location_idx()) ||
+      tt.locations_.ticketing_unavailable_.test(exit_stop.get_location_idx())) {
     return std::nullopt;
   }
 
@@ -243,7 +190,7 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     auto const location_ticketing_id =
         [&](n::rt::run_stop stop) -> std::optional<std::string_view> {
       auto const provider_ids =
-          tt.location_ticketing_identifier_[stop.get_stop().location_idx()];
+          tt.location_ticketing_identifier_[stop.get_location_idx()];
       auto const provider_idx = exit_stop.get_provider_idx(n::event_type::kArr);
 
       auto const it = std::lower_bound(
@@ -260,21 +207,31 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     auto const from_id = location_ticketing_id(enter_stop);
     auto const to_id = location_ticketing_id(exit_stop);
 
-    auto const seq_nums = nigiri::loader::gtfs::stop_seq_number_range{
-        {tt.trip_stop_seq_numbers_[enter_stop.get_trip_idx(
-            n::event_type::kDep)]},
-        static_cast<nigiri::stop_idx_t>(trip_range.size())};
-    auto const seq_num = [&](n::rt::run_stop const& s) {
+    auto const seq_num = [&](n::rt::run_stop const& s,
+                             n::event_type const ev) -> std::string {
+      auto const trip = s.get_trip_idx(ev);
+      auto const trip_stops = [&]() {
+        for (auto const& [t, stops] : tt.trip_transport_ranges_[trip]) {
+          if (t == s.fr_->t_.t_idx_) {
+            return stops;
+          }
+        }
+        throw utl::fail("trip not part of transport");
+      }();
+      auto const seq_nums = nigiri::loader::gtfs::stop_seq_number_range{
+          {tt.trip_stop_seq_numbers_[trip]},
+          static_cast<n::stop_idx_t>(trip_stops.size())};
       return std::to_string(
           *(seq_nums.begin() +
-            static_cast<unsigned>(s.stop_idx_ - trip_range.from_)));
+            static_cast<unsigned>(s.stop_idx_ - trip_stops.from_)));
     };
 
-    auto const from =
-        from_id.has_value() ? std::string{*from_id} : seq_num(enter_stop);
+    auto const from = from_id.has_value()
+                          ? std::string{*from_id}
+                          : seq_num(enter_stop, n::event_type::kDep);
 
-    auto const to =
-        to_id.has_value() ? std::string{*to_id} : seq_num(exit_stop);
+    auto const to = to_id.has_value() ? std::string{*to_id}
+                                      : seq_num(exit_stop, n::event_type::kArr);
 
     auto const to_json_array = [](std::string elem) -> std::string {
       auto array = boost::json::array{};
@@ -360,7 +317,8 @@ api::Itinerary journey_to_response(
     n::lang_t const& lang,
     bool const set_itinerary_id_field,
     alternatives_context const& alternatives,
-    std::chrono::nanoseconds* fares_time) {
+    std::chrono::nanoseconds* fares_time,
+    one_to_many_view const states) {
   auto const itinerary_start_time = j_in.legs_.front().dep_time_;
   auto const itinerary_end_time = j_in.legs_.back().arr_time_;
   auto j = j_in;
@@ -412,8 +370,8 @@ api::Itinerary journey_to_response(
     return {.riderCategoryName_ = std::string{tt.strings_.get(r.name_)},
             .isDefaultFareCategory_ = r.is_default_fare_category_,
             .eligibilityUrl_ = tt.strings_.try_get(r.eligibility_url_)
-                                   .and_then([](std::string_view s) {
-                                     return std::optional{std::string{s}};
+                                   .transform([](std::string_view s) {
+                                     return std::string{s};
                                    })};
   };
   auto const to_products =
@@ -463,17 +421,16 @@ api::Itinerary journey_to_response(
               [](n::routing::journey::leg const& leg) {
                 return holds_alternative<n::routing::journey::run_enter_exit>(
                            leg.uses_) ||
-                       odm::is_odm_leg(leg, kOdmTransportModeId) ||
-                       odm::is_odm_leg(leg, kRideSharingTransportModeId);
+                       odm::is_odm_leg(leg, kOdmTransportMode) ||
+                       odm::is_odm_leg(leg, kRideSharingTransportMode);
               }) -
               1),
       .fareTransfers_ =
-          fares.and_then([&](std::vector<n::fare_transfer> const& transfers) {
-            return std::optional{utl::to_vec(
+          fares.transform([&](std::vector<n::fare_transfer> const& transfers) {
+            return utl::to_vec(
                 transfers, [&](n::fare_transfer const& t) -> api::FareTransfer {
-                  return {.rule_ = t.rule_.and_then([&](auto&& r) {
-                            return std::optional{to_rule(r)};
-                          }),
+                  return {.rule_ = t.rule_.transform(
+                              [&](auto&& r) { return to_rule(r); }),
                           .transferProducts_ = t.rule_.and_then([&](auto&& r) {
                             return t.legs_.empty()
                                        ? std::nullopt
@@ -488,7 +445,7 @@ api::Itinerary journey_to_response(
                                                      r.fare_product_);
                                 });
                               })};
-                })};
+                });
           })};
 
   auto const append = [&](api::Itinerary&& x) {
@@ -512,7 +469,13 @@ api::Itinerary journey_to_response(
   };
 
   auto const render_alternatives =
-      [&](std::vector<n::routing::journey> const& alt_journeys) {
+      [&](std::vector<n::routing::journey> const& alt_journeys,
+          bool const arrive_by = false) {
+        // Alternatives of an arriveBy query: kStart/kEnd and the
+        // retained searches refer to the opposite places.
+        auto const& alt_start = arrive_by ? dest : start;
+        auto const& alt_dest = arrive_by ? start : dest;
+        auto const alt_states = one_to_many_view{states.searches_, arrive_by};
         return utl::to_vec(alt_journeys, [&](n::routing::journey const& alt) {
           auto const& alt_from_loc = alt.legs_.front().from_;
           auto const& alt_to_loc = alt.legs_.back().to_;
@@ -520,10 +483,10 @@ api::Itinerary journey_to_response(
                      w, l, pl, tt, tags, fl, e, rtt, matches, elevations,
                      shapes, gbfs_rd, ae, tz_map, alt,
                      n::is_special(alt_from_loc)
-                         ? start
+                         ? alt_start
                          : place_t{tt_location{alt_from_loc}},
                      n::is_special(alt_to_loc)
-                         ? dest
+                         ? alt_dest
                          : place_t{tt_location{alt_to_loc}},
                      cache, blocked_mem, car_transfers, osr_params,
                      pedestrian_profile, elevation_costs, join_interlined_legs,
@@ -531,8 +494,8 @@ api::Itinerary journey_to_response(
                      with_fares, with_scheduled_skipped_stops,
                      timetable_max_matching_distance, max_matching_distance,
                      api_version, ignore_start_rental_return_constraints,
-                     ignore_dest_rental_return_constraints, lang,
-                     /*set_itinerary_id_field=*/false)
+                     ignore_dest_rental_return_constraints, lang, false, {},
+                     nullptr, alt_states)
               .legs_;
         });
       };
@@ -541,8 +504,10 @@ api::Itinerary journey_to_response(
                                        std::size_t const j_leg_idx) {
     leg.alternatives_ = utl::visit(
         alternatives, render_alternatives, [&](query_alternatives const& a) {
-          return render_alternatives(n::routing::get_leg_alternatives(
-              tt, rtt, a.query, j, j_leg_idx, a.num_alternatives));
+          return render_alternatives(
+              n::routing::get_leg_alternatives(tt, rtt, a.query_, j, j_leg_idx,
+                                               a.num_alternatives_),
+              a.arrive_by_);
         });
   };
 
@@ -566,284 +531,285 @@ api::Itinerary journey_to_response(
                               n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, ae, tz_map, lang,
                                  s, start, dest, ev_type);
-      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, lang);
-      if (auto const it = is_unique.find(s.get_location_idx());
-          it != end(is_unique) && !it->second) {
+      p.alerts_ = get_alerts(
+          n::rt::frun{tt,
+                      rtt,
+                      {.t_ = s.fr_->t_,
+                       .stop_range_ = {s.stop_idx_, static_cast<n::stop_idx_t>(
+                                                        s.stop_idx_ + 1U)},
+                       .rt_ = s.fr_->rt_}},
+          n::alert_stop_match::kStopMatch, lang);
+      if (!utl::lookup(is_unique, s.get_location_idx()).value_or(true)) {
         p.name_ =
             tt.translate(lang, tt.locations_.names_[s.get_location_idx()]);
       }
       return p;
     };
 
-    std::visit(
-        utl::overloaded{
-            [&](n::routing::journey::run_enter_exit const& t) {
-              auto const fr = n::rt::frun{tt, rtt, t.r_};
-              auto is_first_part = true;
-              auto const write_run_leg = [&](auto,
-                                             n::interval<n::stop_idx_t> const
-                                                 subrange) {
-                auto const common_stops = subrange.intersect(t.stop_range_);
-                if (common_stops.size() <= 1) {
-                  return;
-                }
+    utl::visit(
+        j_leg.uses_,
+        [&](n::routing::journey::run_enter_exit const& t) {
+          auto const fr = n::rt::frun{tt, rtt, t.r_};
+          auto is_first_part = true;
+          auto const write_run_leg = [&](auto, n::interval<n::stop_idx_t> const
+                                                   subrange) {
+            auto const common_stops = subrange.intersect(t.stop_range_);
+            if (common_stops.size() <= 1) {
+              return;
+            }
 
-                get_is_unique_stop_name(fr, common_stops, is_unique);
+            get_is_unique_stop_name(fr, common_stops, is_unique);
 
-                auto const enter_stop = fr[common_stops.from_];
-                auto const exit_stop = fr[common_stops.to_ - 1U];
-                auto const color =
-                    enter_stop.get_route_color(n::event_type::kDep);
-                auto const& agency =
-                    enter_stop.get_provider(n::event_type::kDep);
-                auto const fare_indices = get_fare_indices(fares, j_leg);
+            auto const enter_stop = fr[common_stops.from_];
+            auto const exit_stop = fr[common_stops.to_ - 1U];
+            auto const color = enter_stop.get_route_color(n::event_type::kDep);
+            auto const& agency = enter_stop.get_provider(n::event_type::kDep);
+            auto const fare_indices = get_fare_indices(fares, j_leg);
 
-                auto const check_flag_enter_exit = [&](n::route_flag const f) {
-                  return enter_stop.is_flag_set(f, nigiri::event_type::kDep) &&
-                         exit_stop.is_flag_set(f, nigiri::event_type::kArr);
-                };
+            auto const check_flag_enter_exit = [&](n::route_flag const f) {
+              return enter_stop.is_flag_set(f, nigiri::event_type::kDep) &&
+                     exit_stop.is_flag_set(f, nigiri::event_type::kArr);
+            };
 
-                auto& leg = itinerary.legs_.emplace_back(api::Leg{
-                    .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
-                                     api_version),
-                    .from_ = bwd_compat_lvl_adjust(
-                        to_place(enter_stop, n::event_type::kDep), api_version),
-                    .to_ = bwd_compat_lvl_adjust(
-                        to_place(exit_stop, n::event_type::kArr), api_version),
-                    .duration_ =
+            auto& leg = itinerary.legs_.emplace_back(api::Leg{
+                .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
+                                 api_version),
+                .from_ = bwd_compat_lvl_adjust(
+                    to_place(enter_stop, n::event_type::kDep), api_version),
+                .to_ = bwd_compat_lvl_adjust(
+                    to_place(exit_stop, n::event_type::kArr), api_version),
+                .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
+                                 exit_stop.time(n::event_type::kArr) -
+                                 enter_stop.time(n::event_type::kDep))
+                                 .count(),
+                .startTime_ = enter_stop.time(n::event_type::kDep),
+                .endTime_ = exit_stop.time(n::event_type::kArr),
+                .scheduledStartTime_ =
+                    enter_stop.scheduled_time(n::event_type::kDep),
+                .scheduledEndTime_ =
+                    exit_stop.scheduled_time(n::event_type::kArr),
+                .realTime_ = enter_stop.has_rt_data(n::event_type::kDep) ||
+                             exit_stop.has_rt_data(n::event_type::kArr),
+                .scheduled_ = fr.is_scheduled(),
+                .interlineWithPreviousLeg_ = !is_first_part,
+                .headsign_ = std::string{enter_stop.direction(
+                    lang, n::event_type::kDep)},
+                .tripFrom_ =
+                    [&]() {
+                      auto const first =
+                          exit_stop.get_first_trip_stop(n::event_type::kArr);
+                      auto p = bwd_compat_lvl_adjust(
+                          to_place(first, n::event_type::kDep), api_version);
+                      p.departure_ = first.time(n::event_type::kDep);
+                      p.scheduledDeparture_ =
+                          first.scheduled_time(n::event_type::kDep);
+                      return p;
+                    }(),
+                .tripTo_ =
+                    [&]() {
+                      auto const last =
+                          enter_stop.get_last_trip_stop(n::event_type::kDep);
+                      auto p = bwd_compat_lvl_adjust(
+                          to_place(last, n::event_type::kArr), api_version);
+                      p.arrival_ = last.time(n::event_type::kArr);
+                      p.scheduledArrival_ =
+                          last.scheduled_time(n::event_type::kArr);
+                      return p;
+                    }(),
+                .category_ =
+                    enter_stop.get_category(n::event_type::kDep)
+                        .transform([&](nigiri::category_idx_t const c) {
+                          auto const& cat = tt.categories_.at(c);
+                          return api::Category{
+                              .id_ = std::string{tt.strings_.get(cat.id_)},
+                              .name_ =
+                                  std::string{tt.translate(lang, cat.name_)},
+                              .shortName_ = std::string{tt.translate(
+                                  lang, cat.short_name_)},
+                          };
+                        }),
+                .routeId_ = tags.route_id(enter_stop, n::event_type::kDep),
+                .routeUrl_ = std::string{enter_stop.route_url(
+                    n::event_type::kDep, lang)},
+                .directionId_ =
+                    enter_stop.get_direction_id(n::event_type::kDep) == 0 ? "0"
+                                                                          : "1",
+                .routeColor_ = to_str(color.color_),
+                .routeTextColor_ = to_str(color.text_color_),
+                .routeType_ =
+                    enter_stop.route_type(n::event_type::kDep)
+                        .transform([](auto&& x) { return to_idx(x); }),
+                .agencyName_ = std::string{tt.translate(lang, agency.name_)},
+                .agencyUrl_ = std::string{tt.translate(lang, agency.url_)},
+                .agencyFareUrl_ =
+                    std::string{tt.translate(lang, agency.fare_url_)},
+                .agencyId_ =
+                    std::string{tt.strings_.try_get(agency.id_).value_or("?")},
+                .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
+                .routeShortName_ = {std::string{
+                    api_version > 3
+                        ? enter_stop.route_short_name(n::event_type::kDep, lang)
+                        : enter_stop.display_name(n::event_type::kDep, lang)}},
+                .routeLongName_ = {std::string{
+                    enter_stop.route_long_name(n::event_type::kDep, lang)}},
+                .tripShortName_ = {std::string{
+                    enter_stop.trip_short_name(n::event_type::kDep, lang)}},
+                .displayName_ = {std::string{
+                    enter_stop.display_name(n::event_type::kDep, lang)}},
+                .cancelled_ = fr.is_cancelled(),
+                .source_ = fmt::to_string(fr.dbg()),
+                .fareTransferIndex_ = fare_indices.transform(
+                    [](auto&& x) { return x.transfer_idx_; }),
+                .effectiveFareLegIndex_ = fare_indices.transform(
+                    [](auto&& x) { return x.effective_fare_leg_idx_; }),
+                .alerts_ = get_alerts(n::rt::frun{tt,
+                                                  rtt,
+                                                  {.t_ = fr.t_,
+                                                   .stop_range_ = common_stops,
+                                                   .rt_ = fr.rt_}},
+                                      n::alert_stop_match::kStopMatch, lang),
+                .loopedCalendarSince_ =
+                    enter_stop.looped_calendar_since(n::event_type::kDep),
+                .bikesAllowed_ = check_flag_enter_exit(nigiri::kBikesAllowed),
+                .wheelchairAccessible_ =
+                    check_flag_enter_exit(nigiri::kWheelchairAccessible)
+                        ? api::WheelchairAccessibilityEnum::ACCESSIBLE
+                        : api::WheelchairAccessibilityEnum::NOT_ACCESSIBLE,
+                .reservation_ =
+                    check_flag_enter_exit(nigiri::kReservationNotRequired)
+                        ? api::ReservationEnum::NONE
+                        : api::ReservationEnum::COMPULSORY,
+
+                .ticketUrls_ = get_ticketing_urls(tt, fr.id().src_, tags,
+                                                  enter_stop, exit_stop)});
+
+            auto const attributes =
+                tt.attribute_combinations_[enter_stop.get_attribute_combination(
+                    n::event_type::kDep)];
+            if (!leg.alerts_ && !attributes.empty()) {
+              leg.alerts_ = std::vector<api::Alert>{};
+            }
+            for (auto const& a : attributes) {
+              leg.alerts_->push_back(api::Alert{
+                  .code_ = std::string{tt.attributes_[a].code_.view()},
+                  .headerText_ = std::string{
+                      tt.translate(lang, tt.attributes_[a].text_)}});
+            }
+
+            leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
+            leg.from_.departure_ = leg.startTime_;
+            leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;
+            leg.to_.vertexType_ = api::VertexTypeEnum::TRANSIT;
+            leg.to_.arrival_ = leg.endTime_;
+            leg.to_.scheduledArrival_ = leg.scheduledEndTime_;
+            if (detailed_legs) {
+              auto polyline = geo::polyline{};
+              fr.for_each_shape_point(
+                  shapes, common_stops,
+                  [&](geo::latlng const& pos) { polyline.emplace_back(pos); });
+              leg.legGeometry_ = api_version == 1 ? to_polyline<7>(polyline)
+                                                  : to_polyline<6>(polyline);
+            } else {
+              leg.legGeometry_ = empty_polyline();
+            }
+
+            auto const first =
+                static_cast<n::stop_idx_t>(common_stops.from_ + 1U);
+            auto const last = static_cast<n::stop_idx_t>(common_stops.to_ - 1U);
+            leg.intermediateStops_ = std::vector<api::Place>{};
+            for (auto i = first; i < last; ++i) {
+              auto const stop = fr[i];
+              if (!with_scheduled_skipped_stops &&
+                  !stop.get_scheduled_stop().in_allowed() &&
+                  !stop.get_scheduled_stop().out_allowed() &&
+                  !stop.in_allowed() && !stop.out_allowed()) {
+                continue;
+              }
+              auto& p =
+                  leg.intermediateStops_->emplace_back(bwd_compat_lvl_adjust(
+                      to_place(stop, n::event_type::kDep), api_version));
+              p.departure_ = stop.time(n::event_type::kDep);
+              p.scheduledDeparture_ = stop.scheduled_time(n::event_type::kDep);
+              p.arrival_ = stop.time(n::event_type::kArr);
+              p.scheduledArrival_ = stop.scheduled_time(n::event_type::kArr);
+            }
+
+            if (is_first_part) {
+              attach_alternatives(leg, j_leg_idx);
+            }
+
+            is_first_part = false;
+          };
+
+          if (join_interlined_legs) {
+            write_run_leg(n::trip_idx_t{}, t.stop_range_);
+          } else {
+            fr.for_each_trip(write_run_leg);
+          }
+        },
+        [&](n::footpath) {
+          append(
+              w && l && detailed_transfers
+                  ? street_routing(
+                        *w, *l, e, elevations, lang, from, to,
+                        default_output{*w, car_transfers
+                                               ? osr::search_profile::kCar
+                                               : to_profile(api::ModeEnum::WALK,
+                                                            pedestrian_profile,
+                                                            elevation_costs)},
+                        j_leg.dep_time_, j_leg.arr_time_,
+                        car_transfers ? 250.0 : timetable_max_matching_distance,
+                        osr_params, cache, *blocked_mem, api_version, true,
                         std::chrono::duration_cast<std::chrono::seconds>(
-                            exit_stop.time(n::event_type::kArr) -
-                            enter_stop.time(n::event_type::kDep))
-                            .count(),
-                    .startTime_ = enter_stop.time(n::event_type::kDep),
-                    .endTime_ = exit_stop.time(n::event_type::kArr),
-                    .scheduledStartTime_ =
-                        enter_stop.scheduled_time(n::event_type::kDep),
-                    .scheduledEndTime_ =
-                        exit_stop.scheduled_time(n::event_type::kArr),
-                    .realTime_ = fr.is_rt(),
-                    .scheduled_ = fr.is_scheduled(),
-                    .interlineWithPreviousLeg_ = !is_first_part,
-                    .headsign_ = std::string{enter_stop.direction(
-                        lang, n::event_type::kDep)},
-                    .tripFrom_ =
-                        [&]() {
-                          auto const first = exit_stop.get_first_trip_stop(
-                              n::event_type::kArr);
-                          auto p = bwd_compat_lvl_adjust(
-                              to_place(first, n::event_type::kDep),
-                              api_version);
-                          p.departure_ = first.time(n::event_type::kDep);
-                          p.scheduledDeparture_ =
-                              first.scheduled_time(n::event_type::kDep);
-                          return p;
-                        }(),
-                    .tripTo_ =
-                        [&]() {
-                          auto const last = enter_stop.get_last_trip_stop(
-                              n::event_type::kDep);
-                          auto p = bwd_compat_lvl_adjust(
-                              to_place(last, n::event_type::kArr), api_version);
-                          p.arrival_ = last.time(n::event_type::kArr);
-                          p.scheduledArrival_ =
-                              last.scheduled_time(n::event_type::kArr);
-                          return p;
-                        }(),
-                    .category_ =
-                        enter_stop.get_category(n::event_type::kDep)
-                            .transform([&](nigiri::category_idx_t const c) {
-                              auto const& cat = tt.categories_.at(c);
-                              return api::Category{
-                                  .id_ = std::string{tt.strings_.get(cat.id_)},
-                                  .name_ = std::string{tt.translate(lang,
-                                                                    cat.name_)},
-                                  .shortName_ = std::string{tt.translate(
-                                      lang, cat.short_name_)},
-                              };
-                            }),
-                    .routeId_ = tags.route_id(enter_stop, n::event_type::kDep),
-                    .routeUrl_ = std::string{enter_stop.route_url(
-                        n::event_type::kDep, lang)},
-                    .directionId_ =
-                        enter_stop.get_direction_id(n::event_type::kDep) == 0
-                            ? "0"
-                            : "1",
-                    .routeColor_ = to_str(color.color_),
-                    .routeTextColor_ = to_str(color.text_color_),
-                    .routeType_ =
-                        enter_stop.route_type(n::event_type::kDep)
-                            .transform([](auto&& x) { return to_idx(x); }),
-                    .agencyName_ =
-                        std::string{tt.translate(lang, agency.name_)},
-                    .agencyUrl_ = std::string{tt.translate(lang, agency.url_)},
-                    .agencyFareUrl_ =
-                        std::string{tt.translate(lang, agency.fare_url_)},
-                    .agencyId_ =
-                        std::string{
-                            tt.strings_.try_get(agency.id_).value_or("?")},
-                    .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
-                    .routeShortName_ = {std::string{
-                        api_version > 3 ? enter_stop.route_short_name(
-                                              n::event_type::kDep, lang)
-                                        : enter_stop.display_name(
-                                              n::event_type::kDep, lang)}},
-                    .routeLongName_ = {std::string{
-                        enter_stop.route_long_name(n::event_type::kDep, lang)}},
-                    .tripShortName_ = {std::string{
-                        enter_stop.trip_short_name(n::event_type::kDep, lang)}},
-                    .displayName_ = {std::string{
-                        enter_stop.display_name(n::event_type::kDep, lang)}},
-                    .cancelled_ = fr.is_cancelled(),
-                    .source_ = fmt::to_string(fr.dbg()),
-                    .fareTransferIndex_ = fare_indices.transform(
-                        [](auto&& x) { return x.transfer_idx_; }),
-                    .effectiveFareLegIndex_ = fare_indices.transform(
-                        [](auto&& x) { return x.effective_fare_leg_idx_; }),
-                    .alerts_ = get_alerts(fr, std::nullopt, false, lang),
-                    .loopedCalendarSince_ =
-                        enter_stop.looped_calendar_since(n::event_type::kDep),
-                    .bikesAllowed_ =
-                        check_flag_enter_exit(nigiri::kBikesAllowed),
-                    .wheelchairAccessible_ =
-                        check_flag_enter_exit(nigiri::kWheelchairAccessible)
-                            ? api::WheelchairAccessibilityEnum::ACCESSIBLE
-                            : api::WheelchairAccessibilityEnum::NOT_ACCESSIBLE,
-                    .reservation_ =
-                        check_flag_enter_exit(nigiri::kReservationNotRequired)
-                            ? api::ReservationEnum::NONE
-                            : api::ReservationEnum::COMPULSORY,
+                            j_leg.arr_time_ - j_leg.dep_time_) +
+                            std::chrono::minutes{10})
+                  : dummy_itinerary(from, to, api::ModeEnum::WALK,
+                                    j_leg.dep_time_, j_leg.arr_time_,
+                                    api_version));
+        },
+        [&](n::routing::offset const x) {
+          auto const mode = x.mode();
+          if (w == nullptr || l == nullptr || is_client_offset(mode)) {
+            // no OSM data loaded (e.g. `radius` offsets) or client-provided
+            // offset (duration only, no path) -> crow-fly leg
+            append(dummy_itinerary(from, to, to_mode(mode), j_leg.dep_time_,
+                                   j_leg.arr_time_, api_version));
+            return;
+          }
 
-                    .ticketUrls_ =
-                        get_ticketing_urls(tt, fr.id().src_, tags, enter_stop,
-                                           exit_stop, subrange)});
+          // Offsets came from a one-to-many search from the start/dest
+          // place -> reconstruct from it instead of routing again.
+          auto const precomputed =
+              states.find(j_leg.from_, j_leg.to_, mode, x.target());
 
-                auto const attributes =
-                    tt.attribute_combinations_[enter_stop
-                                                   .get_attribute_combination(
-                                                       n::event_type::kDep)];
-                if (!leg.alerts_ && !attributes.empty()) {
-                  leg.alerts_ = std::vector<api::Alert>{};
-                }
-                for (auto const& a : attributes) {
-                  leg.alerts_->push_back(api::Alert{
-                      .code_ = std::string{tt.attributes_[a].code_.view()},
-                      .headerText_ = std::string{
-                          tt.translate(lang, tt.attributes_[a].text_)}});
-                }
+          auto out = std::unique_ptr<output>{};
+          if (to_mode(mode) == api::ModeEnum::FLEX) {
+            utl::verify(precomputed.flex_additional_nodes_ != nullptr,
+                        "flex leg without a retained search");
+            out = std::make_unique<flex::flex_output>(
+                *w, pl, matches, ae, tz_map, tags, tt, rtt, *fl,
+                flex::mode_payload{mode.payload_},
+                *precomputed.flex_additional_nodes_,
+                precomputed.flex_additional_nodes_->to_sharing_data());
+          } else if (to_mode(mode) == api::ModeEnum::RENTAL) {
+            auto const is_pre_transit = pred == nullptr;
+            out = std::make_unique<gbfs::gbfs_output>(
+                *w, gbfs_rd, gbfs_rd.get_products_ref(mode.payload_),
+                is_pre_transit ? ignore_start_rental_return_constraints
+                               : ignore_dest_rental_return_constraints);
+          } else {
+            out = std::make_unique<default_output>(*w, mode);
+          }
 
-                leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
-                leg.from_.departure_ = leg.startTime_;
-                leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;
-                leg.to_.vertexType_ = api::VertexTypeEnum::TRANSIT;
-                leg.to_.arrival_ = leg.endTime_;
-                leg.to_.scheduledArrival_ = leg.scheduledEndTime_;
-                if (detailed_legs) {
-                  auto polyline = geo::polyline{};
-                  fr.for_each_shape_point(shapes, common_stops,
-                                          [&](geo::latlng const& pos) {
-                                            polyline.emplace_back(pos);
-                                          });
-                  leg.legGeometry_ = api_version == 1
-                                         ? to_polyline<7>(polyline)
-                                         : to_polyline<6>(polyline);
-                } else {
-                  leg.legGeometry_ = empty_polyline();
-                }
-
-                auto const first =
-                    static_cast<n::stop_idx_t>(common_stops.from_ + 1U);
-                auto const last =
-                    static_cast<n::stop_idx_t>(common_stops.to_ - 1U);
-                leg.intermediateStops_ = std::vector<api::Place>{};
-                for (auto i = first; i < last; ++i) {
-                  auto const stop = fr[i];
-                  if (!with_scheduled_skipped_stops &&
-                      !stop.get_scheduled_stop().in_allowed() &&
-                      !stop.get_scheduled_stop().out_allowed() &&
-                      !stop.in_allowed() && !stop.out_allowed()) {
-                    continue;
-                  }
-                  auto& p = leg.intermediateStops_->emplace_back(
-                      bwd_compat_lvl_adjust(to_place(stop, n::event_type::kDep),
-                                            api_version));
-                  p.departure_ = stop.time(n::event_type::kDep);
-                  p.scheduledDeparture_ =
-                      stop.scheduled_time(n::event_type::kDep);
-                  p.arrival_ = stop.time(n::event_type::kArr);
-                  p.scheduledArrival_ =
-                      stop.scheduled_time(n::event_type::kArr);
-                }
-
-                if (is_first_part) {
-                  attach_alternatives(leg, j_leg_idx);
-                }
-
-                is_first_part = false;
-              };
-
-              if (join_interlined_legs) {
-                write_run_leg(n::trip_idx_t{}, t.stop_range_);
-              } else {
-                fr.for_each_trip(write_run_leg);
-              }
-            },
-            [&](n::footpath) {
-              append(w && l && detailed_transfers
-                         ? street_routing(
-                               *w, *l, e, elevations, lang, from, to,
-                               default_output{
-                                   *w, car_transfers
-                                           ? osr::search_profile::kCar
-                                           : to_profile(api::ModeEnum::WALK,
-                                                        pedestrian_profile,
-                                                        elevation_costs)},
-                               j_leg.dep_time_, j_leg.arr_time_,
-                               car_transfers ? 250.0
-                                             : timetable_max_matching_distance,
-                               osr_params, cache, *blocked_mem, api_version,
-                               true, with_elevation_profile,
-                               std::chrono::duration_cast<std::chrono::seconds>(
-                                   j_leg.arr_time_ - j_leg.dep_time_) +
-                                   std::chrono::minutes{10})
-                         : dummy_itinerary(from, to, api::ModeEnum::WALK,
-                                           j_leg.dep_time_, j_leg.arr_time_,
-                                           api_version));
-            },
-            [&](n::routing::offset const x) {
-              if (w == nullptr || l == nullptr) {
-                // no OSM data loaded (e.g. `radius` offsets) -> crow-fly leg
-                append(dummy_itinerary(from, to, to_mode(x.transport_mode_id_),
-                                       j_leg.dep_time_, j_leg.arr_time_,
-                                       api_version));
-                return;
-              }
-
-              auto out = std::unique_ptr<output>{};
-              if (flex::mode_id::is_flex(x.transport_mode_id_)) {
-                out = std::make_unique<flex::flex_output>(
-                    *w, *l, pl, matches, ae, tz_map, tags, tt, *fl,
-                    flex::mode_id{x.transport_mode_id_});
-              } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
-                auto const is_pre_transit = pred == nullptr;
-                out = std::make_unique<gbfs::gbfs_output>(
-                    *w, gbfs_rd, gbfs_rd.get_products_ref(x.transport_mode_id_),
-                    is_pre_transit ? ignore_start_rental_return_constraints
-                                   : ignore_dest_rental_return_constraints);
-              } else {
-                out =
-                    std::make_unique<default_output>(*w, x.transport_mode_id_);
-              }
-
-              append(street_routing(
-                  *w, *l, e, elevations, lang, from, to, *out, j_leg.dep_time_,
-                  j_leg.arr_time_, max_matching_distance, osr_params, cache,
-                  *blocked_mem, api_version, detailed_legs,
-                  with_elevation_profile,
-                  std::chrono::duration_cast<std::chrono::seconds>(
-                      j_leg.arr_time_ - j_leg.dep_time_) +
-                      std::chrono::minutes{5}));
-            }},
-        j_leg.uses_);
+          append(street_routing(
+              *w, *l, e, elevations, lang, from, to, *out, j_leg.dep_time_,
+              j_leg.arr_time_, max_matching_distance, osr_params, cache,
+              *blocked_mem, api_version, detailed_legs,
+              std::chrono::duration_cast<std::chrono::seconds>(
+                  j_leg.arr_time_ - j_leg.dep_time_) +
+                  std::chrono::minutes{5},
+              precomputed));
+        });
   }
 
   cleanup_intermodal(itinerary);

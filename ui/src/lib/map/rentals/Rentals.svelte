@@ -27,7 +27,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { t } from '$lib/i18n/translation';
 	import polyline from '@mapbox/polyline';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import type { GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl';
 	import { mount, onDestroy, unmount } from 'svelte';
 	import type { FeatureCollection, Point, Position } from 'geojson';

@@ -228,13 +228,10 @@ route_shape_result route_shape(
 
           frun.for_each_trip([&](n::trip_idx_t const trip_idx,
                                  n::interval<n::stop_idx_t> const) {
-            for (auto const trip_id_idx : tt.trip_ids_[trip_idx]) {
-              auto const trip_id = tt.trip_id_strings_.at(trip_id_idx).view();
-              if (std::ranges::contains(debug_trip_ids, trip_id)) {
-                tags.emplace(fmt::format("trip_{}", trip_id));
-                include = true;
-                return;
-              }
+            auto const trip_id = tt.trip_id_strings_.at(trip_idx).view();
+            if (std::ranges::contains(debug_trip_ids, trip_id)) {
+              tags.emplace(fmt::format("trip_{}", trip_id));
+              include = true;
             }
           });
         }

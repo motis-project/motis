@@ -1,5 +1,6 @@
 <script lang="ts">
-	import maplibregl, { type GeoJSONSourceSpecification } from 'maplibre-gl';
+	import type * as maplibregl from 'maplibre-gl';
+	import type { GeoJSONSourceSpecification } from 'maplibre-gl';
 	import GeoJSON from 'geojson';
 	import { getContext, onDestroy, setContext, type Snippet } from 'svelte';
 

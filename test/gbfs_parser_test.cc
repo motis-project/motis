@@ -536,6 +536,83 @@ TEST(motis, gbfs_free_floating_return_rejects_station_only_products) {
                                               geo::latlng{48.1, 11.1}));
 }
 
+TEST(motis, gbfs_return_allowed_in_returning_station_area) {
+  auto provider = gbfs_provider{.id_ = "provider"};
+  load_vehicle_types(provider, json::parse(R"({
+    "data": {
+      "vehicle_types": [{
+        "vehicle_type_id": "bike",
+        "form_factor": "bicycle",
+        "propulsion_type": "human",
+        "return_constraint": "any_station"
+      }]
+    }
+  })"));
+  load_station_information(provider, json::parse(R"({
+    "data": {
+      "stations": [
+        {
+          "station_id": "returning",
+          "name": "Returning",
+          "lat": 48.1,
+          "lon": 11.1,
+          "station_area": {
+            "type": "MultiPolygon",
+            "coordinates": [[[
+              [11.0, 48.0], [11.2, 48.0], [11.2, 48.2],
+              [11.0, 48.2], [11.0, 48.0]
+            ]]]
+          }
+        },
+        {
+          "station_id": "full",
+          "name": "Full",
+          "lat": 48.5,
+          "lon": 11.5,
+          "station_area": {
+            "type": "MultiPolygon",
+            "coordinates": [[[
+              [11.4, 48.4], [11.6, 48.4], [11.6, 48.6],
+              [11.4, 48.6], [11.4, 48.4]
+            ]]]
+          }
+        }
+      ]
+    }
+  })"));
+  load_station_status(provider, json::parse(R"({
+    "data": {
+      "stations": [
+        {
+          "station_id": "returning",
+          "num_bikes_available": 0,
+          "is_renting": true,
+          "is_returning": true
+        },
+        {
+          "station_id": "full",
+          "num_bikes_available": 5,
+          "is_renting": true,
+          "is_returning": true,
+          "vehicle_docks_available": [
+            {"vehicle_type_ids": ["bike"], "count": 0}
+          ]
+        }
+      ]
+    }
+  })"));
+
+  auto const product =
+      provider_products{.vehicle_types_ = {vehicle_type_idx_t{0U}},
+                        .return_constraint_ = return_constraint::kAnyStation,
+                        .known_return_constraint_ = true};
+  EXPECT_FALSE(allows_free_floating_return_at(provider, product,
+                                              geo::latlng{48.15, 11.15}));
+  EXPECT_TRUE(allows_return_at(provider, product, geo::latlng{48.15, 11.15}));
+  EXPECT_FALSE(allows_return_at(provider, product, geo::latlng{48.55, 11.55}));
+  EXPECT_FALSE(allows_return_at(provider, product, geo::latlng{48.3, 11.3}));
+}
+
 TEST(motis, gbfs_parser_geofencing_skips_bad_parts_and_unknown_type_rules) {
   auto provider = gbfs_provider{.id_ = "provider"};
 
@@ -772,6 +849,90 @@ TEST(motis, gbfs_parser_station_status_count_only_creates_default_type) {
             provider.vehicle_types_.front().form_factor_);
 }
 
+TEST(motis, gbfs_parser_station_status_total_docks_fallback) {
+  auto provider = gbfs_provider{.id_ = "provider"};
+
+  load_station_information(provider, json::parse(R"({
+    "last_updated": 1,
+    "ttl": 60,
+    "version": "2.3",
+    "data": {
+      "stations": [
+        {"station_id": "station-1", "name": "A", "lat": 48.1, "lon": 11.5,
+         "capacity": 20},
+        {"station_id": "station-2", "name": "B", "lat": 48.2, "lon": 11.6,
+         "capacity": 25},
+        {"station_id": "station-3", "name": "C", "lat": 48.3, "lon": 11.7,
+         "capacity": 10},
+        {"station_id": "station-4", "name": "D", "lat": 48.4, "lon": 11.8}
+      ]
+    }
+  })"));
+
+  // station-1: docked feed publishing only the total (e.g. Velib Paris),
+  // full station. station-2: same layout with free docks. station-3: no dock
+  // information at all.
+  load_station_status(provider, json::parse(R"({
+    "last_updated": 1,
+    "ttl": 60,
+    "version": "2.3",
+    "data": {
+      "stations": [
+        {
+          "station_id": "station-1",
+          "num_bikes_available": 30,
+          "num_docks_available": 0,
+          "is_renting": true,
+          "is_returning": true
+        },
+        {
+          "station_id": "station-2",
+          "num_bikes_available": 3,
+          "num_docks_available": 22,
+          "is_renting": true,
+          "is_returning": true
+        },
+        {
+          "station_id": "station-3",
+          "num_bikes_available": 5,
+          "is_renting": true,
+          "is_returning": true
+        },
+        {
+          "station_id": "station-4",
+          "num_bikes_available": 6,
+          "num_docks_available": 0,
+          "is_renting": true,
+          "is_returning": true
+        }
+      ]
+    }
+  })"));
+
+  auto const& full = provider.stations_.at("station-1").status_;
+  ASSERT_TRUE(full.num_docks_available_.has_value());
+  EXPECT_EQ(0U, *full.num_docks_available_);
+  EXPECT_TRUE(full.vehicle_docks_available_.empty());
+
+  auto const& free = provider.stations_.at("station-2").status_;
+  ASSERT_TRUE(free.num_docks_available_.has_value());
+  EXPECT_EQ(22U, *free.num_docks_available_);
+
+  auto const& unknown = provider.stations_.at("station-3").status_;
+  EXPECT_FALSE(unknown.num_docks_available_.has_value());
+
+  // capacity is parsed and distinguishes docked stations from virtual ones
+  EXPECT_EQ(20U,
+            provider.stations_.at("station-1").info_.capacity_.value_or(0U));
+  EXPECT_FALSE(provider.stations_.at("station-4").info_.capacity_.has_value());
+
+  // station-4 reports 0 free docks but declares no capacity: it is a virtual
+  // station, so the total must not be treated as "full"
+  auto const& virt = provider.stations_.at("station-4").status_;
+  ASSERT_TRUE(virt.num_docks_available_.has_value());
+  EXPECT_EQ(0U, *virt.num_docks_available_);
+}
+
 TEST(motis, gbfs_parser_system_information_localized_name_and_defaults) {
   auto provider = gbfs_provider{.id_ = "fallback-id"};
 
@@ -816,6 +977,39 @@ TEST(motis, gbfs_parser_invalid_station_area_is_ignored) {
   auto const& station = provider.stations_.at("station-1");
   EXPECT_DOUBLE_EQ(1.0, station.info_.pos_.lat_);
   EXPECT_EQ(nullptr, station.info_.station_area_.get());
+}
+
+TEST(motis, gbfs_parser_station_bounding_box_includes_position) {
+  auto provider = gbfs_provider{.id_ = "provider"};
+
+  load_station_information(provider, json::parse(R"({
+    "data": {
+      "stations": [
+        {
+          "station_id": "station-1",
+          "name": "Station",
+          "lat": 47.10511,
+          "lon": 6.823428,
+          "station_area": {
+            "type": "MultiPolygon",
+            "coordinates": [[[
+              [47.105152, 6.822401],
+              [47.104378, 6.8235707],
+              [47.105095, 6.8246326],
+              [47.105152, 6.822401]
+            ]]]
+          }
+        }
+      ]
+    }
+  })"));
+
+  auto const& station = provider.stations_.at("station-1");
+  ASSERT_NE(nullptr, station.info_.station_area_.get());
+  auto const bb = station.info_.bounding_box();
+  auto const area_corner = geo::latlng{6.822401, 47.105152};
+  EXPECT_TRUE(bb.contains(geo::box{station.info_.pos_, station.info_.pos_}));
+  EXPECT_TRUE(bb.contains(geo::box{area_corner, area_corner}));
 }
 
 TEST(motis, gbfs_parser_structurally_invalid_feeds_throw) {

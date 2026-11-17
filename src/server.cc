@@ -1,3 +1,4 @@
+#include <functional>
 #include <string_view>
 
 #include "boost/asio/io_context.hpp"
@@ -41,7 +42,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   auto s = net::web_server{scheduler.runner_.ios()};
   s.set_timeout(std::chrono::minutes{5});
-  s.on_http_request(m.qr_);
+  s.on_http_request(std::ref(m));
 
   auto ec = boost::system::error_code{};
   auto const server_config = c.server_.value_or(config::server{});

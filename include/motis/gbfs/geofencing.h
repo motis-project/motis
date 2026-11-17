@@ -29,6 +29,8 @@ void multipoly_split_bboxes(tg_geom const* geom, Fn&& fn) {
 geofencing_restrictions get_default_restrictions(gbfs_provider const&,
                                                  provider_products const&,
                                                  std::vector<rule> const&);
+bool station_allows_return(station const&, provider_products const&);
+
 bool vehicle_is_rentable(gbfs_provider const&,
                          provider_products const&,
                          vehicle_status const&);
@@ -44,5 +46,10 @@ bool allows_free_floating_return_at(gbfs_provider const&,
                                     provider_products const&,
                                     geo::latlng const&,
                                     bool ignore_return_constraints = false);
+
+bool allows_return_at(gbfs_provider const&,
+                      provider_products const&,
+                      geo::latlng const&,
+                      bool ignore_return_constraints = false);
 
 }  // namespace motis::gbfs

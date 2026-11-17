@@ -14,6 +14,9 @@
 		type Error as ApiError
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
+	import DaySeparator from '$lib/DaySeparator.svelte';
+	import { PagedEntries } from '$lib/PagedEntries.svelte';
+	import { isRealtime } from '$lib/utils';
 	import { LoaderCircle } from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
 	import DirectConnection from '$lib/DirectConnection.svelte';
@@ -40,6 +43,11 @@
 			}
 			return res;
 		});
+
+	const pages = new PagedEntries(
+		() => routingResponses,
+		(r: PlanResponse) => r.itineraries
+	);
 </script>
 
 {#snippet legSummary(l: Leg)}
@@ -108,6 +116,13 @@
 							</div>
 						{/if}
 						{#each r.itineraries as it, i (i)}
+							<DaySeparator
+								previous={pages.previous(r, rI, i)?.startTime ??
+									baseQuery?.query.time ??
+									new Date()}
+								timestamp={it.startTime}
+								timeZone={it.legs[0].from.tz}
+							/>
 							<button
 								onclick={() => {
 									selectItinerary(it);
@@ -118,11 +133,13 @@
 										<div class="overflow-hidden basis-1/4 h-full flex flex-col">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.departure}</div>
 											<Time
-												isRealtime={it.legs[0].realTime}
+												isRealtime={isRealtime(
+													it.legs[0].from.departureTimestampReason,
+													it.legs[0].realTime
+												)}
 												timestamp={it.startTime}
 												scheduledTimestamp={it.legs[0].scheduledStartTime}
 												variant="realtime-show-always"
-												queriedTime={baseQuery?.query.time}
 												timeZone={it.legs[0].from.tz}
 											/>
 										</div>
@@ -130,11 +147,13 @@
 										<div class="overflow-hidden basis-1/4 h-full flex flex-col">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.arrival}</div>
 											<Time
-												isRealtime={it.legs[it.legs.length - 1].realTime}
+												isRealtime={isRealtime(
+													it.legs[it.legs.length - 1].to.arrivalTimestampReason,
+													it.legs[it.legs.length - 1].realTime
+												)}
 												timestamp={it.endTime}
 												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledEndTime}
 												variant="realtime-show-always"
-												queriedTime={it.startTime}
 												timeZone={it.legs[it.legs.length - 1].to.tz}
 											/>
 										</div>

@@ -6,6 +6,7 @@
 #include "motis/odm/meta_router.h"
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 #include "boost/asio/io_context.hpp"
@@ -14,6 +15,7 @@
 #include "prometheus/histogram.h"
 
 #include "utl/erase_duplicates.h"
+#include "utl/visit.h"
 
 #include "ctx/ctx.h"
 
@@ -41,13 +43,15 @@
 #include "motis/odm/prima.h"
 #include "motis/odm/shorten.h"
 #include "motis/odm/td_offsets.h"
+#include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/parameters.h"
 #include "motis/osr/street_routing.h"
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/timetable/transfer_time_settings.h"
+#include "motis/transport_mode.h"
 
 namespace n = nigiri;
 using namespace std::chrono_literals;
@@ -107,7 +111,7 @@ meta_router::meta_router(ep::routing const& r,
       ride_sharing_direct_{ride_sharing_direct},
       api_version_{api_version},
       tt_{r_.tt_},
-      rt_{r.rt_},
+      rt_{std::atomic_load(&r.rt_)},
       rtt_{(query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
             query.realtimeMode_ ==
                 api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
@@ -117,7 +121,7 @@ meta_router::meta_router(ep::routing const& r,
                           ? nullptr
                           : rt_->rtt_.get()},
       e_{rt_->e_.get()},
-      gbfs_rd_{r.w_, r.l_, r.gbfs_},
+      gbfs_rd_{r.w_, r.l_, std::atomic_load(&r.gbfs_)},
       start_{query_.arriveBy_ ? to_ : from_},
       dest_{query_.arriveBy_ ? from_ : to_},
       start_modes_{query_.arriveBy_ ? post_transit_modes_ : pre_transit_modes_},
@@ -160,52 +164,38 @@ meta_router::~meta_router() = default;
 
 n::routing::query meta_router::get_base_query(
     n::interval<n::unixtime_t> const& intvl) const {
-  return {
-      .start_time_ = intvl,
-      .start_match_mode_ = r_.is_osr_loaded()
-                               ? n::routing::location_match_mode::kIntermodal
-                               : n::routing::location_match_mode::kEquivalent,
-      .dest_match_mode_ = r_.is_osr_loaded()
-                              ? n::routing::location_match_mode::kIntermodal
-                              : n::routing::location_match_mode::kEquivalent,
-      .use_start_footpaths_ = !r_.is_osr_loaded(),
-      .max_transfers_ = static_cast<std::uint8_t>(
-          query_.maxTransfers_.has_value() ? *query_.maxTransfers_
-                                           : n::routing::kMaxTransfers),
-      .max_travel_time_ = query_.maxTravelTime_
-                              .and_then([](std::int64_t const dur) {
-                                return std::optional{n::duration_t{dur}};
-                              })
-                              .value_or(ep::kInfinityDuration),
-      .min_connection_count_ = 0U,
-      .extend_interval_earlier_ = false,
-      .extend_interval_later_ = false,
-      .max_interval_ = std::nullopt,
-      .prf_idx_ = static_cast<n::profile_idx_t>(
-          query_.useRoutedTransfers_
-              ? (query_.pedestrianProfile_ ==
-                         api::PedestrianProfileEnum::WHEELCHAIR
-                     ? 2U
-                     : 1U)
-              : 0U),
-      .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
-      .require_bike_transport_ = query_.requireBikeTransport_,
-      .require_car_transport_ = query_.requireCarTransport_,
-      .no_compulsory_reservation_ = query_.noCompulsoryReservation_,
-      .transfer_time_settings_ =
-          n::routing::transfer_time_settings{
-              .default_ = (query_.minTransferTime_ == 0 &&
-                           query_.additionalTransferTime_ == 0 &&
-                           query_.transferTimeFactor_ == 1.0),
-              .min_transfer_time_ = n::duration_t{query_.minTransferTime_},
-              .additional_time_ = n::duration_t{query_.additionalTransferTime_},
-              .factor_ = static_cast<float>(query_.transferTimeFactor_)},
-      .via_stops_ =
-          motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
-                                   query_.viaMinimumStay_, query_.arriveBy_),
-      .fastest_direct_ = fastest_direct_ == ep::kInfinityDuration
-                             ? std::nullopt
-                             : std::optional{fastest_direct_}};
+  return {.start_time_ = intvl,
+          .start_match_mode_ =
+              r_.is_osr_loaded() ? n::routing::location_match_mode::kIntermodal
+                                 : n::routing::location_match_mode::kEquivalent,
+          .dest_match_mode_ =
+              r_.is_osr_loaded() ? n::routing::location_match_mode::kIntermodal
+                                 : n::routing::location_match_mode::kEquivalent,
+          .use_start_footpaths_ = !r_.is_osr_loaded(),
+          .max_transfers_ = static_cast<std::uint8_t>(
+              query_.maxTransfers_.has_value() ? *query_.maxTransfers_
+                                               : n::routing::kMaxTransfers),
+          .max_travel_time_ = query_.maxTravelTime_
+                                  .transform([](std::int64_t const dur) {
+                                    return n::duration_t{dur};
+                                  })
+                                  .value_or(ep::kInfinityDuration),
+          .min_connection_count_ = 0U,
+          .extend_interval_earlier_ = false,
+          .extend_interval_later_ = false,
+          .max_interval_ = std::nullopt,
+          .prf_idx_ = get_profile_idx(*tt_, query_),
+          .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
+          .require_bike_transport_ = query_.requireBikeTransport_,
+          .require_car_transport_ = query_.requireCarTransport_,
+          .no_compulsory_reservation_ = query_.noCompulsoryReservation_,
+          .transfer_time_settings_ = get_transfer_time_settings(query_),
+          .via_stops_ = motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
+                                                 query_.viaMinimumStay_,
+                                                 query_.arriveBy_),
+          .fastest_direct_ = fastest_direct_ == ep::kInfinityDuration
+                                 ? std::nullopt
+                                 : std::optional{fastest_direct_}};
 }
 
 std::vector<meta_router::routing_result> meta_router::search_interval(
@@ -232,7 +222,7 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
 
 std::vector<n::routing::journey> collect_odm_journeys(
     std::vector<meta_router::routing_result> const& results,
-    nigiri::transport_mode_id_t const mode) {
+    transport_mode_t const mode) {
   auto taxi_journeys = std::vector<n::routing::journey>{};
   for (auto const& r : results | std::views::drop(1)) {
     for (auto const& j : r.journeys_) {
@@ -280,13 +270,11 @@ api::plan_response meta_router::run() {
   auto const init_start = std::chrono::steady_clock::now();
   utl::verify(r_.tt_ != nullptr && r_.tags_ != nullptr,
               "mode=TRANSIT requires timetable to be loaded");
-  auto prepare_stats = motis::ep::stats_map_t{};
-  auto const start_intvl = std::visit(
-      utl::overloaded{[](n::interval<n::unixtime_t> const i) { return i; },
-                      [](n::unixtime_t const t) {
-                        return n::interval<n::unixtime_t>{t, t};
-                      }},
-      start_time_.start_time_);
+  auto prepare_stats = meta_t{};
+  auto const start_intvl = utl::visit(
+      start_time_.start_time_,
+      [](n::interval<n::unixtime_t> const i) { return i; },
+      [](n::unixtime_t const t) { return n::interval<n::unixtime_t>{t, t}; });
   auto search_intvl =
       n::interval<n::unixtime_t>{start_time_.extend_interval_earlier_
                                      ? start_intvl.to_ - kSearchIntervalSize
@@ -305,15 +293,14 @@ api::plan_response meta_router::run() {
           : n::interval<n::unixtime_t>{context_intvl.from_,
                                        context_intvl.to_ + kODMLookAhead};
   auto const to_osr_loc = [&](auto const& place) {
-    return std::visit(
-        utl::overloaded{
-            [](osr::location const& l) { return l; },
-            [&](tt_location const& l) {
-              return osr::location{
-                  .pos_ = tt_->locations_.coordinates_[l.l_],
-                  .lvl_ = osr::level_t{std::uint8_t{osr::level_t::kNoLevel}}};
-            }},
-        place);
+    return utl::visit(
+        place,  //
+        [](osr::location const& l) { return l; },
+        [&](tt_location const& l) {
+          return osr::location{
+              .pos_ = tt_->locations_.coordinates_[l.l_],
+              .lvl_ = osr::level_t{std::uint8_t{osr::level_t::kNoLevel}}};
+        });
   };
   auto p = prima{r_.config_.prima_->url_, to_osr_loc(from_), to_osr_loc(to_),
                  query_};
@@ -322,10 +309,11 @@ api::plan_response meta_router::run() {
          ride_sharing_direct_, *tt_, rtt_, r_, e_, gbfs_rd_, from_place_,
          to_place_, query_, start_time_, api_version_);
 
-  std::erase(start_modes_, api::ModeEnum::ODM);
-  std::erase(start_modes_, api::ModeEnum::RIDE_SHARING);
-  std::erase(dest_modes_, api::ModeEnum::ODM);
-  std::erase(dest_modes_, api::ModeEnum::RIDE_SHARING);
+  for (auto* const modes : {&start_modes_, &dest_modes_}) {
+    std::erase(*modes, api::ModeEnum::ODM);
+    std::erase(*modes, api::ModeEnum::RIDE_SHARING);
+    std::erase(*modes, api::ModeEnum::FLEX);
+  }
 
   print_time(
       init_start,
@@ -361,9 +349,9 @@ api::plan_response meta_router::run() {
   auto const prep_queries_start = std::chrono::steady_clock::now();
   auto const [first_mile_taxi_short, first_mile_taxi_long] =
       get_td_offsets_split(p.first_mile_taxi_, p.first_mile_taxi_times_,
-                           kOdmTransportModeId);
+                           kOdmTransportMode);
   auto const [last_mile_taxi_short, last_mile_taxi_long] = get_td_offsets_split(
-      p.last_mile_taxi_, p.last_mile_taxi_times_, kOdmTransportModeId);
+      p.last_mile_taxi_, p.last_mile_taxi_times_, kOdmTransportMode);
   auto const params = get_osr_parameters(query_);
   auto const pre_transit_time = std::min(
       std::chrono::seconds{query_.maxPreTransitTime_},
@@ -373,6 +361,10 @@ api::plan_response meta_router::run() {
       std::chrono::seconds{query_.maxPostTransitTime_},
       std::chrono::seconds{
           r_.config_.get_limits().street_routing_max_prepost_transit_seconds_});
+  // The walk/bike/car/rental offsets are one-to-many searches; keeping them
+  // lets the response reconstruct those legs from the search that produced
+  // them instead of routing again with a duration-derived budget.
+  auto otm_searches = one_to_many_searches{};
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
       .start_walk_ = r_.get_offsets(
@@ -385,7 +377,8 @@ api::plan_response meta_router::run() {
                          start_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? post_transit_time : pre_transit_time,
-          max_matching_distance_, gbfs_rd_, prepare_stats),
+          max_matching_distance_, gbfs_rd_, prepare_stats,
+          &otm_searches[n::special_station::kStart]),
       .dest_walk_ = r_.get_offsets(
           rtt_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
@@ -396,7 +389,8 @@ api::plan_response meta_router::run() {
                          dest_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? pre_transit_time : post_transit_time,
-          max_matching_distance_, gbfs_rd_, prepare_stats),
+          max_matching_distance_, gbfs_rd_, prepare_stats,
+          &otm_searches[n::special_station::kEnd]),
       .td_start_walk_ = r_.get_td_offsets(
           rtt_, e_, start_,
           query_.arriveBy_ ? osr::direction::kBackward
@@ -423,14 +417,14 @@ api::plan_response meta_router::run() {
           query_.arriveBy_ ? first_mile_taxi_long : last_mile_taxi_long,
       .start_ride_sharing_ = query_.arriveBy_
                                  ? get_td_offsets(p.last_mile_ride_sharing_,
-                                                  kRideSharingTransportModeId)
+                                                  kRideSharingTransportMode)
                                  : get_td_offsets(p.first_mile_ride_sharing_,
-                                                  kRideSharingTransportModeId),
+                                                  kRideSharingTransportMode),
       .dest_ride_sharing_ = query_.arriveBy_
                                 ? get_td_offsets(p.first_mile_ride_sharing_,
-                                                 kRideSharingTransportModeId)
+                                                 kRideSharingTransportMode)
                                 : get_td_offsets(p.last_mile_ride_sharing_,
-                                                 kRideSharingTransportModeId)};
+                                                 kRideSharingTransportMode)};
   print_time(prep_queries_start, "[prepare queries]",
              r_.metrics_->routing_execution_duration_seconds_preparing_);
 
@@ -442,17 +436,16 @@ api::plan_response meta_router::run() {
   auto const results = search_interval(sub_queries);
   utl::verify(!results.empty(), "prima: public transport result expected");
   auto const& pt_result = results.front();
-  auto taxi_journeys = collect_odm_journeys(results, kOdmTransportModeId);
+  auto taxi_journeys = collect_odm_journeys(results, kOdmTransportMode);
   shorten(taxi_journeys, p.first_mile_taxi_, p.first_mile_taxi_times_,
           p.last_mile_taxi_, p.last_mile_taxi_times_, *tt_, rtt_, query_);
   auto ride_share_journeys =
-      collect_odm_journeys(results, kRideSharingTransportModeId);
+      collect_odm_journeys(results, kRideSharingTransportMode);
   fix_first_mile_duration(ride_share_journeys, p.first_mile_ride_sharing_,
                           p.first_mile_ride_sharing_,
-                          kRideSharingTransportModeId);
+                          kRideSharingTransportMode);
   fix_last_mile_duration(ride_share_journeys, p.last_mile_ride_sharing_,
-                         p.last_mile_ride_sharing_,
-                         kRideSharingTransportModeId);
+                         p.last_mile_ride_sharing_, kRideSharingTransportMode);
   utl::erase_duplicates(
       taxi_journeys, std::less<n::routing::journey>{},
       [](auto const& a, auto const& b) {
@@ -470,11 +463,11 @@ api::plan_response meta_router::run() {
       p.whitelist_taxi(taxi_journeys, *tt_);
   if (was_whitelist_response_valid) {
     add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_, query_.arriveBy_,
-                   kOdmTransportModeId);
+                   kOdmTransportMode);
   }
   if (whitelisted_ride_sharing) {
     add_direct_odm(p.direct_ride_sharing_, ride_share_journeys, from_, to_,
-                   query_.arriveBy_, kRideSharingTransportModeId);
+                   query_.arriveBy_, kRideSharingTransportMode);
   }
   print_time(whitelist_start,
              fmt::format("[whitelisting] (#first_mile_taxi: {}, "
@@ -491,8 +484,7 @@ api::plan_response meta_router::run() {
   taxi_journeys.insert(end(taxi_journeys), begin(ride_share_journeys),
                        end(ride_share_journeys));
   utl::sort(taxi_journeys, [](auto const& a, auto const& b) {
-    return std::tuple{a.departure_time(), a.arrival_time(), a.transfers_} <
-           std::tuple{b.departure_time(), b.arrival_time(), b.transfers_};
+    return a.criteria() < b.criteria();
   });
 
   r_.metrics_->routing_journeys_found_.Increment(
@@ -526,7 +518,7 @@ api::plan_response meta_router::run() {
                 annotation_rtt_, r_.matches_, r_.elevations_, r_.shapes_,
                 gbfs_rd_, r_.ae_, r_.tz_, j, start_, dest_, cache,
                 ep::blocked.get(),
-                query_.requireCarTransport_ && query_.useRoutedTransfers_,
+                query_.requireCarTransport_ && use_routed_transfers(query_),
                 params, query_.pedestrianProfile_, query_.elevationCosts_,
                 query_.joinInterlinedLegs_, detailed_transfers,
                 query_.detailedLegs_, query_.withFares_,
@@ -535,7 +527,8 @@ api::plan_response meta_router::run() {
                 max_matching_distance_, api_version_,
                 query_.ignorePreTransitRentalReturnConstraints_,
                 query_.ignorePostTransitRentalReturnConstraints_,
-                query_.language_);
+                query_.language_, /*set_itinerary_id_field=*/true, {}, nullptr,
+                one_to_many_view{&otm_searches});
 
             if (response.legs_.front().mode_ == api::ModeEnum::RIDE_SHARING &&
                 response.legs_.size() == 1) {

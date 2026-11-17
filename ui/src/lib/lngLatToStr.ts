@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 
 const PRECISION = 7; // API has ~1cm precision, matching for "query changed" check requires rounding
 const round = (v: number) => Number(v.toFixed(PRECISION));

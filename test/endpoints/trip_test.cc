@@ -3,24 +3,33 @@
 #include "fmt/format.h"
 
 #include "utl/init_from.h"
+#include "utl/to_vec.h"
 
 #include "nigiri/common/parse_time.h"
+#include "nigiri/resolve.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/frun.h"
+#include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
 
 #include "net/not_found_exception.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
+#include "motis/endpoints/routing.h"
 #include "motis/endpoints/trip.h"
 #include "motis/import.h"
 #include "motis/rt/auser.h"
 #include "motis/tag_lookup.h"
 
+#include "../util.h"
+
 using namespace std::string_view_literals;
+using namespace std::chrono_literals;
 using namespace motis;
+using namespace motis::test;
 using namespace date;
+namespace n = nigiri;
 
 constexpr auto const kGTFS = R"(
 # agency.txt
@@ -44,6 +53,7 @@ R2,DB,R2,R2,,109
 route_id,service_id,trip_id,trip_headsign,block_id
 R1,S1,T1,Parent2 Express,
 R2,S1,T2,Parent2 Local,
+R2,S1,T3,Parent1,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type,stop_headsign
@@ -53,6 +63,13 @@ T1,11:00:00,11:00:00,Child2,3,0,0,Destination
 T2,12:00:00,12:00:00,Child1A,1,0,0,Origin
 T2,12:10:00,12:10:00,Child1B,2,0,0,Midway
 T2,13:00:00,13:00:00,Child2,3,0,0,Destination
+T3,11:05:00,11:05:00,Child2,1,0,0,
+T3,11:30:00,11:30:00,Child1A,2,0,0,
+
+# transfers.txt
+from_stop_id,to_stop_id,from_trip_id,to_trip_id,transfer_type,min_transfer_time
+Child2,Child2,,,2,120
+Child2,Child2,T1,,2,600
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -177,6 +194,14 @@ TEST(motis, trip_ticketing) {
   import(c, "test/data");
   auto d = data{"test/data", c};
 
+  // T1 -> any at Child2 takes 10 min (transfers.txt), T3 leaves after 5 min:
+  // T1 arrives at a virtual location, the ticketing data is Child2's.
+  ASSERT_TRUE(d.tt_->locations_.is_virt(
+      n::resolve(*d.tt_, nullptr, "T1", "20190501")[2U]
+          .get_stop()
+          .location_idx()))
+      << "precondition";
+
   auto const trip_ep = utl::init_from<ep::trip>(d).value();
 
   // Route booking link
@@ -254,6 +279,73 @@ ticketing_deep_link_id,web_url,android_intent_uri,ios_universal_link_url
 link-1,https://example.com,https://example.com,https://example.com
 )";
 
+// stop_sequence numbers are irregular (not 0/1/10-based), forcing the
+// stop_seq_number_range fully-specified decode path instead of the compact
+// "based" markers exercised by the other feeds in this file.
+constexpr auto const kGTFSIrregularStopSequence = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone,ticketing_deep_link_id
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin,link-1
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+S1,S1,50.0,8.0,0,,
+S2,S2,50.1,8.1,0,,
+S3,S3,50.2,8.2,0,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,R1,R1,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+R1,S1,T1,S3,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+T1,10:00:00,10:00:00,S1,5,0,0
+T1,10:10:00,10:10:00,S2,12,0,0
+T1,10:20:00,10:20:00,S3,40,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+
+# ticketing_deep_links.txt
+ticketing_deep_link_id,web_url,android_intent_uri,ios_universal_link_url
+link-1,https://example.com,https://example.com,https://example.com
+)";
+
+TEST(motis, trip_ticketing_irregular_stop_sequence) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c = config{
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = kGTFSIrregularStopSequence}}}},
+      .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+
+  auto const trip_ep = utl::init_from<ep::trip>(d).value();
+
+  auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
+  ASSERT_EQ(1, res.legs_.size());
+  auto const& leg = res.legs_[0];
+  ASSERT_TRUE(leg.ticketUrls_.has_value());
+  // Without ticketing identifiers, the from/to ids fall back to the raw GTFS
+  // stop_sequence numbers, which must be reconstructed as-is (5 and 40), not
+  // misread as compact "based" markers or off-by-relative-index values.
+  EXPECT_NE(
+      std::string::npos,
+      leg.ticketUrls_->web_->find("from_ticketing_stop_time_id=%5B%225%22%5D"));
+  EXPECT_NE(std::string::npos, leg.ticketUrls_->web_->find(
+                                   "to_ticketing_stop_time_id=%5B%2240%22%5D"));
+}
+
 TEST(motis, trip_ticketing_interlined) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
@@ -297,6 +389,179 @@ TEST(motis, trip_ticketing_interlined) {
         std::string::npos,
         t2.ticketUrls_->web_->find("to_ticketing_stop_time_id=%5B%223%22%5D"));
   }
+}
+
+TEST(motis, trip_ticketing_interlined_joined) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+
+  auto const trip_ep = utl::init_from<ep::trip>(d).value();
+
+  for (auto const* const trip_id :
+       {"20190501_10%3A00_test_T1", "20190501_10%3A45_test_T2"}) {
+    auto const res =
+        trip_ep(fmt::format("?tripId={}&joinInterlinedLegs=true", trip_id));
+    ASSERT_EQ(1, res.legs_.size());
+
+    auto const& leg = res.legs_[0];
+    ASSERT_TRUE(leg.ticketUrls_.has_value());
+    EXPECT_NE(std::string::npos,
+              leg.ticketUrls_->web_->find(
+                  "from_ticketing_stop_time_id=%5B%221%22%5D"));
+    EXPECT_NE(
+        std::string::npos,
+        leg.ticketUrls_->web_->find("to_ticketing_stop_time_id=%5B%223%22%5D"));
+  }
+}
+
+TEST(motis, trip_ticketing_interlined_mid_trip_plan) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+
+  auto const routing_ep = utl::init_from<ep::routing>(d).value();
+
+  auto const res = routing_ep(
+      "?fromPlace=test_S3&toPlace=test_S6&time=2019-05-01T08:00Z"
+      "&joinInterlinedLegs=true");
+  ASSERT_EQ(1, res.itineraries_.size());
+
+  auto const& legs = res.itineraries_.front().legs_;
+  ASSERT_EQ(1, legs.size());
+  ASSERT_TRUE(legs[0].ticketUrls_.has_value());
+  EXPECT_NE(std::string::npos,
+            legs[0].ticketUrls_->web_->find(
+                "from_ticketing_stop_time_id=%5B%223%22%5D"));
+  EXPECT_NE(std::string::npos, legs[0].ticketUrls_->web_->find(
+                                   "to_ticketing_stop_time_id=%5B%222%22%5D"));
+}
+
+// A GTFS-RT `ADDED` trip has no static counterpart, so its run has no
+// `trip_idx` and `get_ticketing_urls` must bail out via its `is_scheduled()`
+// guard rather than trying to look up GTFS stop_sequence numbers for it.
+// R1's agency (DB) has a ticketing deep link configured, so this only passes
+// because of that guard, not because ticketing is unconfigured.
+TEST(motis, trip_ticketing_rt_added) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto const t = [](int const h, int const m) {
+    return date::sys_seconds{date::sys_days{2019_y / May / 1} +
+                             std::chrono::hours{h} + std::chrono::minutes{m}};
+  };
+  auto const stats = test::gtfsrt_update(
+      d,
+      to_feed_msg({trip_update{
+                      .trip_ = {.trip_id_ = "RT_ADDED", .route_id_ = {"R1"}},
+                      .stop_updates_ = {{.stop_id_ = "S1", .time_ = t(12, 0)},
+                                        {.stop_id_ = "S2", .time_ = t(12, 10)},
+                                        {.stop_id_ = "S3", .time_ = t(12, 20)}},
+                      .added_ = true}},
+                  date::sys_days{2019_y / May / 1} + 11h));
+  ASSERT_EQ(1U, stats.total_entities_success_);
+
+  auto const trip_ep = utl::init_from<ep::trip>(d).value();
+  auto const res =
+      trip_ep("?tripId=20190501_12%3A00_test_RT_ADDED&joinInterlinedLegs=true");
+  ASSERT_EQ(1, res.legs_.size());
+  EXPECT_FALSE(res.legs_[0].ticketUrls_.has_value());
+}
+
+// T1 (S1 10:00 -> S5 10:40) and T2 (S5 10:45 -> S7 11:00) share BLOCK1: one
+// transport, two trip sections. A trip alert counts for a leg only if it is
+// for the leg's trip and active during the leg, not at another point of the
+// run.
+TEST(motis, leg_alerts) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto msg =
+      to_feed_msg({alert{.header_ = "before boarding",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}},
+                   alert{.header_ = "on board",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T1"}}}}},
+                   alert{.header_ = "T2",
+                         .description_ = "",
+                         .entities_ = {{.trip_ = {{.trip_id_ = "T2"}}}}}},
+                  date::sys_days{2019_y / May / 1} + 6h);
+  auto const set_period = [&](int const entity, int const h, int const m,
+                              std::chrono::minutes const duration) {
+    auto const start =
+        date::sys_seconds{date::sys_days{2019_y / May / 1} +
+                          std::chrono::hours{h} + std::chrono::minutes{m}};
+    auto const p =
+        msg.mutable_entity(entity)->mutable_alert()->add_active_period();
+    p->set_start(static_cast<std::uint64_t>(start.time_since_epoch().count()));
+    p->set_end(static_cast<std::uint64_t>(
+        (start + duration).time_since_epoch().count()));
+  };
+  set_period(0, 8, 0, 5min);
+  set_period(1, 8, 22, 1h);  // also active during the T2 leg
+  test::gtfsrt_update(d, msg);
+
+  auto const routing_ep = utl::init_from<ep::routing>(d).value();
+  auto const leg_alerts = [&](std::string_view const query) {
+    auto const res = routing_ep(query);
+    return res.itineraries_.size() == 1U &&
+                   res.itineraries_.front().legs_.size() == 1U &&
+                   res.itineraries_.front().legs_.front().alerts_.has_value()
+               ? utl::to_vec(*res.itineraries_.front().legs_.front().alerts_,
+                             [](api::Alert const& a) { return a.headerText_; })
+               : std::vector<std::string>{};
+  };
+
+  // T1 leg S3 10:20 -> S4 10:30 (08:20 - 08:30 UTC)
+  EXPECT_EQ(
+      std::vector<std::string>{"on board"},
+      leg_alerts("?fromPlace=test_S3&toPlace=test_S4&time=2019-05-01T08:00Z"));
+
+  // T2 leg S6 10:50 -> S7 11:00 (08:50 - 09:00 UTC)
+  EXPECT_EQ(
+      std::vector<std::string>{"T2"},
+      leg_alerts("?fromPlace=test_S6&toPlace=test_S7&time=2019-05-01T08:45Z"));
 }
 
 constexpr auto kNetex = R"(

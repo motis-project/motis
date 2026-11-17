@@ -1,5 +1,7 @@
 <script lang="ts">
 	import {
+		type Mode,
+		type StopTime,
 		stoptimes,
 		type StoptimesError,
 		type StoptimesResponse
@@ -7,35 +9,36 @@
 	import { LoaderCircle, ArrowRight, CircleX } from '@lucide/svelte';
 	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import Time from '$lib/Time.svelte';
+	import DaySeparator from '$lib/DaySeparator.svelte';
+	import { PagedEntries } from '$lib/PagedEntries.svelte';
 	import Route from '$lib/Route.svelte';
-	import { Button } from '$lib/components/ui/button';
 	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
-	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { isRealtime, onClickTrip } from '$lib/utils';
 	import { normalizedContains } from '$lib/normalizedContains';
 	import { getModeLabel } from './map/getModeLabel';
 	import { posToLocation } from './Location';
 	import type { Location } from './Location';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import Alerts from './Alerts.svelte';
 
 	let {
 		stopId,
-		stopName,
 		time: queryTime,
 		stopNameFromResponse = $bindable(),
 		stop = $bindable(),
 		stopMarker = $bindable(),
 		arriveBy,
+		modes,
 		exactRadius = false
 	}: {
 		stopId: string;
-		stopName: string;
 		time: Date;
 		arriveBy?: boolean;
 		stopNameFromResponse: string;
 		stop: Location | undefined;
 		stopMarker: maplibregl.Marker | undefined;
+		modes: Mode[];
 		// only show the events of this exact stop (no parent / child / equivalent stops)
 		exactRadius?: boolean;
 	} = $props();
@@ -44,6 +47,7 @@
 		stopId,
 		time: queryTime.toISOString(),
 		arriveBy,
+		mode: modes,
 		exactRadius: exactRadius ? true : undefined,
 		n: 10,
 		language: [language]
@@ -54,6 +58,14 @@
 		responses = [throwOnError(stoptimes({ query }))];
 	});
 	/* eslint-enable svelte/prefer-writable-derived */
+
+	const pages = new PagedEntries(
+		() => responses,
+		(r: StoptimesResponse) => r.stopTimes
+	);
+
+	const scheduledTimestampOf = (stopTime: StopTime) =>
+		arriveBy ? stopTime.place.scheduledArrival! : stopTime.place.scheduledDeparture!;
 
 	const throwOnError = (promise: RequestResult<StoptimesResponse, StoptimesError, false>) =>
 		promise.then((response) => {
@@ -71,21 +83,6 @@
 		});
 </script>
 
-<div class="flex justify-center mb-4">
-	<Button
-		class="font-bold"
-		variant="outline"
-		onclick={() => {
-			onClickStop(stopName, stopId, queryTime, !arriveBy, false, exactRadius);
-		}}
-	>
-		{#if arriveBy}
-			{t.switchToDepartures}
-		{:else}
-			{t.switchToArrivals}
-		{/if}
-	</Button>
-</div>
 {#each responses as r, rI (rI)}
 	{#await r}
 		<div class="flex items-center justify-center">
@@ -113,9 +110,14 @@
 		{/if}
 		{#each r.stopTimes as stopTime, i (i)}
 			{@const timestamp = arriveBy ? stopTime.place.arrival! : stopTime.place.departure!}
-			{@const scheduledTimestamp = arriveBy
-				? stopTime.place.scheduledArrival!
-				: stopTime.place.scheduledDeparture!}
+			{@const scheduledTimestamp = scheduledTimestampOf(stopTime)}
+			{@const previous = pages.previous(r, rI, i)}
+			<DaySeparator
+				class="px-3 pt-3"
+				previous={previous ? scheduledTimestampOf(previous) : queryTime}
+				timestamp={scheduledTimestamp}
+				timeZone={stopTime.place.tz}
+			/>
 
 			<div
 				class="gap-y-2 p-3 w-full text-base grid grid-cols-[auto_1fr] border-b duration-500 ease-out transition-all"
@@ -124,16 +126,25 @@
 					<Time
 						variant="schedule"
 						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
+						isRealtime={isRealtime(
+							arriveBy
+								? stopTime.place.arrivalTimestampReason
+								: stopTime.place.departureTimestampReason,
+							stopTime.realTime
+						)}
 						{timestamp}
 						{scheduledTimestamp}
-						queriedTime={queryTime.toISOString()}
 						{arriveBy}
 					/>
 					<Time
 						variant="realtime"
 						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
+						isRealtime={isRealtime(
+							arriveBy
+								? stopTime.place.arrivalTimestampReason
+								: stopTime.place.departureTimestampReason,
+							stopTime.realTime
+						)}
 						{timestamp}
 						{scheduledTimestamp}
 						{arriveBy}

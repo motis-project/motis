@@ -4,6 +4,30 @@
 
 namespace motis {
 
+api::ModeEnum to_mode(osr::search_profile const m) {
+  switch (m) {
+    case osr::search_profile::kCarParkingWheelchair: [[fallthrough]];
+    case osr::search_profile::kCarParking: return api::ModeEnum::CAR_PARKING;
+    case osr::search_profile::kCarDropOffWheelchair: [[fallthrough]];
+    case osr::search_profile::kCarDropOff: return api::ModeEnum::CAR_DROPOFF;
+    case osr::search_profile::kFoot: [[fallthrough]];
+    case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
+    case osr::search_profile::kCar: return api::ModeEnum::CAR;
+    case osr::search_profile::kHgv: return api::ModeEnum::HGV;
+    case osr::search_profile::kBikeElevationLow: [[fallthrough]];
+    case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
+    case osr::search_profile::kBikeFast: [[fallthrough]];
+    case osr::search_profile::kBike: return api::ModeEnum::BIKE;
+    case osr::search_profile::kBikeSharing: [[fallthrough]];
+    case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
+    case osr::search_profile::kBus: return api::ModeEnum::DEBUG_BUS_ROUTE;
+    case osr::search_profile::kRailway:
+      return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
+    case osr::search_profile::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
+  }
+  std::unreachable();
+}
+
 api::ModeEnum to_mode(osr::mode const m) {
   switch (m) {
     case osr::mode::kFoot: [[fallthrough]];

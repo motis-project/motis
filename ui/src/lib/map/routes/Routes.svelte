@@ -10,7 +10,7 @@
 	import polyline from '@mapbox/polyline';
 	import { colord } from 'colord';
 	import type { Position } from 'geojson';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import type { FeatureCollection, LineString, Point } from 'geojson';
 	import {
 		routeDetails,

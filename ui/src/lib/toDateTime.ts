@@ -18,6 +18,23 @@ export const formatDate = (d: Date, timeZone: string | undefined): string => {
 	});
 };
 
+export const formatLongDate = (d: Date, timeZone: string | undefined): string => {
+	return d.toLocaleDateString(language, {
+		weekday: 'long',
+		day: 'numeric',
+		month: 'long',
+		year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+		timeZone
+	});
+};
+
+// calendar day of d in timeZone; any fixed locale works, en-CA just yields readable YYYY-MM-DD keys
+const dayKey = (d: Date, timeZone: string | undefined): string =>
+	d.toLocaleDateString('en-CA', { timeZone });
+
+export const isSameDay = (a: Date, b: Date, timeZone: string | undefined): boolean =>
+	dayKey(a, timeZone) === dayKey(b, timeZone);
+
 export const formatDateTime = (d: Date, timeZone: string | undefined): string => {
 	return d.toLocaleDateString(language, {
 		day: 'numeric',

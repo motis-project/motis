@@ -48,6 +48,7 @@ server:
   web_folder: ui                    # folder with static files to serve
   n_threads: 24                     # default (if not set): number of hardware threads
   data_attribution_link: https://creativecommons.org/licenses/by/4.0/ # link to data sources or license exposed in HTTP headers and UI
+  when_unhealthy_return_error: false # return HTTP 503 from all endpoints except /api/v1/health and /metrics until rt/gbfs feed(s) have completed their first update since startup
 osm: netherlands-latest.osm.pbf     # required by tiles, street routing, geocoding and reverse-geocoding
 tiles:                              # tiles won't be available if this key is missing
   profile: tiles-profiles/full.lua  # currently `background.lua` (less details) and `full.lua` (more details) are available
@@ -131,7 +132,7 @@ limits:
   max_max_matching_distance: 250  # upper bound (meters) for the maxMatchingDistance API param, larger values are capped to this limit
 logging:
   log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
-osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
+osr_footpath: true                # compute footpaths by street routing (for `useRoutedTransfers`; without it, they replace the beeline walks), `transfers.txt` stays authoritative
 geocoding: true                   # enable geocoding for place/stop name autocompletion
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses
 ```

@@ -7,11 +7,12 @@
 #include "fmt/std.h"
 
 #include "utl/erase.h"
-#include "utl/overloaded.h"
 #include "utl/read_file.h"
 #include "utl/verify.h"
+#include "utl/visit.h"
 
 #include "nigiri/clasz.h"
+#include "nigiri/footpath.h"
 #include "nigiri/routing/limits.h"
 
 #include "rfl.hpp"
@@ -148,12 +149,18 @@ void config::verify() const {
                   nigiri::routing::kMaxSearchIntervalSize.count(),
               "plan_max_search_window_minutes limit cannot be above {}",
               nigiri::routing::kMaxSearchIntervalSize.count());
+  utl::verify(!timetable_ || timetable_->max_footpath_length_ <=
+                                 nigiri::footpath::kMax.count(),
+              "max_footpath_length cannot be above {}",
+              nigiri::footpath::kMax.count());
   utl::verify(limits_.value().geocode_max_suggestions_ >= 1U,
               "geocode_max_suggestions must be >= 1");
   utl::verify(limits_.value().reverse_geocode_max_results_ >= 1U,
               "reverse_geocode_max_results must be >= 1");
   utl::verify(!server_ || server_->gpu_states_ >= 1U,
               "server.gpu_states must be >= 1");
+  utl::verify(!gbfs_ || gbfs_->cache_size_ >= 1U,
+              "gbfs.cache_size must be >= 1");
 
   if (timetable_) {
     utl::verify(!timetable_->route_shapes_.has_value() ||
@@ -263,14 +270,13 @@ std::optional<config::elevators> const& config::get_elevators() const {
 }
 
 bool config::has_elevators() const {
-  return std::visit(
-      utl::overloaded{
-          [](std::optional<elevators> const& x) { return x.has_value(); },
-          [](bool const x) {
-            utl::verify(!x, "elevators=true is not supported");
-            return x;
-          }},
-      elevators_);
+  return utl::visit(
+      elevators_,
+      [](std::optional<elevators> const& x) { return x.has_value(); },
+      [](bool const x) {
+        utl::verify(!x, "elevators=true is not supported");
+        return x;
+      });
 }
 
 bool config::has_rt_feeds() const {
@@ -279,24 +285,26 @@ bool config::has_rt_feeds() const {
   });
 }
 
+config::timetable const& config::get_timetable() const {
+  static auto const default_timetable = timetable{};
+  return timetable_.has_value() ? *timetable_ : default_timetable;
+}
+
 std::optional<config::street_routing> config::get_street_routing() const {
-  return std::visit(
-      utl::overloaded{
-          [](std::optional<config::street_routing> const& x) { return x; },
-          [](bool const street_routing) {
-            return street_routing ? std::optional{config::street_routing{}}
-                                  : std::nullopt;
-          }},
-      street_routing_);
+  return utl::visit(
+      street_routing_,
+      [](std::optional<config::street_routing> const& x) { return x; },
+      [](bool const street_routing) {
+        return street_routing ? std::optional{config::street_routing{}}
+                              : std::nullopt;
+      });
 }
 
 bool config::use_street_routing() const {
-  return std::visit(
-      utl::overloaded{
-          [](std::optional<street_routing> const& o) { return o.has_value(); },
-          [](bool const b) { return b; },
-      },
-      street_routing_);
+  return utl::visit(
+      street_routing_,
+      [](std::optional<street_routing> const& o) { return o.has_value(); },
+      [](bool const b) { return b; });
 }
 
 }  // namespace motis

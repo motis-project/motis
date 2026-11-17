@@ -16,7 +16,8 @@ std::optional<osr::location> parse_location(std::string_view,
 
 date::sys_days parse_iso_date(std::string_view);
 
-nigiri::routing::query cursor_to_query(std::string_view);
+nigiri::routing::query cursor_to_query(std::string_view,
+                                       nigiri::duration_t window);
 
 std::pair<nigiri::direction, nigiri::unixtime_t> parse_cursor(std::string_view);
 

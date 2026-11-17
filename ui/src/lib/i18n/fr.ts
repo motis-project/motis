@@ -36,9 +36,12 @@ const translations: Translations = {
 	departure: 'Départ',
 	duration: 'Durée',
 	arrivals: 'Arrivées',
+	arrivalsAt: (stop) => `Arrivées à ${stop}`,
 	later: 'plus tard',
 	earlier: 'plus tôt',
+	onDate: (date: string) => `le ${date}`,
 	departures: 'Départs',
+	departuresAt: (stop) => `Départs à ${stop}`,
 	connections: 'Itinéraires',
 	switchToArrivals: 'Afficher les arrivées',
 	switchToDepartures: 'Afficher les départs',
@@ -210,12 +213,12 @@ const translations: Translations = {
 	pageTitle: {
 		default: 'MOTIS',
 		fromTo: (from, to) => `${from} à ${to}`,
-		departuresAt: (stop) => `Départs à ${stop}`,
-		arrivalsAt: (stop) => `Arrivées à ${stop}`,
 		isochronesFrom: (place) => `Isochrones depuis ${place}`
 	},
 	tickets: 'Billets',
-	routeInformation: "Plus d'informations"
+	routeInformation: "Plus d'informations",
+	history: 'Historique',
+	clearHistory: "Effacer l'historique"
 };
 
 export default translations;
