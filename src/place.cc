@@ -12,6 +12,7 @@
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/special_stations.h"
 #include "nigiri/timetable.h"
+#include "nigiri/wikidata.h"
 
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
@@ -178,6 +179,10 @@ api::Place to_place(n::timetable const* tt,
             .parentId_ = p == n::location_idx_t::invalid() || p == l
                              ? std::nullopt
                              : std::optional{tags->id(*tt, p)},
+            .wikidataUrl_ =
+                n::wikidata_url(*tt, tt->locations_.wikidata_[l].valid()
+                                         ? tt->locations_.wikidata_[l]
+                                         : tt->locations_.wikidata_[p]),
             .importance_ = ae == nullptr
                                ? std::nullopt
                                : std::optional{ae->place_importance_.at(
