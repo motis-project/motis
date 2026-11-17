@@ -921,7 +921,7 @@ api::plan_response routing::route(api::plan_params const& query,
   auto const detailed_transfers =
       query.detailedTransfers_.value_or(query.detailedLegs_);
   auto const with_elevation_profile =
-      query.elevationProfile_.value_or(false) && query.detailedLegs_;
+      query.detailedLegs_ && query.elevationProfile_;
 
   auto const [start_time, t] = get_start_time(query, tt_);
 

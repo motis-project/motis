@@ -326,7 +326,7 @@ void import(config const& c,
            [&]() {
              osr::extract(
                  true, fs::path{*c.osm_}, data_path / "osr", elevation_dir,
-                 {.stats_file_ = data_path / "osr" / "elevation_stats.txt",
+                 {.stats_file_ = {data_path / "osr" / "elevation_stats.txt"},
                   .max_points_ = c.get_street_routing()->max_elevation_samples_,
                   .min_elevation_ =
                       osr::preprocessing::elevation::elevation_meters_t{

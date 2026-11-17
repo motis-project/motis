@@ -1,45 +1,26 @@
 #include "motis/osr/street_routing.h"
 
-<<<<<<< HEAD
 #include <cstddef>
 #include <optional>
 
-#include "utl/concat.h"
-#include "utl/get_or_create.h"
-#include "utl/verify.h"
-
 #include "cista/strong.h"
-    =======
-#include <cassert>
-
-#include "geo/polyline_format.h"
 
 #include "utl/concat.h"
 #include "utl/get_or_create.h"
 #include "utl/raii.h"
-    >>>>>>> master
+#include "utl/verify.h"
 
 #include "osr/routing/algorithms.h"
 #include "osr/routing/elevation_profile.h"
 #include "osr/routing/path.h"
 #include "osr/routing/route.h"
-#include "osr/routing/sharing_data.h"
 
-    <<<<<<< HEAD
-=======
-#include "nigiri/special_stations.h"
-#include "nigiri/timetable.h"
-
-#include "motis/constants.h"
-#include "motis/flex/mode_payload.h"
-    >>>>>>> master
 #include "motis/osr/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
-#include "motis/transport_mode.h"
 #include "motis/update_rtt_td_footpaths.h"
 
-    namespace n = nigiri;
+namespace n = nigiri;
 
 namespace motis {
 
