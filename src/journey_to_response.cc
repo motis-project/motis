@@ -759,7 +759,8 @@ api::Itinerary journey_to_response(
                                                             elevation_costs)},
                         j_leg.dep_time_, j_leg.arr_time_,
                         car_transfers ? 250.0 : timetable_max_matching_distance,
-                        osr_params, cache, *blocked_mem, api_version, true,
+                        osr_params, cache, *blocked_mem, api_version,
+                        /*detailed_leg=*/true, with_elevation_profile,
                         std::chrono::duration_cast<std::chrono::seconds>(
                             j_leg.arr_time_ - j_leg.dep_time_) +
                             std::chrono::minutes{10})
@@ -804,7 +805,7 @@ api::Itinerary journey_to_response(
           append(street_routing(
               *w, *l, e, elevations, lang, from, to, *out, j_leg.dep_time_,
               j_leg.arr_time_, max_matching_distance, osr_params, cache,
-              *blocked_mem, api_version, detailed_legs,
+              *blocked_mem, api_version, detailed_legs, with_elevation_profile,
               std::chrono::duration_cast<std::chrono::seconds>(
                   j_leg.arr_time_ - j_leg.dep_time_) +
                   std::chrono::minutes{5},
