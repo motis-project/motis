@@ -9,6 +9,7 @@
 
 #include "utl/get_or_create.h"
 #include "utl/helpers/algorithm.h"
+#include "utl/lookup.h"
 #include "utl/read_file.h"
 #include "utl/verify.h"
 
@@ -151,16 +152,16 @@ data::data(std::filesystem::path p, config const& c)
     }
     auto const [key, expected_ver] = ver;
     auto const h = read_hashes(path_, name);
-    auto const existing_ver_it = h.find(key);
+    auto const existing_ver = utl::lookup(h, key);
 
-    utl::verify(existing_ver_it != end(h),
+    utl::verify(existing_ver.has_value(),
                 "{}: no existing version found [key={}], please re-run import; "
                 "hashes: {}",
                 name, key, to_str(h));
-    utl::verify(existing_ver_it->second == expected_ver,
+    utl::verify(*existing_ver == expected_ver,
                 "{}: binary version mismatch [existing={} vs expected={}], "
                 "please re-run import; hashes: {}",
-                name, existing_ver_it->second, expected_ver, to_str(h));
+                name, *existing_ver, expected_ver, to_str(h));
   };
 
   verify_version(c.timetable_.has_value(), "tt", n_version());

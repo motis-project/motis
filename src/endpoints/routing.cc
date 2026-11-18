@@ -22,6 +22,7 @@
 #include "utl/helpers/algorithm.h"
 #include "utl/timing.h"
 #include "utl/to_vec.h"
+#include "utl/visit.h"
 
 #include "osr/lookup.h"
 #include "osr/platforms.h"
@@ -232,24 +233,23 @@ n::routing::td_offsets_t routing::get_td_offsets(
     nigiri::routing::start_time_t const& start_time,
     meta_t& stats,
     one_to_many_side* const states) const {
-  return std::visit(
-      utl::overloaded{
-          [&](tt_location l) {
-            if (!is_osr_loaded()) {
-              return n::routing::td_offsets_t{};
-            }
-            return ::motis::ep::get_td_offsets(
-                *this, rtt, e, stop_to_osr_location(*this, l.l_), dir, modes,
-                osr_params, pedestrian_profile, elevation_costs,
-                max_matching_distance, max, start_time, stats, states);
-          },
-          [&](osr::location const& pos) {
-            return ::motis::ep::get_td_offsets(
-                *this, rtt, e, pos, dir, modes, osr_params, pedestrian_profile,
-                elevation_costs, max_matching_distance, max, start_time, stats,
-                states);
-          }},
-      p);
+  return utl::visit(
+      p,
+      [&](tt_location l) {
+        if (!is_osr_loaded()) {
+          return n::routing::td_offsets_t{};
+        }
+        return ::motis::ep::get_td_offsets(
+            *this, rtt, e, stop_to_osr_location(*this, l.l_), dir, modes,
+            osr_params, pedestrian_profile, elevation_costs,
+            max_matching_distance, max, start_time, stats, states);
+      },
+      [&](osr::location const& pos) {
+        return ::motis::ep::get_td_offsets(
+            *this, rtt, e, pos, dir, modes, osr_params, pedestrian_profile,
+            elevation_costs, max_matching_distance, max, start_time, stats,
+            states);
+      });
 }
 
 bool include_rental_provider(
@@ -566,23 +566,22 @@ std::vector<n::routing::offset> routing::get_offsets(
                                     elevation_costs, max, max_matching_distance,
                                     gbfs_rd, stats, states);
   };
-  return std::visit(
-      utl::overloaded{
-          [&](tt_location const l) {
-            if (!is_osr_loaded()) {
-              return station_start(l.l_);
-            }
-            auto offsets = do_get_offsets(stop_to_osr_location(*this, l.l_));
-            for_each_meta(*tt_, nullptr,
-                          nigiri::routing::location_match_mode::kEquivalent,
-                          l.l_, [&](n::location_idx_t const c) {
-                            offsets.emplace_back(c, n::duration_t{0U}, 0U);
-                          });
+  return utl::visit(
+      p,
+      [&](tt_location const l) {
+        if (!is_osr_loaded()) {
+          return station_start(l.l_);
+        }
+        auto offsets = do_get_offsets(stop_to_osr_location(*this, l.l_));
+        for_each_meta(*tt_, nullptr,
+                      nigiri::routing::location_match_mode::kEquivalent, l.l_,
+                      [&](n::location_idx_t const c) {
+                        offsets.emplace_back(c, n::duration_t{0U}, 0U);
+                      });
 
-            return offsets;
-          },
-          [&](osr::location const& pos) { return do_get_offsets(pos); }},
-      p);
+        return offsets;
+      },
+      [&](osr::location const& pos) { return do_get_offsets(pos); });
 }
 
 std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
@@ -1105,8 +1104,8 @@ api::plan_response routing::route(api::plan_params const& query,
             start_time.start_time_, prepare_stats, otm_dest),
         .max_transfers_ = static_cast<std::uint8_t>(max_transfers),
         .max_travel_time_ = query.maxTravelTime_
-                                .and_then([](std::int64_t const dur) {
-                                  return std::optional{n::duration_t{dur}};
+                                .transform([](std::int64_t const dur) {
+                                  return n::duration_t{dur};
                                 })
                                 .value_or(kInfinityDuration),
         .min_connection_count_ = static_cast<unsigned>(query.numItineraries_),

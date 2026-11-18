@@ -229,7 +229,7 @@ TEST(one_to_many, get_request_forward) {
                                        {.duration_ = 122.0},
                                        // Ground, not the level -1 way below
                                        {.duration_ = 220.0},
-                                       {.duration_ = 349.0},
+                                       {.duration_ = 350.0},
                                        {.duration_ = 579.0},
                                        {},
                                        {},
@@ -431,8 +431,7 @@ TEST(one_to_many, get_request_backward_with_wheelchair_and_short_post_transit) {
   // Not valid for post transit => unreachable from FFM_101
   EXPECT_DOUBLE_EQ(247.0, sd.at(2).duration_.value());
   EXPECT_NEAR(121.7, sd.at(2).distance_.value(), 0.1);
-  EXPECT_DOUBLE_EQ(521.0, sd.at(3).duration_.value());
-  EXPECT_NEAR(269.7, sd.at(3).distance_.value(), 0.1);
+  EXPECT_EQ(api::Duration{}, sd.at(3));
   EXPECT_DOUBLE_EQ(775.0, sd.at(4).duration_.value());
   EXPECT_NEAR(473.0, sd.at(4).distance_.value(), 0.1);
 
@@ -720,10 +719,10 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
   // rows apply to the default profile only.
   ASSERT_EQ(4U, td.size());
   ASSERT_EQ(1U, td.at(0).size());
-  EXPECT_DOUBLE_EQ(1620.0, td.at(0).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1140.0, td.at(0).at(0).duration_);
   EXPECT_EQ(0, td.at(0).at(0).transfers_);
   ASSERT_EQ(1U, td.at(1).size());
-  EXPECT_DOUBLE_EQ(1680.0, td.at(1).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1380.0, td.at(1).at(0).duration_);
   EXPECT_EQ(0, td.at(1).at(0).transfers_);
   ASSERT_EQ(1U, td.at(2).size());
   EXPECT_DOUBLE_EQ(1320.0, td.at(2).at(0).duration_);
@@ -779,14 +778,18 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
     // the rows beat the routed walks (1620 / 1860 / 2280 with
     // useRoutedTransfers), to Tram_1 via the row to Tram_2
     ASSERT_EQ(1U, dd.at(0).size());
-    EXPECT_DOUBLE_EQ(1500.0, dd.at(0).at(0).duration_);
+    EXPECT_DOUBLE_EQ(1140.0, dd.at(0).at(0).duration_);
     EXPECT_EQ(0, dd.at(0).at(0).transfers_);
-    ASSERT_EQ(1U, dd.at(1).size());
+    ASSERT_EQ(2U, dd.at(1).size());
     EXPECT_DOUBLE_EQ(1320.0, dd.at(1).at(0).duration_);
     EXPECT_EQ(0, dd.at(1).at(0).transfers_);
-    ASSERT_EQ(1U, dd.at(2).size());
+    EXPECT_DOUBLE_EQ(1260.0, dd.at(1).at(1).duration_);
+    EXPECT_EQ(1, dd.at(1).at(1).transfers_);
+    ASSERT_EQ(2U, dd.at(2).size());
     EXPECT_DOUBLE_EQ(1500.0, dd.at(2).at(0).duration_);
     EXPECT_EQ(0, dd.at(2).at(0).transfers_);
+    EXPECT_DOUBLE_EQ(1320.0, dd.at(2).at(1).duration_);
+    EXPECT_EQ(1, dd.at(2).at(1).transfers_);
     ASSERT_EQ(1U, dd.at(3).size());
     EXPECT_DOUBLE_EQ(4260.0, dd.at(3).at(0).duration_);
     EXPECT_EQ(2, dd.at(3).at(0).transfers_);

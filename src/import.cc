@@ -455,14 +455,14 @@ void import(config const& c,
                        .extend_calendar_ = dc.extend_calendar_,
                        .user_script_ =
                            dc.script_
-                               .and_then([](std::string const& path) {
+                               .transform([](std::string const& path) {
                                  if (path.starts_with("\nfunction")) {
-                                   return std::optional{path};
+                                   return path;
                                  }
-                                 return std::optional{std::string{
+                                 return std::string{
                                      cista::mmap{path.c_str(),
                                                  cista::mmap::protection::READ}
-                                         .view()}};
+                                         .view()};
                                })
                                .value_or("")}};
                 }),

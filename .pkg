@@ -1,7 +1,7 @@
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=af7aa0a652b0e74b011671ff8a4883bce9ab8380
+  commit=2c89c3ac6e3f58d31449932867b5854d5c2b5280
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.89.0
@@ -9,7 +9,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=354b50591d72bac31e2eb22e9d70d600514424bf
+  commit=9f68d847d8f36f0b88c37b63b1976c1588db2f1d
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -49,7 +49,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=248b798f3320525d4a2ea018f309f60b386cb41b
+  commit=4bc8b62e8cdc816c15010058674d4ec239475919
 [prometheus-cpp]
   url=git@github.com:motis-project/prometheus-cpp.git
   branch=master
@@ -73,4 +73,4 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=9c0c2674d03912eb463fefd10141e864856a58f5
+  commit=d61ed1258dd43f4b81bf8608ef267b626a405f55

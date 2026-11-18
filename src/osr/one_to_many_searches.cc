@@ -1,5 +1,7 @@
 #include "motis/osr/one_to_many_searches.h"
 
+#include "utl/lookup.h"
+
 namespace n = nigiri;
 
 namespace motis {
@@ -32,18 +34,18 @@ precomputed_route one_to_many_view::find(n::location_idx_t const leg_from,
     return {};
   }
 
-  auto const it = side->by_mode_.find(mode);
-  if (it == end(side->by_mode_)) {
+  auto const search_idx = utl::lookup(side->by_mode_, mode);
+  if (!search_idx.has_value()) {
     return {};
   }
 
-  auto const& s = side->searches_[it->second];
-  auto const d = s.dest_idx_.find(target);
-  if (d == end(s.dest_idx_)) {
+  auto const& s = side->searches_[*search_idx];
+  auto const d = utl::lookup(s.dest_idx_, target);
+  if (!d.has_value()) {
     return {};
   }
 
-  return {s.state_.get(), d->second, &s.flex_additional_nodes_};
+  return {s.state_.get(), *d, &s.flex_additional_nodes_};
 }
 
 }  // namespace motis

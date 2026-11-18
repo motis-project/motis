@@ -1,5 +1,7 @@
 #include "motis/elevators/elevators.h"
 
+#include "utl/lookup.h"
+
 #include "osr/ways.h"
 
 namespace motis {
@@ -20,9 +22,8 @@ vector_map<elevator_idx_t, elevator> update_elevator_coordinates(
     for (auto const n : elevator_nodes) {
       auto const id_it = ids->find(cista::to_idx(w.node_to_osm_[n]));
       if (id_it != end(*ids)) {
-        auto const e_it = id_to_elevator.find(id_it->second);
-        if (e_it != end(id_to_elevator)) {
-          elevators[e_it->second].pos_ = w.get_node_pos(n).as_latlng();
+        if (auto const e = utl::lookup(id_to_elevator, id_it->second)) {
+          elevators[*e].pos_ = w.get_node_pos(n).as_latlng();
         }
       }
     }

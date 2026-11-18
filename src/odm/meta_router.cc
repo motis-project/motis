@@ -15,6 +15,7 @@
 #include "prometheus/histogram.h"
 
 #include "utl/erase_duplicates.h"
+#include "utl/visit.h"
 
 #include "ctx/ctx.h"
 
@@ -175,8 +176,8 @@ n::routing::query meta_router::get_base_query(
               query_.maxTransfers_.has_value() ? *query_.maxTransfers_
                                                : n::routing::kMaxTransfers),
           .max_travel_time_ = query_.maxTravelTime_
-                                  .and_then([](std::int64_t const dur) {
-                                    return std::optional{n::duration_t{dur}};
+                                  .transform([](std::int64_t const dur) {
+                                    return n::duration_t{dur};
                                   })
                                   .value_or(ep::kInfinityDuration),
           .min_connection_count_ = 0U,
@@ -270,12 +271,10 @@ api::plan_response meta_router::run() {
   utl::verify(r_.tt_ != nullptr && r_.tags_ != nullptr,
               "mode=TRANSIT requires timetable to be loaded");
   auto prepare_stats = meta_t{};
-  auto const start_intvl = std::visit(
-      utl::overloaded{[](n::interval<n::unixtime_t> const i) { return i; },
-                      [](n::unixtime_t const t) {
-                        return n::interval<n::unixtime_t>{t, t};
-                      }},
-      start_time_.start_time_);
+  auto const start_intvl = utl::visit(
+      start_time_.start_time_,
+      [](n::interval<n::unixtime_t> const i) { return i; },
+      [](n::unixtime_t const t) { return n::interval<n::unixtime_t>{t, t}; });
   auto search_intvl =
       n::interval<n::unixtime_t>{start_time_.extend_interval_earlier_
                                      ? start_intvl.to_ - kSearchIntervalSize
@@ -294,15 +293,14 @@ api::plan_response meta_router::run() {
           : n::interval<n::unixtime_t>{context_intvl.from_,
                                        context_intvl.to_ + kODMLookAhead};
   auto const to_osr_loc = [&](auto const& place) {
-    return std::visit(
-        utl::overloaded{
-            [](osr::location const& l) { return l; },
-            [&](tt_location const& l) {
-              return osr::location{
-                  .pos_ = tt_->locations_.coordinates_[l.l_],
-                  .lvl_ = osr::level_t{std::uint8_t{osr::level_t::kNoLevel}}};
-            }},
-        place);
+    return utl::visit(
+        place,  //
+        [](osr::location const& l) { return l; },
+        [&](tt_location const& l) {
+          return osr::location{
+              .pos_ = tt_->locations_.coordinates_[l.l_],
+              .lvl_ = osr::level_t{std::uint8_t{osr::level_t::kNoLevel}}};
+        });
   };
   auto p = prima{r_.config_.prima_->url_, to_osr_loc(from_), to_osr_loc(to_),
                  query_};

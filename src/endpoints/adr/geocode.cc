@@ -39,11 +39,11 @@ a::guess_context& get_guess_context(a::typeahead const& t, a::cache& cache) {
 api::geocode_response geocode::operator()(
     boost::urls::url_view const& url) const {
   auto const params = api::geocode_params{url.params()};
-  auto const place = params.place_.and_then([](std::string const& s) {
+  auto const place = params.place_.transform([](std::string const& s) {
     auto const parsed = parse_location(s);
     utl::verify<net::bad_request_exception>(parsed.has_value(),
                                             "could not parse place {}", s);
-    return std::optional{parsed.value().pos_};
+    return parsed.value().pos_;
   });
   auto const required_modes =
       params.mode_.transform([](std::vector<api::ModeEnum> const& modes) {
