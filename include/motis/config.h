@@ -142,6 +142,7 @@ struct config {
     unsigned http_timeout_{30};
     bool canned_rt_{false};
     bool incremental_rt_update_{false};
+    unsigned rt_max_stale_age_{600};
     bool extend_missing_footpaths_{false};
     std::uint16_t max_footpath_length_{15};
     std::uint16_t default_transfer_time_{2};
@@ -219,6 +220,7 @@ struct config {
     unsigned update_interval_{60};
     unsigned http_timeout_{30};
     unsigned cache_size_{50};
+    unsigned max_stale_age_{86400};
     std::optional<std::string> proxy_{};
     std::optional<bool> use_connect_{false};
     std::optional<ttl> ttl_{};
@@ -239,6 +241,7 @@ struct config {
     std::optional<std::string> init_{};
     std::optional<std::string> osm_mapping_{};
     unsigned http_timeout_{10};
+    unsigned max_stale_age_{3600};
     std::optional<headers_t> headers_{};
   };
 

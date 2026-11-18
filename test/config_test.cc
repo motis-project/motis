@@ -55,6 +55,7 @@ timetable:
   http_timeout: 30
   canned_rt: false
   incremental_rt_update: false
+  rt_max_stale_age: 600
   extend_missing_footpaths: false
   max_footpath_length: 15
   default_transfer_time: 2

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <map>
 #include <string>
+#include <string_view>
 
 #include "boost/asio/awaitable.hpp"
 #include "boost/beast/core/flat_buffer.hpp"
@@ -68,6 +69,11 @@ boost::asio::awaitable<void> http_CONNECT(Stream& stream,
   }
 }
 
+std::string decode_http_body(std::string body,
+                             std::string_view content_encoding);
+
 std::string get_http_body(http_response const&);
+
+bool is_followable_redirect(unsigned status_code);
 
 }  // namespace motis
