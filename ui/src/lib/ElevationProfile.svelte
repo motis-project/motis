@@ -1,7 +1,18 @@
 <script lang="ts">
 	import { type ElevationProfile } from '@motis-project/motis-client';
 
-	let { profile }: { profile: ElevationProfile } = $props();
+	let { profile, width, height }: { profile: ElevationProfile, width: number, height: number } = $props();
+    let rootElement: HTMLElement | undefined = $state();
+    let fontSize: number = $state(12);
+
+    $effect(() => {
+        if (!rootElement) return;
+        const computed = window.getComputedStyle(rootElement);
+        const parsed = parseFloat(computed.fontSize);
+        if (!isNaN(parsed)) {
+            fontSize = parsed;
+        }
+    });
 
 	interface IResult {
 		distance: number;
@@ -28,11 +39,9 @@
 		return res;
 	};
 
-	const width = 400;
-	const height = 400;
-	const fontSize = 20;
-	const xPadding = Math.max(40, `${profile.max}m`.length * fontSize * 0.6 + 5);
-	const yPadding = 40;
+	// const xPadding = Math.max(40, `${profile.max}m`.length * fontSize * 0.6 + 5);
+    const xPadding = $derived(`${profile.max}`.length * fontSize * 1.2 + 5);
+	const yPadding = $derived(fontSize * 1.4 + 5);
 	const xScale = (d: number): number => {
 		return (d / maxDistance) * (width - xPadding * 2) + xPadding;
 	};
@@ -51,7 +60,7 @@
 	);
 </script>
 
-<div class="flex flex-col items-center">
+<div bind:this={rootElement} class="flex flex-col items-center">
 	<svg viewBox="0 0 {width} {height}" class="w-full h-auto">
 		<!-- x-Axis -->
 		<path
@@ -59,37 +68,31 @@
 			d="M {xPadding} {height - yPadding} L {width - xPadding} {height - yPadding}"
 		/>
 		<text
-			class="label"
+            class="label"
 			x={xPadding}
 			y={height - yPadding + fontSize}
-			font-size={fontSize}
-			fill="#64748b"
 			text-anchor="middle">0km</text
 		>
 		<text
-			class="label"
+            class="label"
 			x={width / 2}
 			y={height - yPadding + fontSize}
-			font-size={fontSize}
-			fill="#64748b"
 			text-anchor="middle">{(maxDistance / 2).toFixed(2)}km</text
 		>
 		<text
-			class="label"
+            class="label"
 			x={width - xPadding}
 			y={height - yPadding + fontSize}
-			font-size={fontSize}
-			fill="#64748b"
 			text-anchor="middle">{maxDistance.toFixed(2)}km</text
 		>
 		<!-- Median -->
-		{#if profile.median}
-			{@const y = yScale(profile.median)}
-			<path class="median-line" d="M {xPadding} {y} L {width - xPadding} {y}" />
-			<text class="label" x={xPadding - 5} {y} font-size={fontSize} fill="#64748b" text-anchor="end"
+		<!-- {#if profile.median}
+			{@const yMed = yScale(profile.median)}
+			<path class="median-line" d="M {xPadding} {yMed} L {width - xPadding} {yMed}" />
+			<text class="label" x={xPadding - 5} y={yMed} text-anchor="end"
 				>{profile.median}m</text
 			>
-		{/if}
+		{/if} -->
 		<!-- y-Axis -->
 		<path
 			class="axis-line"
@@ -99,49 +102,54 @@
 			class="label"
 			x={xPadding - 5}
 			y={height - yPadding}
-			font-size={fontSize}
-			fill="#64748b"
 			text-anchor="end">0m</text
 		>
-		<text
-			class="label"
-			x={xPadding - 5}
-			y={yScale(profile.min)}
-			font-size={fontSize}
-			fill="#64748b"
-			text-anchor="end">{profile.min}m</text
-		>
-		<text
-			class="label"
-			x={xPadding - 5}
-			y={yPadding}
-			font-size={fontSize}
-			fill="#64748b"
-			text-anchor="end">{profile.max}m</text
+        <!-- Minimum -->
+        <path
+            class="median-line"
+            d="M {xPadding} {yScale(profile.min)} L {width - xPadding} {yScale(profile.min)}"
+        />
+        <text
+            class="label"
+            x={xPadding - 5} y={yScale(profile.min)}
+            text-anchor="end" dominant-baseline="hanging"
+        >{profile.min}m</text>
+        <!-- Maximum -->
+        <path
+            class="median-line" 
+            d="M {xPadding} {yScale(profile.max)} L {width - xPadding} {yScale(profile.max)}"
+        />
+        <text
+            class="label"
+			x={xPadding - 5} y={yScale(profile.max)}
+			text-anchor="end" dominant-baseline="alphabetic">{profile.max}m</text
 		>
 		<!-- Profile -->
 		<path d={linePath} fill="none" stroke="#30919c" stroke-width="1" />
 	</svg>
-	<div class="mt-2 text-center text-sm text-slate-500">
+	<!-- <div class="mt-2 text-center text-sm text-slate-500">
 		median={profile.median}m N={profile.size}
 		up={profile.up}m down={profile.down}m
-	</div>
+	</div> -->
 </div>
 
 <style>
-	.label {
-		fill: '#64748b';
-	}
+    .label {
+        fill: currentColor;
+        font-size: inherit;
+        font-family: inherit;
+    }
 
 	.axis-line {
 		fill: none;
-		stroke: #000000;
+		stroke: currentColor;
 		stroke-width: 1px;
 	}
 
 	.median-line {
 		fill: none;
-		stroke: #000000;
+		stroke: currentColor;
+        stroke-dasharray: 2 4;
 		stroke-width: 1px;
 		opacity: 0.4;
 	}

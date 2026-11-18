@@ -8,9 +8,10 @@
 		TriangleAlert,
 		Bike,
 		Accessibility,
-		ExternalLink
+		ExternalLink,
+        ChevronsRight,
 	} from '@lucide/svelte';
-    import { Modal, Content, Trigger } from "sv-popup"
+    import { Popover } from "bits-ui";
 	import type {
 		FareProduct,
 		Itinerary,
@@ -24,7 +25,7 @@
 	import ReservationRequired from '$lib/ReservationRequired.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
-	import { Button } from '$lib/components/ui/button';
+	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import Route from '$lib/Route.svelte';
     import ElevationProfile from './ElevationProfile.svelte';
 	import Alerts from '$lib/Alerts.svelte';
@@ -41,6 +42,8 @@
 	}: {
 		itinerary: Itinerary;
 	} = $props();
+
+    let buttonHeight = $state(0);
 
 	const isTransitLeg = (l: Leg) => !!l.displayName;
 	const isRelevantLeg = (l: Leg) => l.duration !== 0 || isTransitLeg(l);
@@ -223,73 +226,88 @@
 	{@const stepsWithToll = l.steps?.filter((s: StepInstruction) => s.toll)}
 	{@const stepsWithAccessRestriction = l.steps?.filter((s: StepInstruction) => s.accessRestriction)}
 
-	<div class="py-12 flex flex-col gap-y-4 text-muted-foreground">
-		<span class="ml-6">
-			{formatDurationSec(l.duration)}
-			{getModeName(l)}
-			{formatDistanceMeters(l.distance)}
-		</span>
-		{#if l.rental && l.rental.systemName}
-			<span class="ml-6">
-				{t.sharingProvider}:
-				<a href={l.rental.url} target="_blank" class="hover:underline">{l.rental.systemName}</a>
-			</span>
-		{/if}
-		{#if l.rental?.returnConstraint == 'ROUNDTRIP_STATION'}
-			<span class="ml-6">
-				{t.roundtripStationReturnConstraint}
-			</span>
-		{/if}
-		{#if l.rental?.rentalUriWeb}
-			<span class="ml-6">
-				<Button class="font-bold" variant="outline" href={l.rental.rentalUriWeb} target="_blank">
-					{t.rent}
-				</Button>
-			</span>
-		{/if}
+    <div class="py-12 flex flex-row items-stretch justify-between gap-x-4 text-muted-foreground">
+        <div class="flex flex-col gap-y-4 text-left">
+            <span class="ml-6">
+                {formatDurationSec(l.duration)}
+                {getModeName(l)}
+                {formatDistanceMeters(l.distance)}
+            </span>
+            {#if l.rental && l.rental.systemName}
+                <span class="ml-6">
+                    {t.sharingProvider}:
+                    <a href={l.rental.url} target="_blank" class="hover:underline">{l.rental.systemName}</a>
+                </span>
+            {/if}
+            {#if l.rental?.returnConstraint == 'ROUNDTRIP_STATION'}
+                <span class="ml-6">
+                    {t.roundtripStationReturnConstraint}
+                </span>
+            {/if}
+            {#if l.rental?.rentalUriWeb}
+                <span class="ml-6">
+                    <Button class="font-bold" variant="outline" href={l.rental.rentalUriWeb} target="_blank">
+                        {t.rent}
+                    </Button>
+                </span>
+            {/if}
+            {#if stepsWithElevation && stepsWithElevation.length > 0}
+                <div class="ml-6 flex items-center gap-2 text-xs">
+                    {t.incline}
+                    <div class="flex items-center">
+                        <ArrowUp class="size-4" />
+                        {stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)} m
+                    </div>
+                    <div class="flex items-center">
+                        <ArrowDown class="size-4" />
+                        {stepsWithElevation.reduce(
+                            (acc: number, s: StepInstruction) => acc + s.elevationDown!,
+                            0
+                        )} m
+                    </div>
+                </div>
+            {/if}
+            {#if stepsWithToll && stepsWithToll.length > 0}
+                <div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
+                    <DollarSign class="size-4" />
+                    {t.toll}
+                </div>
+            {/if}
+            {#if stepsWithAccessRestriction && stepsWithAccessRestriction.length > 0}
+                <div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
+                    <CircleX class="size-4" />
+                    {t.accessRestriction}
+                    ({stepsWithAccessRestriction
+                        .map((s) => s.accessRestriction)
+                        .filter((value, index, array) => array.indexOf(value) === index)
+                        .join(', ')})
+                </div>
+            {/if}
+        </div>
         {#if l.elevationProfile}
-            <Modal basic small=true>
-                <Content>
-                    <ElevationProfile profile={l.elevationProfile} />
-                </Content>
-                <Trigger>
-                    <Button variant="outline">Elevation Profile</Button>
-                </Trigger>
-            </Modal>
+            <div class="flex items-center justify-end">
+                <Popover.Root> 
+                    <div bind:clientHeight={buttonHeight}>
+                    <Popover.Trigger class={buttonVariants({ variant: "outline", size: "icon" })}>
+                        <ChevronsRight class="size-4" />
+                    </Popover.Trigger>
+            
+                    <Popover.Portal>
+                        <Popover.Content
+                            side="right" 
+                            align="start"
+                            sideOffset={8}
+                            class="z-50 rounded-lg border bg-popover p-4 text-xs text-muted-foreground shadow-xl outline-none flex flex-col justify-between"
+                            style="height: {buttonHeight * 4}px; width: {buttonHeight * 8}px;"
+                        >
+                            <ElevationProfile profile={l.elevationProfile} width={buttonHeight * 8} height={buttonHeight * 4} />
+                        </Popover.Content>
+                    </Popover.Portal>
+                </div>
+                </Popover.Root>
+            </div>
         {/if}
-		{#if stepsWithElevation && stepsWithElevation.length > 0}
-			<div class="ml-6 flex items-center gap-2 text-xs">
-                {t.incline}
-				<div class="flex items-center">
-					<ArrowUp class="size-4" />
-					{stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)} m
-				</div>
-				<div class="flex items-center">
-					<ArrowDown class="size-4" />
-					{stepsWithElevation.reduce(
-						(acc: number, s: StepInstruction) => acc + s.elevationDown!,
-						0
-					)} m
-				</div>
-			</div>
-		{/if}
-        {#if stepsWithToll && stepsWithToll.length > 0}
-			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
-				<DollarSign class="size-4" />
-				{t.toll}
-			</div>
-		{/if}
-		{#if stepsWithAccessRestriction && stepsWithAccessRestriction.length > 0}
-			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
-				<CircleX class="size-4" />
-				{t.accessRestriction}
-				({stepsWithAccessRestriction
-					.map((s) => s.accessRestriction)
-					.filter((value, index, array) => array.indexOf(value) === index)
-					.join(', ')})
-			</div>
-		{/if}
-	</div>
+    </div>
 {/snippet}
 
 {#snippet productInfo(product: FareProduct)}
