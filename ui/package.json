@@ -78,7 +78,6 @@
 		"geojson": "^0.5.0",
 		"maplibre-gl": "^6.11.1",
 		"rbush": "^4.0.1",
-		"sv-popup": "^0.5.3",
 		"svelte-radix": "^1.1.1"
 	},
 	"devEngines": {
