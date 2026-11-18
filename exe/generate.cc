@@ -21,6 +21,7 @@
 #include "nigiri/common/interval.h"
 #include "nigiri/flex.h"
 #include "nigiri/location_routes.h"
+#include "nigiri/routing/dijkstra.h"
 #include "nigiri/routing/raptor/debug.h"
 #include "nigiri/routing/search.h"
 #include "nigiri/special_stations.h"
@@ -572,7 +573,7 @@ int generate(int ac, char** av) {
     arr_weight.assign(d.tt_->n_locations(), 0.0);
 
     auto const day_from = d.tt_->day_idx(*first_day);
-    auto const day_to = d.tt_->day_idx(*last_day);
+    auto const day_to = d.tt_->day_idx(last_day);
 
     for (auto i = 0U; i != d.tt_->n_routes(); ++i) {
       auto const route = n::route_idx_t{i};
@@ -781,7 +782,7 @@ int generate(int ac, char** av) {
   };
   auto const event_desc = [&](char const* what) {
     return fmt::format("weighted by {} count within [{}, {})", what, *first_day,
-                       *last_day);
+                       last_day);
   };
   auto const from_desc =
       population_from  ? std::string{weight_desc(*population_from)}
@@ -943,14 +944,14 @@ int generate(int ac, char** av) {
         }
 
         if (lb_rank && rank_stop != n::location_idx_t::invalid()) {
-          auto const search = n::routing::search<
-              n::direction::kBackward,
-              n::routing::raptor<n::direction::kBackward, false, 0,
-                                 n::routing::search_mode::kOneToAll>>{
-              *d.tt_, nullptr, s.ss_, s.rs_,
-              nigiri::routing::query{
-                  .start_time_ = d.tt_->date_range_.from_,
-                  .destination_ = {{rank_stop, n::duration_t{0U}, 0}}}};
+          // the lower bounds directly: raptor no longer computes them when
+          // a search is constructed (kUseLowerBounds = false)
+          auto const q = n::routing::query{
+              .start_time_ = d.tt_->date_range_.from_,
+              .destination_ = {{rank_stop, n::duration_t{0U}, 0}}};
+          n::routing::dijkstra(*d.tt_, q, d.tt_->bwd_search_lb_graph_[q.prf_idx_],
+                               nullptr, nullptr,
+                               s.ss_.travel_time_lower_bound_);
           utl::sort(s.stops_, [&](auto const& a, auto const& b) {
             return s.ss_.travel_time_lower_bound_[to_idx(a)] <
                    s.ss_.travel_time_lower_bound_[to_idx(b)];
