@@ -125,7 +125,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .no_compulsory_reservation_ = query.noCompulsoryReservation_,
-      .transfer_time_settings_ = get_transfer_time_settings(query),
+      .transfer_time_settings_ = get_transfer_time_settings(tt_, query),
   };
 
   auto const state =

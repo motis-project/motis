@@ -155,7 +155,7 @@ std::vector<api::ParetoSet> transit_durations(
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .no_compulsory_reservation_ = query.noCompulsoryReservation_,
-      .transfer_time_settings_ = get_transfer_time_settings(query),
+      .transfer_time_settings_ = get_transfer_time_settings(ep.tt_, query),
   };
 
   // Compute and update durations using transits

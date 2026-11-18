@@ -42,7 +42,9 @@ api::transfers_response transfers::operator()(
       if (tt_.locations_.is_virt(fp.target())) {
         continue;
       }
-      field(footpaths[fp.target()]) = fp.duration().count();
+      auto& x = field(footpaths[fp.target()]);
+      auto const d = static_cast<double>(fp.duration().count());
+      x = x.has_value() ? std::min(*x, d) : d;
     }
   };
   add(0U, [](api::Transfer& t) -> auto& { return t.default_; });

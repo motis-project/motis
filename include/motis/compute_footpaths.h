@@ -3,6 +3,8 @@
 #include "cista/memory_holder.h"
 
 #include "osr/routing/profile.h"
+
+#include "nigiri/loader/station_footpaths.h"
 #include "osr/types.h"
 
 #include "motis/fwd.h"
@@ -26,6 +28,7 @@ void compute_footpaths(osr::ways const&,
                        nigiri::timetable&,
                        nigiri::mutable_fws_multimap<nigiri::location_idx_t,
                                                     nigiri::footpath>& walks,
+                       nigiri::loader::station_footpaths_t& restricted,
                        platform_matches_t const&,
                        way_matches_storage const*,
                        osr::elevation_storage const*,

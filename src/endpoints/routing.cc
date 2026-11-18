@@ -18,6 +18,7 @@
 #include "prometheus/counter.h"
 #include "prometheus/histogram.h"
 
+#include "utl/enumerate.h"
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/timing.h"
@@ -31,6 +32,7 @@
 #include "osr/routing/sharing_data.h"
 #include "osr/types.h"
 
+#include "nigiri/loader/station_footpaths.h"
 #include "nigiri/common/interval.h"
 #include "nigiri/constants.h"
 #include "nigiri/for_each_meta.h"
@@ -44,6 +46,8 @@
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
+#include "nigiri/routing/transfer_time_settings.h"
+#include "nigiri/station_paths.h"
 #if defined(NIGIRI_CUDA)
 #include "nigiri/routing/gpu/raptor.h"
 #endif
@@ -268,6 +272,113 @@ bool include_rental_provider(
                                   end(*rental_providers));
 }
 
+// First/last mile through station entrances: street route to the entrances
+// near pos, then the best usable entrance path to each stop. The street
+// search is kept under entrance_search_mode() with the entrance index as
+// destination key.
+void add_entrance_offsets(routing const& r,
+                          n::rt_timetable const* rtt,
+                          osr::location const& pos,
+                          osr::direction const dir,
+                          osr::search_profile const profile,
+                          osr_parameters const& osr_params,
+                          std::chrono::seconds const max,
+                          double const max_matching_distance,
+                          osr::elevation_storage const* elevations,
+                          std::vector<n::routing::offset>& offsets,
+                          one_to_many_side* const states) {
+  if (r.station_paths_ == nullptr || r.entrance_rtree_ == nullptr) {
+    return;
+  }
+
+  auto const& sp = *r.station_paths_;
+  auto const entrances = r.entrance_rtree_->in_radius(
+      pos.pos_, get_max_distance(profile, osr_params, max));
+  if (entrances.empty()) {
+    return;
+  }
+
+  auto const entrance_locations =
+      utl::to_vec(entrances, [&](n::station_entrance_idx_t const e) {
+        auto const& node = sp.nodes_[sp.entrances_[e].node_];
+        return osr::location{.pos_ = node.pos_,
+                             .lvl_ = node.has_level()
+                                         ? osr::level_t{node.level_}
+                                         : osr::level_t{osr::kNoLevel}};
+      });
+  auto const params = to_profile_parameters(profile, osr_params);
+  auto pos_match = osr::match_result{};
+  r.l_->match(params, pos, false, dir, max_matching_distance, nullptr, profile,
+              {}, pos_match);
+  auto entrance_matches = osr::match_result{};
+  for (auto const& x : entrance_locations) {
+    r.l_->match(params, x, true, dir, max_matching_distance, nullptr, profile,
+                {}, entrance_matches);
+  }
+  auto state = osr::route_one_to_many(
+      params, *r.w_, *r.l_, profile, pos, entrance_locations,
+      pos_match[osr::match_idx_t{0U}], entrance_matches, max, dir, nullptr,
+      nullptr, elevations);
+  auto const& street = state->results();
+
+  auto const& station_profile =
+      *n::loader::kStationProfiles[profile == osr::search_profile::kWheelchair
+                                       ? n::kWheelchairProfile
+                                       : n::kDefaultProfile];
+  auto const is_exit = dir == osr::direction::kBackward;
+  auto best =
+      hash_map<n::location_idx_t,
+               std::pair<std::uint32_t, n::station_entrance_path_idx_t>>{};
+  auto dest_idx = hash_map<n::location_idx_t, std::size_t>{};
+  for (auto const [i, e] : utl::enumerate(entrances)) {
+    if (!street[i].has_value()) {
+      continue;
+    }
+    dest_idx.emplace(n::location_idx_t{to_idx(e)}, i);
+    auto const street_seconds =
+        static_cast<std::uint32_t>(street[i]->duration_.count());
+    for (auto const& p : sp.entrance_paths(e, is_exit)) {
+      auto const path_idx = to_idx(sp.get_idx(p));
+      if ((rtt != nullptr && path_idx < rtt->blocked_entrance_paths_.size() &&
+           rtt->blocked_entrance_paths_.test(path_idx)) ||
+          (p.restriction_.flags_ & station_profile.forbidden_) != 0U ||
+          !n::routing::is_usable(p.restriction_,
+                                 osr_params.station_restrictions_)) {
+        continue;
+      }
+      auto const seconds =
+          street_seconds +
+          static_cast<std::uint32_t>(
+              std::ceil(static_cast<double>(p.walk_seconds_) *
+                        station_profile.walk_factor_)) +
+          p.fixed_seconds_ +
+          static_cast<std::uint32_t>(
+              osr_params.station_restrictions_.get_penalty(p.restriction_) *
+              60);
+      if (seconds > static_cast<std::uint32_t>(max.count())) {
+        continue;
+      }
+      auto const [it, is_new] =
+          best.emplace(p.l_, std::pair{seconds, sp.get_idx(p)});
+      if (!is_new && seconds < it->second.first) {
+        it->second = {seconds, sp.get_idx(p)};
+      }
+    }
+  }
+
+  for (auto const& [l, x] : best) {
+    offsets.emplace_back(
+        l, n::duration_t{static_cast<unsigned>(std::ceil(x.first / 60.0))},
+        entrance_transport_mode(profile, to_idx(x.second)));
+  }
+
+  if (states != nullptr && !dest_idx.empty()) {
+    states->by_mode_[entrance_search_mode(profile)] = states->searches_.size();
+    states->searches_.emplace_back(
+        one_to_many_search{std::move(state), std::move(dest_idx), {}});
+  }
+}
+
 std::vector<n::routing::offset> get_offsets(
     routing const& r,
     n::rt_timetable const* rtt,
@@ -317,8 +428,16 @@ std::vector<n::routing::offset> get_offsets(
     }
 
     auto const max_dist = get_max_distance(profile, osr_params, max);
-    auto const near_stops =
+    auto near_stops =
         get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, max_dist);
+    auto const is_walk = m == api::ModeEnum::WALK;
+    if (is_walk && r.station_paths_ != nullptr) {
+      // Reached through their entrances only (see add_entrance_offsets).
+      std::erase_if(near_stops, [&](n::location_idx_t const l) {
+        return r.station_paths_->is_entrance_only(
+            r.tt_->locations_.get_base_idx(l));
+      });
+    }
     auto const near_stop_locations = utl::to_vec(
         near_stops,
         [&](n::location_idx_t const l) { return stop_to_osr_location(r, l); });
@@ -483,6 +602,11 @@ std::vector<n::routing::offset> get_offsets(
                                    std::ceil(p->duration_.count() / 60.0))},
                                mode);
         }
+      }
+      if (is_walk) {
+        add_entrance_offsets(r, rtt, pos, dir, profile, osr_params, max,
+                             max_matching_distance, elevations, offsets,
+                             states);
       }
     }
 
@@ -1110,7 +1234,7 @@ api::plan_response routing::route(api::plan_params const& query,
         .require_bike_transport_ = query.requireBikeTransport_,
         .require_car_transport_ = query.requireCarTransport_,
         .no_compulsory_reservation_ = query.noCompulsoryReservation_,
-        .transfer_time_settings_ = get_transfer_time_settings(query),
+        .transfer_time_settings_ = get_transfer_time_settings(*tt_, query),
         .via_stops_ = get_via_stops(*tt_, *tags_, query.via_,
                                     query.viaMinimumStay_, query.arriveBy_),
         .fastest_direct_ = fastest_direct == kInfinityDuration
@@ -1198,9 +1322,10 @@ api::plan_response routing::route(api::plan_params const& query,
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
                  !q.td_start_.empty() || !q.td_dest_.empty() ||
-                 !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-                 q.require_bike_transport_ || q.require_car_transport_ ||
-                 q.no_compulsory_reservation_) {
+                 !q.transfer_time_settings_.default_ ||
+                 !q.transfer_time_settings_.restrictions_.is_default() ||
+                 !q.via_stops_.empty() || q.require_bike_transport_ ||
+                 q.require_car_transport_ || q.no_compulsory_reservation_) {
         auto raptor_state = n::routing::raptor_state{};
         r = n::routing::raptor_search(
             *tt_, rtt, search_state, raptor_state, q,
@@ -1278,7 +1403,10 @@ api::plan_response routing::route(api::plan_params const& query,
                         static_cast<std::size_t>(query.numLegAlternatives_),
                         query.arriveBy_}}
                   : alternatives_context{},
-              &fares_time, one_to_many_view{&otm_searches});
+              &fares_time, one_to_many_view{&otm_searches},
+              station_path_context{.paths_ = station_paths_,
+                                   .prf_idx_ = q.prf_idx_,
+                                   .settings_ = q.transfer_time_settings_});
         });
 
     return {
@@ -1325,7 +1453,9 @@ api::plan_response routing_post::operator()(
                          .tz_ = tz_,
                          .odm_bounds_ = odm_bounds_,
                          .ride_sharing_bounds_ = ride_sharing_bounds_,
-                         .metrics_ = metrics_
+                         .metrics_ = metrics_,
+                         .station_paths_ = station_paths_,
+                         .entrance_rtree_ = entrance_rtree_
 #if defined(NIGIRI_CUDA)
                          ,
                          .gpu_pool_ = gpu_pool_

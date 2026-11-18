@@ -27,6 +27,7 @@
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
+#include "nigiri/station_paths.h"
 #include "nigiri/timetable.h"
 
 #if defined(NIGIRI_CUDA)
@@ -35,6 +36,7 @@
 
 #include "motis/config.h"
 #include "motis/constants.h"
+#include "motis/elevators/station_elevators.h"
 #include "motis/elevators/update_elevators.h"
 #include "motis/endpoints/initial.h"
 #include "motis/flex/flex_areas.h"
@@ -177,6 +179,7 @@ data::data(std::filesystem::path p, config const& c)
   auto tt = std::async(std::launch::async, [&]() {
     if (c.timetable_) {
       load_tt("tt.bin");
+      load_station_paths();
       if (c.timetable_->with_shapes_) {
         load_shapes();
       }
@@ -255,6 +258,7 @@ data::data(std::filesystem::path p, config const& c)
                               cista::mmap::protection::READ}
                       .view(),
             *new_rtt);
+        block_station_elevators(*tt_, station_paths_.get(), *rt_->e_, *new_rtt);
         metrics_->gpu_rt_timetable_.Set(finalize_rtt(*tt_, *new_rtt) ? 1.0
                                                                      : 0.0);
         rt_->rtt_ = std::move(new_rtt);
@@ -368,6 +372,29 @@ void data::load_shapes() {
   shapes_ = {};
   shapes_ = std::make_unique<nigiri::shapes_storage>(
       nigiri::shapes_storage{path_, cista::mmap::protection::READ});
+}
+
+void data::load_station_paths() {
+  station_paths_ = {};
+  entrance_rtree_ = {};
+  if (!std::filesystem::is_directory(path_ / "station_paths")) {
+    return;
+  }
+  station_paths_ = std::make_unique<nigiri::station_paths>(
+      path_ / "station_paths", cista::mmap::protection::READ);
+
+  // Entrances with paths: first/last mile attaches there.
+  entrance_rtree_ =
+      std::make_unique<point_rtree<nigiri::station_entrance_idx_t>>();
+  auto const& sp = *station_paths_;
+  auto prev = nigiri::station_entrance_idx_t::invalid();
+  for (auto const& p : sp.entrance_paths_) {
+    if (p.entrance_ != prev) {
+      prev = p.entrance_;
+      entrance_rtree_->add(sp.nodes_[sp.entrances_[p.entrance_].node_].pos_,
+                           p.entrance_);
+    }
+  }
 }
 
 void data::load_railviz() {

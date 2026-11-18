@@ -12,6 +12,7 @@
 #include "nigiri/routing/clasz_mask.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
+#include "nigiri/station_paths.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/elevators/elevators.h"
@@ -142,6 +143,8 @@ struct routing {
   odm::bounds const* odm_bounds_;
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
+  nigiri::station_paths const* station_paths_{nullptr};
+  point_rtree<nigiri::station_entrance_idx_t> const* entrance_rtree_{nullptr};
 #if defined(NIGIRI_CUDA)
   gpu_search_pool* gpu_pool_{nullptr};
 #endif
@@ -171,6 +174,8 @@ struct routing_post {
   odm::bounds const* odm_bounds_;
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
+  nigiri::station_paths const* station_paths_{nullptr};
+  point_rtree<nigiri::station_entrance_idx_t> const* entrance_rtree_{nullptr};
 #if defined(NIGIRI_CUDA)
   gpu_search_pool* gpu_pool_{nullptr};
 #endif

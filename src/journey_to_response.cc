@@ -22,13 +22,16 @@
 #include "geo/polyline_format.h"
 
 #include "nigiri/loader/gtfs/stop_seq_number_encoding.h"
+#include "nigiri/loader/station_footpaths.h"
 #include "nigiri/common/split_duration.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/leg_alternatives.h"
+#include "nigiri/routing/transfers.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
 #include "nigiri/rt/service_alert.h"
 #include "nigiri/special_stations.h"
+#include "nigiri/station_paths.h"
 #include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
@@ -279,6 +282,126 @@ std::optional<api::TicketUrls> get_ticketing_urls(
       .ios_ = make(tt.ticketing_links_.ios_[ticketing_idx].view())};
 }
 
+api::DirectionEnum to_direction(n::station_piece_mode const m) {
+  switch (m) {
+    case n::station_piece_mode::kElevator: return api::DirectionEnum::ELEVATOR;
+    case n::station_piece_mode::kStairs: [[fallthrough]];
+    case n::station_piece_mode::kEscalator: return api::DirectionEnum::STAIRS;
+    case n::station_piece_mode::kWalkway: [[fallthrough]];
+    case n::station_piece_mode::kTravelator: [[fallthrough]];
+    case n::station_piece_mode::kFareGate: [[fallthrough]];
+    case n::station_piece_mode::kExitGate: break;
+  }
+  return api::DirectionEnum::CONTINUE;
+}
+
+// Walk leg along station graph pieces (steps, levels, node coordinates).
+template <typename Pieces>
+api::Itinerary station_pieces_itinerary(n::station_paths const&,
+                                        Pieces const&,
+                                        api::Place const& from,
+                                        api::Place const& to,
+                                        n::unixtime_t start_time,
+                                        n::unixtime_t end_time,
+                                        unsigned api_version);
+
+// Footpath leg along the stored station graph path, if the footpath from ->
+// to the query's settings select is a station graph footpath.
+std::optional<api::Itinerary> station_path_itinerary(
+    n::timetable const& tt,
+    n::rt_timetable const* rtt,
+    station_path_context const& ctx,
+    n::location_idx_t const from_l,
+    n::location_idx_t const to_l,
+    api::Place const& from,
+    api::Place const& to,
+    n::unixtime_t const start_time,
+    n::unixtime_t const end_time,
+    unsigned const api_version) {
+  if (ctx.paths_ == nullptr || ctx.paths_->paths_.size() == 0U ||
+      to_idx(from_l) >= tt.n_locations() || to_idx(to_l) >= tt.n_locations()) {
+    return std::nullopt;
+  }
+  auto const r = n::routing::get_footpath_restriction(
+      tt, ctx.prf_idx_, ctx.settings_, from_l, to_l, rtt);
+  if (!r.has_value()) {
+    return std::nullopt;
+  }
+  auto const& loc = tt.locations_;
+  auto const path_idx =
+      ctx.paths_->find(loc.get_base_idx(from_l), loc.get_base_idx(to_l), *r);
+  if (!path_idx.has_value()) {
+    return std::nullopt;
+  }
+
+  return station_pieces_itinerary(*ctx.paths_,
+                                  ctx.paths_->path_pieces_[*path_idx], from, to,
+                                  start_time, end_time, api_version);
+}
+
+template <typename Pieces>
+api::Itinerary station_pieces_itinerary(n::station_paths const& paths,
+                                        Pieces const& pieces,
+                                        api::Place const& from,
+                                        api::Place const& to,
+                                        n::unixtime_t const start_time,
+                                        n::unixtime_t const end_time,
+                                        unsigned const api_version) {
+  auto const level = [](n::station_node const& n) {
+    return n.has_level() ? static_cast<double>(n.level_) : 0.0;
+  };
+  auto const to_api_polyline = [&](geo::polyline const& p) {
+    return api_version == 1 ? to_polyline<7>(p) : to_polyline<6>(p);
+  };
+
+  auto itinerary = dummy_itinerary(from, to, api::ModeEnum::WALK, start_time,
+                                   end_time, api_version);
+  auto& leg = itinerary.legs_.front();
+  auto geometry = geo::polyline{};
+  auto const add_point = [&](geo::latlng const& p) {
+    if (geometry.empty() || geometry.back() != p) {
+      geometry.push_back(p);
+    }
+  };
+  if (from.lat_ != 0.0 || from.lon_ != 0.0) {
+    add_point({from.lat_, from.lon_});
+  }
+  auto steps = std::vector<api::StepInstruction>{};
+  auto distance = 0.0;
+  for (auto const piece_idx : pieces) {
+    auto const& piece = paths.pieces_[piece_idx];
+    auto const& a = paths.nodes_[piece.from_];
+    auto const& b = paths.nodes_[piece.to_];
+    auto step_line = geo::polyline{};
+    if (a.has_pos()) {
+      step_line.push_back(a.pos_);
+      add_point(a.pos_);
+    }
+    if (b.has_pos()) {
+      step_line.push_back(b.pos_);
+      add_point(b.pos_);
+    }
+    auto const d =
+        a.has_pos() && b.has_pos() ? geo::distance(a.pos_, b.pos_) : 0.0;
+    distance += d;
+    steps.push_back(api::StepInstruction{
+        .relativeDirection_ = to_direction(piece.mode_),
+        .distance_ = d,
+        .fromLevel_ = level(a),
+        .toLevel_ = level(b),
+        .polyline_ = to_api_polyline(step_line),
+        .streetName_ = std::string{paths.get_string(piece.signpost_)},
+        .exit_ = {},
+        .stayOn_ = false,
+        .area_ = false});
+  }
+  add_point({to.lat_, to.lon_});
+  leg.legGeometry_ = to_api_polyline(geometry);
+  leg.distance_ = distance;
+  leg.steps_ = std::move(steps);
+  return itinerary;
+}
+
 api::Itinerary journey_to_response(
     osr::ways const* w,
     osr::lookup const* l,
@@ -317,7 +440,8 @@ api::Itinerary journey_to_response(
     bool const set_itinerary_id_field,
     alternatives_context const& alternatives,
     std::chrono::nanoseconds* fares_time,
-    one_to_many_view const states) {
+    one_to_many_view const states,
+    station_path_context const& station_ctx) {
   auto const itinerary_start_time = j_in.legs_.front().dep_time_;
   auto const itinerary_end_time = j_in.legs_.back().arr_time_;
   auto j = j_in;
@@ -494,7 +618,7 @@ api::Itinerary journey_to_response(
                      timetable_max_matching_distance, max_matching_distance,
                      api_version, ignore_start_rental_return_constraints,
                      ignore_dest_rental_return_constraints, lang, false, {},
-                     nullptr, alt_states)
+                     nullptr, alt_states, station_ctx)
               .legs_;
         });
       };
@@ -747,6 +871,15 @@ api::Itinerary journey_to_response(
           }
         },
         [&](n::footpath) {
+          if (detailed_transfers) {
+            if (auto station_path = station_path_itinerary(
+                    tt, rtt, station_ctx, j_leg.from_, j_leg.to_, from, to,
+                    j_leg.dep_time_, j_leg.arr_time_, api_version);
+                station_path.has_value()) {
+              append(std::move(*station_path));
+              return;
+            }
+          }
           append(
               w && l && detailed_transfers
                   ? street_routing(
@@ -768,6 +901,77 @@ api::Itinerary journey_to_response(
         },
         [&](n::routing::offset const x) {
           auto const mode = x.mode();
+          if (auto const entrance_path = get_entrance_path(mode);
+              entrance_path.has_value() && station_ctx.paths_ != nullptr &&
+              w != nullptr && l != nullptr) {
+            // Street to/from the entrance + station path to/from the stop.
+            auto const& sp = *station_ctx.paths_;
+            auto const& p = sp.entrance_paths_[n::station_entrance_path_idx_t{
+                *entrance_path}];
+            auto const& entrance = sp.entrances_[p.entrance_];
+            auto const& node = sp.nodes_[entrance.node_];
+            auto entrance_place = api::Place{};
+            entrance_place.name_ = sp.get_string(entrance.name_);
+            entrance_place.lat_ = node.pos_.lat_;
+            entrance_place.lon_ = node.pos_.lng_;
+            if (node.has_level()) {
+              entrance_place.level_ = static_cast<double>(node.level_);
+            }
+            entrance_place.vertexType_ = api::VertexTypeEnum::NORMAL;
+
+            auto const profile = profile_of(mode);
+            auto const& station_profile =
+                *n::loader::kStationProfiles
+                    [profile == osr::search_profile::kWheelchair
+                         ? n::kWheelchairProfile
+                         : n::kDefaultProfile];
+            auto const station_minutes = n::duration_t{static_cast<unsigned>(
+                std::ceil((std::ceil(static_cast<double>(p.walk_seconds_) *
+                                     station_profile.walk_factor_) +
+                           p.fixed_seconds_) /
+                          60.0) +
+                osr_params.station_restrictions_.get_penalty(p.restriction_))};
+            auto const leg_duration = std::chrono::duration_cast<n::duration_t>(
+                j_leg.arr_time_ - j_leg.dep_time_);
+            auto const station_duration =
+                std::min(station_minutes, leg_duration);
+            auto const street_mode = transport_mode(profile);
+            auto const precomputed = states.find(
+                j_leg.from_, j_leg.to_, entrance_search_mode(profile),
+                n::location_idx_t{to_idx(p.entrance_)});
+            auto const street = [&](api::Place const& a, api::Place const& b,
+                                    n::unixtime_t const start,
+                                    n::unixtime_t const end) {
+              return street_routing(
+                  *w, *l, e, elevations, lang, a, b,
+                  default_output{*w, street_mode}, start, end,
+                  max_matching_distance, osr_params, cache, *blocked_mem,
+                  api_version, detailed_legs,
+                  std::chrono::duration_cast<std::chrono::seconds>(end -
+                                                                   start) +
+                      std::chrono::minutes{5},
+                  precomputed);
+            };
+            auto const station = [&](api::Place const& a, api::Place const& b,
+                                     n::unixtime_t const start,
+                                     n::unixtime_t const end) {
+              return station_pieces_itinerary(
+                  sp,
+                  sp.entrance_path_pieces_[n::station_entrance_path_idx_t{
+                      *entrance_path}],
+                  a, b, start, end, api_version);
+            };
+            if (p.is_exit_) {
+              auto const t = j_leg.dep_time_ + station_duration;
+              append(station(from, entrance_place, j_leg.dep_time_, t));
+              append(street(entrance_place, to, t, j_leg.arr_time_));
+            } else {
+              auto const t = j_leg.arr_time_ - station_duration;
+              append(street(from, entrance_place, j_leg.dep_time_, t));
+              append(station(entrance_place, to, t, j_leg.arr_time_));
+            }
+            return;
+          }
           if (w == nullptr || l == nullptr || is_client_offset(mode)) {
             // no OSM data loaded (e.g. `radius` offsets) or client-provided
             // offset (duration only, no path) -> crow-fly leg

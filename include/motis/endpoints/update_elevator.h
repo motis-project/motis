@@ -28,6 +28,7 @@ struct update_elevator {
   elevator_id_osm_mapping_t const* elevator_ids_;
   platform_matches_t const& matches_;
   std::shared_ptr<rt>& rt_;
+  nigiri::station_paths const* station_paths_{nullptr};
 };
 
 }  // namespace motis::ep

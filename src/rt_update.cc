@@ -27,6 +27,7 @@
 
 #include "motis/config.h"
 #include "motis/data.h"
+#include "motis/elevators/station_elevators.h"
 #include "motis/elevators/update_elevators.h"
 #include "motis/http_req.h"
 #include "motis/railviz.h"
@@ -335,6 +336,9 @@ awaitable<void> update_rt(config const& c,
   } else {
     elevators = std::move(d.rt_->e_);
   }
+  if (elevators != nullptr) {
+    block_station_elevators(*d.tt_, d.station_paths_.get(), *elevators, *rtt);
+  }
   d.metrics_->gpu_rt_timetable_.Set(finalize_rtt(*d.tt_, *rtt) ? 1.0 : 0.0);
 
   // Update real-time timetable shared pointer.
@@ -353,6 +357,9 @@ void apply_canned_rt_update(config const& c,
   auto rtt = std::make_unique<n::rt_timetable>(
       n::rt::create_rt_timetable(*d.tt_, day));
   apply_canned(d, endpoints, *rtt);
+  if (d.rt_->e_ != nullptr) {
+    block_station_elevators(*d.tt_, d.station_paths_.get(), *d.rt_->e_, *rtt);
+  }
   d.metrics_->gpu_rt_timetable_.Set(finalize_rtt(*d.tt_, *rtt) ? 1.0 : 0.0);
 
   auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);

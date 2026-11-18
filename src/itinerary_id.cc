@@ -803,7 +803,12 @@ api::Itinerary reconstruct_itinerary(
                stop_times_ep.config_.timetable_.value().max_matching_distance_,
                flm.max_matching_distance_, 6U, false, false, lang,
                /*set_itinerary_id_field=*/false, alternatives, nullptr,
-               one_to_many_view{&otm_searches})
+               one_to_many_view{&otm_searches},
+               station_path_context{
+                   .paths_ = routing.station_paths_,
+                   .prf_idx_ = safe_prf_idx,
+                   .settings_ = {.restrictions_ =
+                                     flm.osr_params_.station_restrictions_}})
         .legs_;
   };
 
@@ -856,6 +861,8 @@ api::Itinerary reconstruct_itinerary(
 
     auto q = n::routing::query{};
     q.prf_idx_ = safe_prf_idx;
+    q.transfer_time_settings_.restrictions_ =
+        flm.osr_params_.station_restrictions_;
     auto const offs = std::vector<n::routing::offset>{
         {change_location(*next, false), n::duration_t{0}, kWalkTransportMode}};
 
@@ -906,7 +913,9 @@ api::Itinerary reconstruct_itinerary(
             .allowed_claszes_ = allowed_claszes,
             .require_bike_transport_ = require_bike_transport,
             .require_car_transport_ = require_car_transport,
-            .no_compulsory_reservation_ = no_compulsory_reservation},
+            .no_compulsory_reservation_ = no_compulsory_reservation,
+            .transfer_time_settings_ =
+                {.restrictions_ = flm.osr_params_.station_restrictions_}},
         has_prev_transit ? change_location(*legs[i - 2U].transit_, true)
                          : n::location_idx_t::invalid(),
         has_next_transit ? change_location(*legs[i + 2U].transit_, false)

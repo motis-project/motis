@@ -26,6 +26,7 @@ namespace nigiri {
 struct timetable;
 struct rt_timetable;
 struct shapes_storage;
+struct station_paths;
 enum class rt_data_state : std::uint8_t;
 
 namespace rt {

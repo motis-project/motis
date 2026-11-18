@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "nigiri/routing/journey.h"
+#include "nigiri/routing/transfer_time_settings.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/service_alert.h"
 #include "nigiri/types.h"
@@ -49,6 +50,14 @@ using alternatives_context = std::variant<
     // precomputed
     std::vector<nigiri::routing::journey>>;
 
+// Footpaths through station graphs: geometry and steps from the stored path
+// of the footpath the query's settings select.
+struct station_path_context {
+  nigiri::station_paths const* paths_{nullptr};
+  nigiri::profile_idx_t prf_idx_{nigiri::kDefaultProfile};
+  nigiri::routing::transfer_time_settings settings_{};
+};
+
 api::Itinerary journey_to_response(
     osr::ways const*,
     osr::lookup const*,
@@ -87,6 +96,7 @@ api::Itinerary journey_to_response(
     bool const set_itinerary_id_field = true,
     alternatives_context const& alternatives = {},
     std::chrono::nanoseconds* fares_time = nullptr,
-    one_to_many_view states = {});
+    one_to_many_view states = {},
+    station_path_context const& station_ctx = {});
 
 }  // namespace motis

@@ -10,6 +10,7 @@
 #include "date/date.h"
 
 #include "nigiri/rt/vdv_aus.h"
+#include "nigiri/station_paths.h"
 #include "nigiri/types.h"
 
 #include "osr/types.h"
@@ -83,6 +84,7 @@ struct data {
   void load_tt(std::filesystem::path const&);
   void load_flex_areas();
   void load_shapes();
+  void load_station_paths();
   void load_railviz();
   void load_tbd();
   void load_geocoder();
@@ -101,9 +103,9 @@ struct data {
     return std::tie(config_, initial_response_, t_, adr_ext_, f_, tz_, r_, tc_,
                     w_, pl_, l_, elevations_, tt_, tbd_, tags_, location_rtree_,
                     elevator_nodes_, elevator_osm_mapping_, shapes_,
-                    railviz_static_, matches_, way_matches_, rt_, gbfs_,
-                    odm_bounds_, ride_sharing_bounds_, flex_areas_, metrics_,
-                    auser_
+                    station_paths_, entrance_rtree_, railviz_static_, matches_,
+                    way_matches_, rt_, gbfs_, odm_bounds_, ride_sharing_bounds_,
+                    flex_areas_, metrics_, auser_
 #if defined(NIGIRI_CUDA)
                     ,
                     gpu_tt_, gpu_pool_
@@ -132,6 +134,8 @@ struct data {
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<elevator_id_osm_mapping_t> elevator_osm_mapping_;
   ptr<nigiri::shapes_storage> shapes_;
+  ptr<nigiri::station_paths> station_paths_;
+  ptr<point_rtree<nigiri::station_entrance_idx_t>> entrance_rtree_;
   ptr<railviz_static_index> railviz_static_;
   cista::wrapped<vector_map<nigiri::location_idx_t, osr::platform_idx_t>>
       matches_;

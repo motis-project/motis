@@ -1,5 +1,7 @@
 #pragma once
 
+#include "osr/routing/profiles/foot.h"
+
 #include <cstdint>
 #include <functional>
 
@@ -7,6 +9,8 @@
 
 #include "osr/routing/parameters.h"
 #include "osr/routing/profile.h"
+
+#include "nigiri/routing/transfer_time_settings.h"
 
 #include "motis-api/motis-api.h"
 
@@ -46,6 +50,9 @@ struct osr_parameters {
   bool hgv_trailer_{kHgvTrailer};
   std::uint8_t hgv_top_speed_km_h_{kHgvTopSpeedKmh};
   bool hgv_low_emission_zone_access_{kHgvLowEmissionZoneAccess};
+  osr::foot_accessibility accessibility_{};
+  // Station graph paths of the first/last mile (entrance <-> platform).
+  nigiri::routing::footpath_restriction_settings station_restrictions_{};
 };
 
 osr_parameters get_osr_parameters(api::plan_params const&);

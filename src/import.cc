@@ -37,6 +37,7 @@
 #include "nigiri/routing/tb/preprocess.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
+#include "nigiri/station_paths.h"
 #include "nigiri/timetable.h"
 #include "nigiri/timetable_metrics.h"
 
@@ -350,7 +351,8 @@ void import(config const& c,
 
   auto const compute_walks =
       [&](n::timetable& tt,
-          n::mutable_fws_multimap<n::location_idx_t, n::footpath>& walks) {
+          n::mutable_fws_multimap<n::location_idx_t, n::footpath>& walks,
+          n::loader::station_footpaths_t& restricted) {
         auto d = data{data_path};
         d.load_osr();
 
@@ -363,10 +365,6 @@ void import(config const& c,
              .max_matching_distance_ = c.timetable_->max_matching_distance_,
              .extend_missing_ = c.timetable_->extend_missing_footpaths_,
              .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
-            {.profile_ = osr::search_profile::kWheelchair,
-             .profile_idx_ = n::kWheelchairProfile,
-             .max_matching_distance_ = 8.0,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
             {.profile_ = osr::search_profile::kCar,
              .profile_idx_ = n::kCarProfile,
              .max_matching_distance_ = 250.0,
@@ -376,7 +374,7 @@ void import(config const& c,
                  return tt.is_flag_set(nigiri::kCarsAllowed, r);
                });
              }}};
-        compute_footpaths(*d.w_, *d.l_, *d.pl_, tt, walks, matches,
+        compute_footpaths(*d.w_, *d.l_, *d.pl_, tt, walks, restricted, matches,
                           way_matches.has_value() ? &*way_matches : nullptr,
                           d.elevations_.get(), profiles);
       };
@@ -426,6 +424,9 @@ void import(config const& c,
               keep_routed_shape_data);
         }
 
+        auto station_paths = n::station_paths{data_path / "station_paths",
+                                              cista::mmap::protection::WRITE};
+
         auto tags = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
         auto tt = cista::wrapped{cista::raw::make_unique<n::timetable>(nl::load(
             utl::to_vec(
@@ -473,7 +474,8 @@ void import(config const& c,
              .compute_walks_ = c.osr_footpath_
                                    ? decltype(n::loader::finalize_options::
                                                   compute_walks_){compute_walks}
-                                   : nullptr},
+                                   : nullptr,
+             .station_paths_ = &station_paths},
             interval, assistance.get(), shapes.get(), false))};
 
         tt->write(data_path / "tt.bin");

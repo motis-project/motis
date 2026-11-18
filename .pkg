@@ -36,8 +36,8 @@
   commit=d1d445326a5d3ec77e14394fee60962d08894ba0
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
-  branch=master
-  commit=7575542b44cc6ea4015266b681b85b3be1fc5824
+  branch=pathways1
+  commit=6fb14ddc6366a3b6cf7205575102fd56b5020e38
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
@@ -48,8 +48,8 @@
   commit=f2240dc890f3bf68fe6fa5a80450e93aab09578e
 [osr]
   url=git@github.com:motis-project/osr.git
-  branch=master
-  commit=4bc8b62e8cdc816c15010058674d4ec239475919
+  branch=pathways1
+  commit=89da01ed2101e3ac6f199fbfd28abbf09c5747f8
 [prometheus-cpp]
   url=git@github.com:motis-project/prometheus-cpp.git
   branch=master

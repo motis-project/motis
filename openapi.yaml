@@ -201,6 +201,93 @@ paths:
             type: number
             default: 1.0
 
+        - name: accessibilityProfile
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            User group whose requirements the footpaths through stations with
+            accessibility data (e.g. GTFS pathways) have to meet. Presets
+            following the DELFI handbook on barrier-free travel information:
+              - `WHEELCHAIR`: no stairs, escalators or steps, slope <= 6 %, width >= 90 cm
+              - `WHEELCHAIR_ASSISTED`: no stairs or escalators, slope <= 12 %, width >= 90 cm
+              - `WALKER`: no stairs or escalators, slope <= 6 %, width >= 90 cm
+
+            `NONE` with `pedestrianProfile=WHEELCHAIR` uses `WHEELCHAIR`.
+          schema:
+            $ref: '#/components/schemas/AccessibilityProfile'
+            default: NONE
+
+        - name: avoidWalkFeatures
+          in: query
+          required: false
+          description: |
+            Optional. Footpaths through stations with accessibility data
+            (e.g. GTFS pathways) avoid these features, in addition to the ones
+            excluded by `accessibilityProfile`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/WalkFeature'
+          explode: false
+
+        - name: penalizedWalkFeatures
+          in: query
+          required: false
+          description: |
+            Optional. Footpaths through stations with accessibility data that
+            contain one of these features take `walkFeaturePenalty` minutes
+            longer (once per feature), e.g. to prefer ramps over elevators.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/WalkFeature'
+          explode: false
+
+        - name: walkFeaturePenalty
+          in: query
+          required: false
+          description: |
+            Optional. Default is 2 minutes. Penalty in minutes for each feature
+            in `penalizedWalkFeatures` (replaces the penalty of the
+            `accessibilityProfile` preset for that feature).
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 60
+            default: 2
+
+        - name: maxSlope
+          in: query
+          required: false
+          description: |
+            Optional. Maximum slope in percent of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          schema:
+            type: number
+
+        - name: minWidth
+          in: query
+          required: false
+          description: |
+            Optional. Minimum width in meters of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          schema:
+            type: number
+
+        - name: strictAccessibility
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            `true`: footpath segments without slope / width data fail the
+            `maxSlope` / `minWidth` limits. `false`: they pass.
+          schema:
+            type: boolean
+            default: false
+
         - name: maxMatchingDistance
           in: query
           required: false
@@ -1473,6 +1560,93 @@ paths:
             type: number
             default: 1.0
 
+        - name: accessibilityProfile
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            User group whose requirements the footpaths through stations with
+            accessibility data (e.g. GTFS pathways) have to meet. Presets
+            following the DELFI handbook on barrier-free travel information:
+              - `WHEELCHAIR`: no stairs, escalators or steps, slope <= 6 %, width >= 90 cm
+              - `WHEELCHAIR_ASSISTED`: no stairs or escalators, slope <= 12 %, width >= 90 cm
+              - `WALKER`: no stairs or escalators, slope <= 6 %, width >= 90 cm
+
+            `NONE` with `pedestrianProfile=WHEELCHAIR` uses `WHEELCHAIR`.
+          schema:
+            $ref: '#/components/schemas/AccessibilityProfile'
+            default: NONE
+
+        - name: avoidWalkFeatures
+          in: query
+          required: false
+          description: |
+            Optional. Footpaths through stations with accessibility data
+            (e.g. GTFS pathways) avoid these features, in addition to the ones
+            excluded by `accessibilityProfile`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/WalkFeature'
+          explode: false
+
+        - name: penalizedWalkFeatures
+          in: query
+          required: false
+          description: |
+            Optional. Footpaths through stations with accessibility data that
+            contain one of these features take `walkFeaturePenalty` minutes
+            longer (once per feature), e.g. to prefer ramps over elevators.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/WalkFeature'
+          explode: false
+
+        - name: walkFeaturePenalty
+          in: query
+          required: false
+          description: |
+            Optional. Default is 2 minutes. Penalty in minutes for each feature
+            in `penalizedWalkFeatures` (replaces the penalty of the
+            `accessibilityProfile` preset for that feature).
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 60
+            default: 2
+
+        - name: maxSlope
+          in: query
+          required: false
+          description: |
+            Optional. Maximum slope in percent of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          schema:
+            type: number
+
+        - name: minWidth
+          in: query
+          required: false
+          description: |
+            Optional. Minimum width in meters of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          schema:
+            type: number
+
+        - name: strictAccessibility
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            `true`: footpath segments without slope / width data fail the
+            `maxSlope` / `minWidth` limits. `false`: they pass.
+          schema:
+            type: boolean
+            default: false
+
         - name: useRoutedTransfers
           in: query
           required: false
@@ -1921,6 +2095,93 @@ paths:
           schema:
             type: number
             default: 1.0
+
+        - name: accessibilityProfile
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            User group whose requirements the footpaths through stations with
+            accessibility data (e.g. GTFS pathways) have to meet. Presets
+            following the DELFI handbook on barrier-free travel information:
+              - `WHEELCHAIR`: no stairs, escalators or steps, slope <= 6 %, width >= 90 cm
+              - `WHEELCHAIR_ASSISTED`: no stairs or escalators, slope <= 12 %, width >= 90 cm
+              - `WALKER`: no stairs or escalators, slope <= 6 %, width >= 90 cm
+
+            `NONE` with `pedestrianProfile=WHEELCHAIR` uses `WHEELCHAIR`.
+          schema:
+            $ref: '#/components/schemas/AccessibilityProfile'
+            default: NONE
+
+        - name: avoidWalkFeatures
+          in: query
+          required: false
+          description: |
+            Optional. Footpaths through stations with accessibility data
+            (e.g. GTFS pathways) avoid these features, in addition to the ones
+            excluded by `accessibilityProfile`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/WalkFeature'
+          explode: false
+
+        - name: penalizedWalkFeatures
+          in: query
+          required: false
+          description: |
+            Optional. Footpaths through stations with accessibility data that
+            contain one of these features take `walkFeaturePenalty` minutes
+            longer (once per feature), e.g. to prefer ramps over elevators.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/WalkFeature'
+          explode: false
+
+        - name: walkFeaturePenalty
+          in: query
+          required: false
+          description: |
+            Optional. Default is 2 minutes. Penalty in minutes for each feature
+            in `penalizedWalkFeatures` (replaces the penalty of the
+            `accessibilityProfile` preset for that feature).
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 60
+            default: 2
+
+        - name: maxSlope
+          in: query
+          required: false
+          description: |
+            Optional. Maximum slope in percent of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          schema:
+            type: number
+
+        - name: minWidth
+          in: query
+          required: false
+          description: |
+            Optional. Minimum width in meters of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          schema:
+            type: number
+
+        - name: strictAccessibility
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            `true`: footpath segments without slope / width data fail the
+            `maxSlope` / `minWidth` limits. `false`: they pass.
+          schema:
+            type: boolean
+            default: false
 
         - name: maxMatchingDistance
           in: query
@@ -2579,6 +2840,93 @@ paths:
           schema:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
+        - name: accessibilityProfile
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            User group whose requirements the footpaths through stations with
+            accessibility data (e.g. GTFS pathways) have to meet. Presets
+            following the DELFI handbook on barrier-free travel information:
+              - `WHEELCHAIR`: no stairs, escalators or steps, slope <= 6 %, width >= 90 cm
+              - `WHEELCHAIR_ASSISTED`: no stairs or escalators, slope <= 12 %, width >= 90 cm
+              - `WALKER`: no stairs or escalators, slope <= 6 %, width >= 90 cm
+
+            `NONE` with `pedestrianProfile=WHEELCHAIR` uses `WHEELCHAIR`.
+          schema:
+            $ref: '#/components/schemas/AccessibilityProfile'
+            default: NONE
+
+        - name: avoidWalkFeatures
+          in: query
+          required: false
+          description: |
+            Optional. Footpaths through stations with accessibility data
+            (e.g. GTFS pathways) avoid these features, in addition to the ones
+            excluded by `accessibilityProfile`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/WalkFeature'
+          explode: false
+
+        - name: penalizedWalkFeatures
+          in: query
+          required: false
+          description: |
+            Optional. Footpaths through stations with accessibility data that
+            contain one of these features take `walkFeaturePenalty` minutes
+            longer (once per feature), e.g. to prefer ramps over elevators.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/WalkFeature'
+          explode: false
+
+        - name: walkFeaturePenalty
+          in: query
+          required: false
+          description: |
+            Optional. Default is 2 minutes. Penalty in minutes for each feature
+            in `penalizedWalkFeatures` (replaces the penalty of the
+            `accessibilityProfile` preset for that feature).
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 60
+            default: 2
+
+        - name: maxSlope
+          in: query
+          required: false
+          description: |
+            Optional. Maximum slope in percent of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          schema:
+            type: number
+
+        - name: minWidth
+          in: query
+          required: false
+          description: |
+            Optional. Minimum width in meters of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          schema:
+            type: number
+
+        - name: strictAccessibility
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            `true`: footpath segments without slope / width data fail the
+            `maxSlope` / `minWidth` limits. `false`: they pass.
+          schema:
+            type: boolean
+            default: false
+
         - name: useRoutedTransfers
           in: query
           required: false
@@ -4299,6 +4647,27 @@ components:
         - OFF
         - REALTIME_ANNOTATION_ONLY
         - REALTIME
+
+    AccessibilityProfile:
+      description: |
+        User groups with requirements on footpaths through stations
+        (DELFI handbook on barrier-free travel information).
+      type: string
+      enum:
+        - NONE
+        - WHEELCHAIR
+        - WHEELCHAIR_ASSISTED
+        - WALKER
+
+    WalkFeature:
+      description: Features of footpaths through stations that can be avoided.
+      type: string
+      enum:
+        - STAIRS
+        - ESCALATOR
+        - ELEVATOR
+        - RAMP
+        - STEP
 
     PedestrianProfile:
       description: Different accessibility profiles for pedestrians.
@@ -6095,6 +6464,56 @@ components:
             Values smaller than 1.0 are not supported.
           type: number
           default: 1.0
+        accessibilityProfile:
+          description: |
+            Optional. Default is `NONE`.
+
+            User group whose requirements the footpaths through stations with
+            accessibility data (e.g. GTFS pathways) have to meet. See the `plan`
+            parameter of the same name.
+          $ref: "#/components/schemas/AccessibilityProfile"
+          default: NONE
+        avoidWalkFeatures:
+          description: |
+            Optional. Footpaths through stations with accessibility data avoid
+            these features, in addition to the ones excluded by `accessibilityProfile`.
+          type: array
+          items:
+            $ref: "#/components/schemas/WalkFeature"
+        penalizedWalkFeatures:
+          description: |
+            Optional. Footpaths through stations with accessibility data that
+            contain one of these features take `walkFeaturePenalty` minutes
+            longer (once per feature).
+          type: array
+          items:
+            $ref: "#/components/schemas/WalkFeature"
+        walkFeaturePenalty:
+          description: |
+            Optional. Default is 2 minutes. Penalty in minutes for each feature
+            in `penalizedWalkFeatures`.
+          type: integer
+          minimum: 0
+          maximum: 60
+          default: 2
+        maxSlope:
+          description: |
+            Optional. Maximum slope in percent of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          type: number
+        minWidth:
+          description: |
+            Optional. Minimum width in meters of footpaths through stations
+            with accessibility data. Replaces the value of `accessibilityProfile`.
+          type: number
+        strictAccessibility:
+          description: |
+            Optional. Default is `false`.
+
+            `true`: footpath segments without slope / width data fail the
+            `maxSlope` / `minWidth` limits. `false`: they pass.
+          type: boolean
+          default: false
         useRoutedTransfers:
           description: |
             Optional. Default is `false`.

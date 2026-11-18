@@ -17,6 +17,10 @@
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/profiles/hgv.h"
 
+#include "nigiri/footpath_restriction.h"
+
+#include "motis/timetable/transfer_time_settings.h"
+
 namespace motis {
 
 template <typename T>
@@ -289,6 +293,49 @@ bool hgv_low_emission_zone_access(T const& params)
       osr_parameters::kHgvLowEmissionZoneAccess);
 }
 
+// Station accessibility settings (nigiri units) -> OSM street constraints.
+// Stairs and escalators are both steps in OSM; single steps (kerbs) are not
+// extracted.
+template <typename T>
+osr::foot_accessibility get_foot_accessibility(T const& params) {
+  if constexpr (requires { params.accessibilityProfile_; }) {
+    using fr = nigiri::footpath_restriction;
+    using frs = nigiri::routing::footpath_restriction_settings;
+    auto const s = get_restriction_settings(params);
+    auto a = osr::foot_accessibility{.strict_ = s.strict_};
+    if ((s.forbidden_ & (fr::kStairs | fr::kEscalator)) != 0U) {
+      a.forbidden_ |= osr::foot_accessibility::kSteps;
+    }
+    if ((s.forbidden_ & fr::kElevator) != 0U) {
+      a.forbidden_ |= osr::foot_accessibility::kElevator;
+    }
+    if ((s.forbidden_ & fr::kRamp) != 0U) {
+      a.forbidden_ |= osr::foot_accessibility::kRamp;
+    }
+    if (s.max_slope_ != frs::kNoSlopeLimit) {
+      a.max_incline_ = static_cast<std::uint16_t>(
+          static_cast<double>(s.max_slope_) * 10.0 / fr::kSlopeStepsPerPercent);
+    }
+    if (s.min_width_ != frs::kNoWidthLimit) {
+      a.min_width_cm_ = static_cast<std::uint16_t>(
+          static_cast<double>(s.min_width_) * 100.0 / fr::kWidthStepsPerMeter);
+    }
+    return a;
+  } else {
+    return {};
+  }
+}
+
+template <typename T>
+nigiri::routing::footpath_restriction_settings get_station_restrictions(
+    T const& params) {
+  if constexpr (requires { params.accessibilityProfile_; }) {
+    return get_restriction_settings(params);
+  } else {
+    return {};
+  }
+}
+
 template <typename T>
 osr_parameters to_osr_parameters(T const& params) {
   return {
@@ -306,6 +353,8 @@ osr_parameters to_osr_parameters(T const& params) {
       .hgv_trailer_ = hgv_trailer(params),
       .hgv_top_speed_km_h_ = hgv_top_speed(params),
       .hgv_low_emission_zone_access_ = hgv_low_emission_zone_access(params),
+      .accessibility_ = get_foot_accessibility(params),
+      .station_restrictions_ = get_station_restrictions(params),
   };
 }
 
@@ -362,10 +411,12 @@ osr::profile_parameters to_profile_parameters(
   switch (p) {
     case osr::search_profile::kFoot:
       return osr::foot<false, osr::elevator_tracking>::parameters{
-          .speed_meters_per_second_ = params.pedestrian_speed_};
+          .speed_meters_per_second_ = params.pedestrian_speed_,
+          .accessibility_ = params.accessibility_};
     case osr::search_profile::kWheelchair:
       return osr::foot<true, osr::elevator_tracking>::parameters{
-          .speed_meters_per_second_ = wheelchair_speed};
+          .speed_meters_per_second_ = wheelchair_speed,
+          .accessibility_ = params.accessibility_};
     case osr::search_profile::kBike:
       return osr::bike<osr::bike_costing::kSafe,
                        osr::kElevationNoCost>::parameters{

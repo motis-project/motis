@@ -7,6 +7,7 @@
 #include "motis/constants.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
+#include "motis/elevators/station_elevators.h"
 #include "motis/get_loc.h"
 #include "motis/railviz.h"
 #include "motis/rt_update.h"
@@ -52,6 +53,7 @@ json::value update_elevator::operator()(json::value const& query) const {
       w_, l_, pl_, tt_, loc_rtree_, new_e, matches_, tasks, rtt, new_rtt,
       std::chrono::seconds{c_.timetable_.value().max_footpath_length_ * 60});
 
+  block_station_elevators(tt_, station_paths_, new_e, new_rtt);
   finalize_rtt(tt_, new_rtt);
 
   auto new_rt = std::make_shared<rt>(
