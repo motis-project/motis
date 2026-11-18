@@ -76,6 +76,10 @@ export const RouteSchema = {
         agencyUrl: {
             type: 'string'
         },
+        agencyWikidataUrl: {
+            description: 'Fully qualified link to the Wikidata (or other Wikibase) item of the agency.',
+            type: 'string'
+        },
         routeColor: {
             type: 'string'
         },
@@ -84,6 +88,10 @@ export const RouteSchema = {
         },
         routeType: {
             type: 'integer'
+        },
+        routeWikidataUrl: {
+            description: 'Fully qualified link to the Wikidata (or other Wikibase) item of the route.',
+            type: 'string'
         }
     }
 } as const;
@@ -667,6 +675,10 @@ export const PlaceSchema = {
             description: "If it's not a root stop, this field contains the `stopId` of the parent stop.",
             type: 'string'
         },
+        wikidataUrl: {
+            description: 'Fully qualified link to the Wikidata (or other Wikibase) item of the stop (or of its parent station if the stop itself has none).',
+            type: 'string'
+        },
         importance: {
             description: 'The importance of the stop between 0-1.',
             type: 'number'
@@ -888,10 +900,18 @@ For non-transit legs, null
         agencyUrl: {
             type: 'string'
         },
+        agencyWikidataUrl: {
+            description: 'Fully qualified link to the Wikidata (or other Wikibase) item of the agency.',
+            type: 'string'
+        },
         routeId: {
             type: 'string'
         },
         routeUrl: {
+            type: 'string'
+        },
+        routeWikidataUrl: {
+            description: 'Fully qualified link to the Wikidata (or other Wikibase) item of the route.',
             type: 'string'
         },
         directionId: {
@@ -1779,6 +1799,10 @@ For non-transit legs, null
         routeUrl: {
             type: 'string'
         },
+        routeWikidataUrl: {
+            description: 'Fully qualified link to the Wikidata (or other Wikibase) item of the route.',
+            type: 'string'
+        },
         directionId: {
             type: 'string'
         },
@@ -1795,6 +1819,10 @@ For non-transit legs, null
             type: 'string'
         },
         agencyUrl: {
+            type: 'string'
+        },
+        agencyWikidataUrl: {
+            description: 'Fully qualified link to the Wikidata (or other Wikibase) item of the agency.',
             type: 'string'
         },
         agencyFareUrl: {
