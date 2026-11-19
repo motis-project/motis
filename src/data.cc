@@ -1,5 +1,6 @@
 #include "motis/data.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <future>
 #include <iostream>
@@ -7,6 +8,7 @@
 #include "cista/io.h"
 
 #include "utl/get_or_create.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/lookup.h"
 #include "utl/read_file.h"
 #include "utl/verify.h"
@@ -55,14 +57,13 @@ namespace n = nigiri;
 namespace motis {
 
 #if defined(NIGIRI_CUDA)
-gpu_search_pool::lease::lease(gpu_search_pool& p,
-                              n::routing::gpu::gpu_raptor_state& s)
-    : pool_{p}, state_{s} {}
+gpu_search_pool::lease::lease(gpu_search_pool& p, unsigned const slot)
+    : pool_{p}, slot_{slot}, state_{*p.states_[slot]}, mc_{p.mc_[slot]} {}
 
 gpu_search_pool::lease::~lease() {
   {
     auto const l = std::scoped_lock{pool_.mutex_};
-    pool_.free_.push_back(&state_);
+    pool_.free_.push_back(slot_);
   }
   pool_.cv_.notify_one();
 }
@@ -77,25 +78,44 @@ gpu_search_pool::gpu_search_pool(n::routing::gpu::gpu_timetable const& gtt,
       if (states_.empty()) {
         throw;
       }
-      std::cerr << "gpu_search_pool: only " << states_.size() << "/" << n
-                << " states allocated: " << e.what() << "\n";
+      n::log(n::log_lvl::error, "motis.gpu",
+             "only {}/{} gpu states allocated: {}", states_.size(), n,
+             e.what());
       break;
     }
   }
-
-  for (auto& s : states_) {
-    free_.push_back(s.get());
+  mc_.resize(states_.size(), false);
+  for (auto i = 0U; i != states_.size(); ++i) {
+    free_.push_back(i);
   }
 }
 
 gpu_search_pool::~gpu_search_pool() = default;
 
-gpu_search_pool::lease gpu_search_pool::acquire() {
+void gpu_search_pool::add_mc_states(unsigned const n) {
+  auto const l = std::scoped_lock{mutex_};
+  for (auto i = 0U; i != std::min<std::size_t>(n, states_.size()); ++i) {
+    mc_[i] = states_[i]->try_mc_state() != nullptr;  // logs a failure
+  }
+  auto const n_mc =
+      static_cast<unsigned>(std::count(begin(mc_), end(mc_), true));
+  if (n_mc != n) {
+    n::log(n::log_lvl::error, "motis.gpu",
+           "only {}/{} gpu mc states allocated (gpu_states={})", n_mc, n,
+           states_.size());
+  }
+}
+
+gpu_search_pool::lease gpu_search_pool::acquire(bool const mc) {
   auto l = std::unique_lock{mutex_};
   cv_.wait(l, [&]() { return !free_.empty(); });
-  auto* s = free_.back();
-  free_.pop_back();
-  return {*this, *s};
+  auto it = utl::find_if(free_, [&](unsigned const s) { return mc_[s] == mc; });
+  if (it == end(free_)) {
+    it = std::prev(end(free_));
+  }
+  auto const slot = *it;
+  free_.erase(it);
+  return {*this, slot};
 }
 #endif
 
@@ -316,6 +336,9 @@ data::data(std::filesystem::path p, config const& c)
     gpu_tt_ = std::make_unique<n::routing::gpu::gpu_timetable>(*tt_);
     gpu_pool_ = std::make_unique<gpu_search_pool>(
         *gpu_tt_, c.server_ ? c.server_->gpu_states_ : 2U);
+    // after the rt timetable upload (finalize_rtt above): rt searches need it
+    // on the device, the mc phases can fall back to the CPU
+    gpu_pool_->add_mc_states(c.server_ ? c.server_->gpu_mc_states_ : 0U);
   }
 #endif
 }

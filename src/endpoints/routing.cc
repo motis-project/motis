@@ -38,6 +38,8 @@
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
+#include "nigiri/routing/raptor/bmraptor.h"
+#include "nigiri/routing/raptor/mcraptor.h"
 #include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
@@ -737,10 +739,14 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     }
   }
   utl::erase_duplicates(itineraries);
-  return {itineraries, fastest_direct != kInfinityDuration
-                           ? std::chrono::round<n::duration_t>(
-                                 fastest_direct * fastest_direct_factor)
-                           : fastest_direct};
+  // a large factor must not overflow the 16 bit minutes of n::duration_t
+  return {itineraries,
+          fastest_direct != kInfinityDuration
+              ? std::chrono::round<n::duration_t>(
+                    std::min(fastest_direct * fastest_direct_factor,
+                             std::chrono::duration<double, std::ratio<60>>{
+                                 kInfinityDuration}))
+              : fastest_direct};
 }
 
 void remove_slower_than_fastest_direct(n::routing::query& q) {
@@ -1166,9 +1172,61 @@ api::plan_response routing::route(api::plan_params const& query,
     auto const pong_applicable =
         query.timetableView_ &&
         query.arriveBy_ != start_time.extend_interval_later_;
+    // BM-RAPTOR and the plain range McRAPTOR it is compared against both run
+    // on the mcraptor engine, which covers neither via nor bike/car transport
+    // requirements. Realtime and time-dependent offsets ARE covered; the two
+    // guards stay in the response so a client can still see what the query
+    // carried, but they no longer gate anything.
+    // The multicriteria extra Pareto dimensions, selected per request. Any of
+    // them switches routing to the multicriteria engine - see the criteria
+    // dispatch below. avoided_modes is ONE binary criterion for the union of
+    // the requested classes (AIR, COACH, or both - query::avoided_claszes_).
+    auto const min_non_transit = query.minimizeNonTransit_;
+    auto const min_mode_switches = query.minimizeModeSwitches_;
+    auto const min_avoided_modes = !query.minimizeWithout_.empty();
+    auto const avoided_modes_mask = [&] {
+      auto mask = n::routing::clasz_mask_t{0U};
+      for (auto const& c : query.minimizeWithout_) {
+        switch (c) {
+          case api::VehicleClassFilterEnum::AIR:
+            mask |= n::routing::to_mask(n::clasz::kAir);
+            break;
+          case api::VehicleClassFilterEnum::COACH:
+            mask |= n::routing::to_mask(n::clasz::kCoach);
+            break;
+        }
+      }
+      return mask;
+    }();
+    if (min_avoided_modes) {
+      q.avoided_claszes_ = avoided_modes_mask;
+    }
+    auto const mc_criteria_on =
+        min_non_transit || min_mode_switches || min_avoided_modes;
+    // An explicit BMRAPP still runs the mc engine even with no extra criteria
+    // (arr only) - useful for benchmarking against PONG.
+    auto const mc_engine_requested = algorithm == api::algorithmEnum::BMRAPP;
+    auto const mc_requested = mc_engine_requested || mc_criteria_on;
+    // the gates of mcraptor_supported, reported below
+    auto const mc_g_nobikecar =
+        !q.require_bike_transport_ && !q.require_car_transport_;
+    auto const mc_g_noreservation = !q.no_compulsory_reservation_;
+    auto const mc_g_novia = q.via_stops_.empty();
+    auto const mc_supported = n::routing::mcraptor_supported(q, rtt);
+    auto mc_applicable = mc_requested && mc_supported;
+    if (mc_requested && !mc_applicable) {
+      // fall back to rRAPTOR - and say so, instead of reporting the
+      // requested algorithm for a search it never ran
+      algorithm = api::algorithmEnum::RAPTOR;
+    } else if (mc_applicable && !mc_engine_requested) {
+      // minimize* params opt into the mc engine even when PONG (or another
+      // algorithm) was asked for
+      algorithm = api::algorithmEnum::BMRAPP;
+    }
     while (true) {
 #if defined(NIGIRI_CUDA)
-      if (algorithm != api::algorithmEnum::TB && gpu_supported &&
+      if (algorithm != api::algorithmEnum::TB && !mc_applicable &&
+          gpu_supported && gpu_pool_ != nullptr &&
           run_on_gpu(/*use_pong=*/pong_applicable &&
                      algorithm == api::algorithmEnum::PONG)) {
         gpu_used = true;
@@ -1179,7 +1237,104 @@ api::plan_response routing::route(api::plan_params const& query,
       }
 #endif
 
-      if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
+      if (mc_applicable) {
+        auto const dir = query.arriveBy_ ? n::direction::kBackward
+                                         : n::direction::kForward;
+        auto const mc_timeout = query.timeout_.has_value()
+                                    ? std::chrono::seconds{*query.timeout_}
+                                    : max_timeout;
+        // Extra pareto dimensions of the multicriteria engines, each toggled
+        // by its own request parameter (minimizeNonTransit / minimizeWithout /
+        // minimizeModeSwitches). They compose freely (see arr_with in
+        // mcraptor.h); the eight aliases below are just the dispatched
+        // combinations. With none set the engine runs arrival-only (only
+        // reachable via an explicit algorithm=BMRAPP).
+        //   non_transit    minutes not on transit: offsets + transfer footpaths
+        //   avoided_modes  binary "uses an avoided vehicle class" (flights) -
+        //                  keeps both the fast option that flies and the best
+        //                  one that does not, instead of filtering it out
+        //   mode_switches  number of vehicle-class switches between consecutive
+        //                  trips (bus -> subway counts, subway -> subway not)
+        // BMRAPP takes the SCALAR state (its ping/pong/pruning searches),
+        // like pong_search does, so it can run those on the GPU. Its
+        // multicriteria phases run on the device too on a pool slot that
+        // holds a device mc state (server.gpu_mc_states), else on the CPU.
+        auto const run = [&]<typename Criteria>(std::type_identity<Criteria>) {
+          auto mc_state = n::routing::basic_mcraptor_state<Criteria>{};
+#if defined(NIGIRI_CUDA)
+          if (gpu_supported && gpu_pool_ != nullptr) {
+            // a failure is answered by the plain GPU raptor, see below
+            auto const lease = gpu_pool_->acquire(/*mc=*/true);
+            gpu_used = true;
+            return n::routing::bmrap_profile_search<Criteria>(
+                *tt_, rtt, search_state, lease.state_, mc_state, q, dir,
+                mc_timeout, lease.mc_);
+          }
+#endif
+          auto scalar_state = n::routing::raptor_state{};
+          return n::routing::bmrap_profile_search<Criteria>(
+              *tt_, rtt, search_state, scalar_state, mc_state, q, dir,
+              mc_timeout);
+        };
+        auto const run_with = [&]<typename Criteria>() {
+          return run(std::type_identity<Criteria>{});
+        };
+        try {
+          auto const sel = (min_non_transit ? 0b100 : 0) |
+                           (min_avoided_modes ? 0b010 : 0) |
+                           (min_mode_switches ? 0b001 : 0);
+          switch (sel) {
+            case 0b000:
+              r = run_with.template operator()<n::routing::arr_criteria>();
+              break;
+            case 0b001:
+              r = run_with.template
+                  operator()<n::routing::arr_mode_switches_criteria>();
+              break;
+            case 0b010:
+              r = run_with.template
+                  operator()<n::routing::arr_avoided_modes_criteria>();
+              break;
+            case 0b011:
+              r = run_with.template operator()<
+                  n::routing::arr_avoided_modes_mode_switches_criteria>();
+              break;
+            case 0b100:
+              r = run_with.template
+                  operator()<n::routing::arr_non_transit_criteria>();
+              break;
+            case 0b101:
+              r = run_with.template operator()<
+                  n::routing::arr_non_transit_mode_switches_criteria>();
+              break;
+            case 0b110:
+              r = run_with.template operator()<
+                  n::routing::arr_non_transit_avoided_modes_criteria>();
+              break;
+            default:  // 0b111
+              r = run_with.template operator()<
+                  n::routing::
+                      arr_non_transit_avoided_modes_mode_switches_criteria>();
+              break;
+          }
+        } catch (std::exception const& e) {
+          std::cout << "BMRAPP EXCEPTION: " << e.what() << "\n";
+          mc_applicable = false;
+          algorithm = api::algorithmEnum::RAPTOR;
+#if defined(NIGIRI_CUDA)
+          // GPU BMRAPP failed (a device capacity, out of memory, a CUDA
+          // error): the plain GPU raptor answers (PONG where applicable, as
+          // BMRAPP's anchor search) instead of the much slower CPU
+          // multicriteria engine; the loop falls back to the CPU if that fails
+          // too.
+          if (gpu_used && pong_applicable) {
+            algorithm = api::algorithmEnum::PONG;
+          }
+          gpu_used = false;
+#endif
+          continue;
+        }
+      } else if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
         try {
           auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
@@ -1193,7 +1348,8 @@ api::plan_response routing::route(api::plan_params const& query,
           algorithm = api::algorithmEnum::RAPTOR;
           continue;
         }
-      } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
+      } else if (algorithm == api::algorithmEnum::RAPTOR ||
+                 algorithm == api::algorithmEnum::BMRAPP || tbd_ == nullptr ||
                  (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
@@ -1222,6 +1378,14 @@ api::plan_response routing::route(api::plan_params const& query,
     // record the algorithm that actually ran (after any fallbacks)
     auto const algo_stats = meta_t{
         {"algorithm", static_cast<std::uint64_t>(algorithm)},
+        {"mc_requested", mc_requested},
+        {"mc_supported", mc_supported},
+        {"mc_min_non_transit", min_non_transit},
+        {"mc_min_avoided_modes", min_avoided_modes},
+        {"mc_min_mode_switches", min_mode_switches},
+        {"mc_g_nobikecar", mc_g_nobikecar},
+        {"mc_g_noreservation", mc_g_noreservation},
+        {"mc_g_novia", mc_g_novia},
 #if defined(NIGIRI_CUDA)
         {"gpu_used", gpu_used},
         {"gpu_supported", gpu_supported},
@@ -1247,7 +1411,9 @@ api::plan_response routing::route(api::plan_params const& query,
                                r.interval_, journeys);
     }
 
-    direct_filter(direct, journeys);
+    if (query.directFilter_) {
+      direct_filter(direct, journeys);
+    }
 
     auto q_for_alts = q;
     if (query.arriveBy_) {
@@ -1280,6 +1446,26 @@ api::plan_response routing::route(api::plan_params const& query,
                   : alternatives_context{},
               &fares_time, one_to_many_view{&otm_searches});
         });
+
+    // the multicriteria engine's criterion values, for comparing engines
+    if (mc_applicable) {
+      for (auto i = 0U; i != itineraries.size(); ++i) {
+        auto const& j = journeys[i];
+        itineraries[i].criteria_ = api::ItineraryCriteria{
+            .nonTransit_ =
+                min_non_transit
+                    ? std::optional{static_cast<std::int64_t>(j.criteria_cost_)}
+                    : std::nullopt,
+            .modeSwitches_ = min_mode_switches
+                                 ? std::optional{static_cast<std::int64_t>(
+                                       j.criteria_mode_switches_)}
+                                 : std::nullopt,
+            .avoidedModes_ =
+                min_avoided_modes
+                    ? std::optional{j.criteria_avoided_modes_ != 0U}
+                    : std::nullopt};
+      }
+    }
 
     return {
         .debugOutput_ = join_meta(
