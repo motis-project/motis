@@ -9,6 +9,7 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
+#include "nigiri/wikidata.h"
 
 #include "motis/collect_locations.h"
 #include "motis/data.h"
@@ -117,10 +118,13 @@ api::stopInfo_response stop::operator()(
                    std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
                .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
+               .agencyWikidataUrl_ = n::wikidata_url(tt_, agency.wikidata_),
                .routeColor_ = n::to_str(color.color_),
                .routeTextColor_ = n::to_str(color.text_color_),
                .routeType_ = rs.route_type(ev).transform(
-                   [](n::route_type_t const x) { return to_idx(x); })});
+                   [](n::route_type_t const x) { return to_idx(x); }),
+               .routeWikidataUrl_ =
+                   n::wikidata_url(tt_, rs.route_wikidata(ev))});
         }
       }
     }

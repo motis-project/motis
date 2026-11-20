@@ -30,6 +30,7 @@
 #include "nigiri/rt/service_alert.h"
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
+#include "nigiri/wikidata.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/constants.h"
@@ -630,6 +631,8 @@ api::Itinerary journey_to_response(
                 .routeId_ = tags.route_id(enter_stop, n::event_type::kDep),
                 .routeUrl_ = std::string{enter_stop.route_url(
                     n::event_type::kDep, lang)},
+                .routeWikidataUrl_ = n::wikidata_url(
+                    tt, enter_stop.route_wikidata(n::event_type::kDep)),
                 .directionId_ =
                     enter_stop.get_direction_id(n::event_type::kDep) == 0 ? "0"
                                                                           : "1",
@@ -640,6 +643,7 @@ api::Itinerary journey_to_response(
                         .transform([](auto&& x) { return to_idx(x); }),
                 .agencyName_ = std::string{tt.translate(lang, agency.name_)},
                 .agencyUrl_ = std::string{tt.translate(lang, agency.url_)},
+                .agencyWikidataUrl_ = n::wikidata_url(tt, agency.wikidata_),
                 .agencyFareUrl_ =
                     std::string{tt.translate(lang, agency.fare_url_)},
                 .agencyId_ =

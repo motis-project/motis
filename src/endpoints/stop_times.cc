@@ -18,6 +18,7 @@
 #include "nigiri/rt/run.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
+#include "nigiri/wikidata.h"
 
 #include "adr/typeahead.h"
 
@@ -601,8 +602,11 @@ api::stoptimes_response stop_times::operator()(
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                 .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
                 .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
+                .agencyWikidataUrl_ = n::wikidata_url(tt_, agency.wikidata_),
                 .routeId_ = tags_.route_id(s, ev_type),
                 .routeUrl_ = std::string{s.route_url(ev_type, lang)},
+                .routeWikidataUrl_ =
+                    n::wikidata_url(tt_, s.route_wikidata(ev_type)),
                 .directionId_ = s.get_direction_id(ev_type) == 0 ? "0" : "1",
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =

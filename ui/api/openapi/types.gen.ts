@@ -52,9 +52,17 @@ export type Route = {
     agencyId: string;
     agencyName: string;
     agencyUrl: string;
+    /**
+     * Fully qualified link to the Wikidata (or other Wikibase) item of the agency.
+     */
+    agencyWikidataUrl?: string;
     routeColor?: string;
     routeTextColor?: string;
     routeType?: number;
+    /**
+     * Fully qualified link to the Wikidata (or other Wikibase) item of the route.
+     */
+    routeWikidataUrl?: string;
 };
 
 /**
@@ -561,6 +569,10 @@ export type Place = {
      */
     parentId?: string;
     /**
+     * Fully qualified link to the Wikidata (or other Wikibase) item of the stop (or of its parent station if the stop itself has none).
+     */
+    wikidataUrl?: string;
+    /**
      * The importance of the stop between 0-1.
      */
     importance?: number;
@@ -754,8 +766,16 @@ export type StopTime = {
     agencyId: string;
     agencyName: string;
     agencyUrl: string;
+    /**
+     * Fully qualified link to the Wikidata (or other Wikibase) item of the agency.
+     */
+    agencyWikidataUrl?: string;
     routeId: string;
     routeUrl?: string;
+    /**
+     * Fully qualified link to the Wikidata (or other Wikibase) item of the route.
+     */
+    routeWikidataUrl?: string;
     directionId: string;
     routeColor?: string;
     routeTextColor?: string;
@@ -1443,12 +1463,20 @@ export type Leg = {
     category?: Category;
     routeId?: string;
     routeUrl?: string;
+    /**
+     * Fully qualified link to the Wikidata (or other Wikibase) item of the route.
+     */
+    routeWikidataUrl?: string;
     directionId?: string;
     routeColor?: string;
     routeTextColor?: string;
     routeType?: number;
     agencyName?: string;
     agencyUrl?: string;
+    /**
+     * Fully qualified link to the Wikidata (or other Wikibase) item of the agency.
+     */
+    agencyWikidataUrl?: string;
     agencyFareUrl?: string;
     agencyId?: string;
     tripId?: string;
