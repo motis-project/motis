@@ -295,7 +295,7 @@
                     <Popover.Portal>
                         <Popover.Content
                             side="right" 
-                            align="start"
+                            align="center"
                             sideOffset={8}
                             class="z-50 rounded-lg border bg-popover p-4 text-xs text-muted-foreground shadow-xl outline-none flex flex-col justify-between"
                             style="height: {buttonHeight * 4}px; width: {buttonHeight * 8}px;"
