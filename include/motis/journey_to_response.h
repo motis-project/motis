@@ -76,6 +76,7 @@ api::Itinerary journey_to_response(
     bool join_interlined_legs,
     bool detailed_transfers,
     bool detailed_legs,
+    bool with_elevation_profile,
     bool with_fares,
     bool with_scheduled_skipped_stops,
     double timetable_max_matching_distance,

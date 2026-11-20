@@ -15,6 +15,7 @@
 
 #include "motis/flex/flex_routing_data.h"
 #include "motis/fwd.h"
+
 #include "motis/match_platforms.h"
 #include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/parameters.h"
@@ -81,6 +82,7 @@ api::Itinerary street_routing(
     osr::bitvec<osr::node_idx_t>& blocked_mem,
     unsigned api_version,
     bool detailed_leg = true,
+    bool with_elevation_profile = false,
     std::chrono::seconds max = std::chrono::seconds{3600},
     precomputed_route const& precomputed = {});
 

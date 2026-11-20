@@ -5,9 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  bits-ui:
-    hash: 564d024ee4e6e5e9477c216dbfc6497ac730186278435a2b6ad291a1cad3797f
-    path: patches/bits-ui.patch
+  bits-ui: 564d024ee4e6e5e9477c216dbfc6497ac730186278435a2b6ad291a1cad3797f
 
 importers:
 
@@ -1614,6 +1612,7 @@ packages:
   eslint@9.39.2:
     resolution: {integrity: sha512-LEyamqS7W5HB3ujJyvi0HQK/dtVINZvd5mAAp9eT5S/ujByGjiZLCzPcHVzuXbpJDJF/cxwHlfceVUDZ2lnSTw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
