@@ -32,6 +32,7 @@ export const defaultQuery = {
 	requireCarTransport: false,
 	noCompulsoryReservation: false,
 	elevationCosts: 'NONE',
+    withElevationProfile: false,
 	vehicleHeight: 4.0,
 	vehicleWidth: 2.55,
 	vehicleLength: 18.75,
