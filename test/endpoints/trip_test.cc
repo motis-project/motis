@@ -945,7 +945,7 @@ TEST(motis, trip_notice_translations) {
         <Ankunftszeit>2024-12-15T04:57:00</Ankunftszeit>
         <IstAnkunftPrognose>2024-12-15T05:03:00</IstAnkunftPrognose>
       </IstHalt>
-      <LinienText>NET</LinienText>
+      <LinienText>2336</LinienText>
       <ProduktID>NET</ProduktID>
       <RichtungsText>Netex Demo</RichtungsText>
       <Zusatzfahrt>false</Zusatzfahrt>

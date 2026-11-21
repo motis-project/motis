@@ -33,11 +33,11 @@ void add_trip_updates(n::timetable const& tt,
                       transit_realtime::FeedMessage& fm) {
   fr.for_each_trip([&](n::trip_idx_t trip_idx,
                        n::interval<n::stop_idx_t> const subrange) {
-    auto fe = fm.add_entity();
+    auto fe = transit_realtime::FeedEntity{};
     auto const trip_id = tags.id_fragments(
         tt, fr[subrange.from_ - fr.stop_range_.from_], n::event_type::kDep);
-    fe->set_id(trip_id.trip_id_);
-    auto tu = fe->mutable_trip_update();
+    fe.set_id(trip_id.trip_id_);
+    auto tu = fe.mutable_trip_update();
     auto td = tu->mutable_trip();
     td->set_trip_id(trip_id.trip_id_);
     td->set_start_time(fmt::format("{}:00", trip_id.start_time_));
@@ -60,6 +60,7 @@ void add_trip_updates(n::timetable const& tt,
       }
     }
     if (fr.is_cancelled()) {
+      *fm.add_entity() = std::move(fe);
       return;
     }
     auto const seq_numbers =
@@ -78,7 +79,7 @@ void add_trip_updates(n::timetable const& tt,
     // Events without real-time data are omitted. Stops without any real-time
     // data are exported as NO_DATA (which also applies to subsequent stops).
     auto last_delay = n::duration_t::max();
-    auto no_data = false;
+    auto no_data = true;
     for (; seq_it != end(seq_numbers); ++stop_idx, ++seq_it) {
       auto const s = fr[stop_idx - fr.stop_range_.from_];
 
@@ -147,6 +148,10 @@ void add_trip_updates(n::timetable const& tt,
             transit_realtime::TripUpdate_StopTimeUpdate_ScheduleRelationship::
                 TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED);
       }
+    }
+
+    if (tu->stop_time_update_size() != 0) {
+      *fm.add_entity() = std::move(fe);
     }
   });
 }

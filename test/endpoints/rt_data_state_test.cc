@@ -129,7 +129,7 @@ std::vector<std::string> gtfsrt_export(data& d) {
 
   auto fm = transit_realtime::FeedMessage{};
   EXPECT_TRUE(fm.ParseFromString(res->body()));
-  EXPECT_EQ(1, fm.entity_size());
+  EXPECT_LE(fm.entity_size(), 1);
   if (fm.entity_size() != 1) {
     return {};
   }
@@ -515,5 +515,18 @@ TEST(motis, rt_data_state) {
     EXPECT_EQ("15:13", format_time(intermediate.arrival_));
     EXPECT_EQ(api::TimestampReasonEnum::PREDICTED,
               intermediate.arrivalTimestampReason_);
+
+    EXPECT_EQ((std::vector<std::string>{"2: arr=300", "3: NO_DATA"}),
+              gtfsrt_export(d));
+  }
+
+  {
+    d.init_rtt(date::sys_days{2026_y / June / 30});
+    auto siri_updater = auser(*d.tt_, d.tags_->get_src("test"),
+                              nigiri::rt::vdv_aus::updater::xml_format::kSiri);
+    auto const stats =
+        siri_updater.consume_update(siri_update("", ""), *d.rt_->rtt_);
+    EXPECT_EQ(1U, stats.matched_runs_);
+    EXPECT_TRUE(gtfsrt_export(d).empty());
   }
 }
