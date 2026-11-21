@@ -337,6 +337,7 @@ api::Itinerary journey_to_response(
   if (with_fares) {
     auto const fares_start = std::chrono::steady_clock::now();
     fares = n::get_fares(tt, rtt, j);
+    std::erase_if(*fares, [](n::fare_transfer const& t) { return !t.main_; });
     if (fares_time != nullptr) {
       *fares_time += std::chrono::duration_cast<std::chrono::nanoseconds>(
           std::chrono::steady_clock::now() - fares_start);
