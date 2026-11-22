@@ -1,5 +1,7 @@
 #include "motis/endpoints/stop.h"
 
+#include <algorithm>
+
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/verify.h"
@@ -11,6 +13,7 @@
 #include "nigiri/types.h"
 
 #include "motis/collect_locations.h"
+#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
@@ -41,17 +44,19 @@ api::stopInfo_response stop::operator()(
     add_location(tt_, t_, ae_, locations, l, query.exactRadius_);
   };
 
+  auto const radius = query.radius_.transform([](std::int64_t const r) {
+    return static_cast<double>(std::min(r, std::int64_t{kMaxQueryRadius}));
+  });
   if (query_stop.has_value()) {
     locations.emplace_back(tt_.locations_.get_root_idx(*query_stop));
-    if (query.radius_) {
-      loc_rtree_.in_radius(tt_.locations_.coordinates_[*query_stop],
-                           static_cast<double>(*query.radius_), add);
+    if (radius) {
+      loc_rtree_.in_radius(tt_.locations_.coordinates_[*query_stop], *radius,
+                           add);
     } else {
       add(*query_stop);
     }
   } else {
-    loc_rtree_.in_radius(query_center->pos_,
-                         static_cast<double>(*query.radius_), add);
+    loc_rtree_.in_radius(query_center->pos_, *radius, add);
   }
 
   utl::erase_duplicates(locations);

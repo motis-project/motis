@@ -23,6 +23,7 @@
 
 #include "motis/adr_extend_tt.h"
 #include "motis/collect_locations.h"
+#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
@@ -441,16 +442,18 @@ std::vector<n::rt::run> stop_times::get_runs(
     add_location(tt_, t_, ae_, locations, l, query.exactRadius_);
   };
 
+  auto const radius = query.radius_.transform([](std::int64_t const r) {
+    return static_cast<double>(std::min(r, std::int64_t{kMaxQueryRadius}));
+  });
   if (query_stop.has_value()) {
     locations.emplace_back(tt_.locations_.get_root_idx(*query_stop));
-    if (query.radius_) {
-      loc_rtree_.in_radius(*center, static_cast<double>(*query.radius_), add);
+    if (radius) {
+      loc_rtree_.in_radius(*center, *radius, add);
     } else {
       add(*query_stop);
     }
   } else {
-    loc_rtree_.in_radius(*center, static_cast<double>(query.radius_.value()),
-                         add);
+    loc_rtree_.in_radius(*center, radius.value(), add);
   }
   utl::erase_duplicates(locations);
 

@@ -362,7 +362,11 @@ api::trips_response get_trains(tag_lookup const& tags,
       std::chrono::time_point_cast<n::unixtime_t::duration>(*query.startTime_);
   auto const end_time =
       std::chrono::time_point_cast<n::unixtime_t::duration>(*query.endTime_);
-  auto const time_interval = n::interval{start_time, end_time};
+  auto const query_interval = n::interval{start_time, end_time};
+  if (!tt.internal_interval().overlaps(query_interval)) {
+    return {};
+  }
+  auto const time_interval = tt.internal_interval().intersect(query_interval);
   auto const area = geo::make_box({min->pos_, max->pos_});
 
   // Collect runs within time+location window.

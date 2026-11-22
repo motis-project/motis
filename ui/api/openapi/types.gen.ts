@@ -1933,6 +1933,7 @@ export type OneToManyIntermodalParams = {
      * The maximum travel time in minutes.
      * If not provided, the routing uses the value
      * hardcoded in the server which is usually quite high.
+     * Larger values are capped to this hardcoded value.
      *
      * *Warning*: Use with care. Setting this too low can lead to
      * optimal (e.g. the least transfers) journeys not being found.
@@ -1965,6 +1966,7 @@ export type OneToManyIntermodalParams = {
      *
      * If not provided, the routing uses the server-side default value
      * which is hardcoded and very high to cover all use cases.
+     * Larger values are capped to this hardcoded value.
      *
      * *Warning*: Use with care. Setting this too low can lead to
      * optimal (e.g. the fastest) journeys not being found.
@@ -2575,6 +2577,7 @@ export type PlanData = {
          * for the next transit leg / departing after the previous transit
          * leg's arrival). Each alternative is a 3-leg sequence
          * `[ingress footpath, transit, egress footpath]`.
+         * Values above 5 are capped to 5.
          *
          */
         numLegAlternatives?: number;
@@ -2709,6 +2712,7 @@ export type PlanData = {
          * for each of them is estimated from the crow-fly distance to the coordinate
          * at walking speed (1.5 m/s), rounded down to whole minutes.
          * Works without OSM/street routing data loaded.
+         * Values above 500000 are capped to 500000.
          *
          */
         radius?: number;
@@ -3165,6 +3169,7 @@ export type OneToManyIntermodalData = {
          *
          * If not provided, the routing uses the server-side default value
          * which is hardcoded and very high to cover all use cases.
+         * Larger values are capped to this hardcoded value.
          *
          * *Warning*: Use with care. Setting this too low can lead to
          * optimal (e.g. the fastest) journeys not being found.
@@ -3177,6 +3182,7 @@ export type OneToManyIntermodalData = {
          * The maximum travel time in minutes.
          * If not provided, the routing uses the value
          * hardcoded in the server which is usually quite high.
+         * Larger values are capped to this hardcoded value.
          *
          * *Warning*: Use with care. Setting this too low can lead to
          * optimal (e.g. the least transfers) journeys not being found.
@@ -3694,13 +3700,22 @@ export type RefreshItineraryData = {
         maxMatchingDistance?: number;
         /**
          * Maximum time in seconds for the last (egress) street leg.
+         * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+         *
          */
         maxPostTransitTime?: number;
         /**
          * Maximum time in seconds for the first (access) street leg.
+         * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+         *
          */
         maxPreTransitTime?: number;
         noCompulsoryReservation?: boolean;
+        /**
+         * Maximum number of alternatives to return per transit leg, see `/plan`.
+         * Values above 5 are capped to 5.
+         *
+         */
         numLegAlternatives?: number;
         pedestrianProfile?: PedestrianProfile;
         /**
@@ -3865,6 +3880,8 @@ export type StoptimesData = {
          *
          * If set, all stops at parent stations and their child stops in the specified radius
          * are returned.
+         *
+         * Values above 10000 are capped to 10000.
          *
          */
         radius?: number;
@@ -4053,6 +4070,8 @@ export type StopInfoData = {
          *
          * If set, all stops at parent stations and their child stops in the
          * specified radius are returned. Required if stopId is not given.
+         *
+         * Values above 10000 are capped to 10000.
          *
          */
         radius?: number;

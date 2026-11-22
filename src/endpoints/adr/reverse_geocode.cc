@@ -25,10 +25,12 @@ api::reverseGeocode_response reverse_geocode::operator()(
       std::min(params.numResults_.value_or(kDefaultResults), config_limit);
   utl::verify<net::bad_request_exception>(requested_limit >= 1,
                                           "limit must be >= 1");
+  auto const place = parse_location(params.place_);
+  utl::verify<net::bad_request_exception>(
+      place.has_value(), "could not parse place {}", params.place_);
   return suggestions_to_response(
       t_, f_, ae_, tt_, tags_, w_, pl_, matches_, {}, {},
-      r_.lookup(t_, parse_location((params.place_))->pos_,
-                static_cast<std::size_t>(requested_limit),
+      r_.lookup(t_, place->pos_, static_cast<std::size_t>(requested_limit),
                 to_filter_type(params.type_)));
 }
 

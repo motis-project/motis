@@ -2422,6 +2422,7 @@ Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
             description: `The maximum travel time in minutes.
 If not provided, the routing uses the value
 hardcoded in the server which is usually quite high.
+Larger values are capped to this hardcoded value.
 
 *Warning*: Use with care. Setting this too low can lead to
 optimal (e.g. the least transfers) journeys not being found.
@@ -2456,6 +2457,7 @@ send an empty \`transitModes\` parameter instead.
 
 If not provided, the routing uses the server-side default value
 which is hardcoded and very high to cover all use cases.
+Larger values are capped to this hardcoded value.
 
 *Warning*: Use with care. Setting this too low can lead to
 optimal (e.g. the fastest) journeys not being found.

@@ -14,6 +14,7 @@
 
 #include "nigiri/types.h"
 
+#include "motis/constants.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/itinerary_id.h"
@@ -48,15 +49,25 @@ ep::routing make_routing(Endpoint const& ep) {
                      .metrics_ = ep.metrics_};
 }
 
-// Caps the API parameter with the `max_max_matching_distance` config limit.
 template <typename Endpoint>
 first_last_mile_options make_capped_first_last_mile_options(
     Endpoint const& ep, api::refreshItinerary_params const& query) {
+  auto const limits = ep.config_.get_limits();
+  auto const max_prepost_transit =
+      std::chrono::seconds{limits.street_routing_max_prepost_transit_seconds_};
   auto flm = make_first_last_mile_options(query);
   flm.max_matching_distance_ =
-      std::min(flm.max_matching_distance_,
-               ep.config_.get_limits().max_max_matching_distance_);
+      std::min(flm.max_matching_distance_, limits.max_max_matching_distance_);
+  flm.max_pre_transit_ = std::min(flm.max_pre_transit_, max_prepost_transit);
+  flm.max_post_transit_ = std::min(flm.max_post_transit_, max_prepost_transit);
   return flm;
+}
+
+std::size_t get_capped_num_leg_alternatives(
+    api::refreshItinerary_params const& query) {
+  return std::min(static_cast<std::size_t>(
+                      std::max(query.numLegAlternatives_, std::int64_t{0})),
+                  kMaxLegAlternatives);
 }
 
 template <typename Endpoint>
@@ -77,7 +88,7 @@ api::Itinerary refresh_itinerary::operator()(
       query.requireDisplayNameMatch_, query.joinInterlinedLegs_,
       query.detailedTransfers_.value_or(query.detailedLegs_),
       query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
-      static_cast<std::size_t>(query.numLegAlternatives_),
+      get_capped_num_leg_alternatives(query),
       to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
       query.requireCarTransport_, query.noCompulsoryReservation_,
       get_profile_idx(query.useRoutedTransfers_, query.requireCarTransport_,
@@ -108,7 +119,7 @@ api::Itinerary refresh_itinerary_post::operator()(
       query.joinInterlinedLegs_,
       query.detailedTransfers_.value_or(query.detailedLegs_),
       query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
-      static_cast<std::size_t>(query.numLegAlternatives_),
+      get_capped_num_leg_alternatives(query),
       to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
       query.requireCarTransport_, query.noCompulsoryReservation_,
       get_profile_idx(query.useRoutedTransfers_, query.requireCarTransport_,

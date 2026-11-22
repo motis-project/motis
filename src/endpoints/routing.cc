@@ -1025,10 +1025,12 @@ api::plan_response routing::route(api::plan_params const& query,
     auto const* start_client = get_client_offsets(!query.arriveBy_);
     auto const* dest_client = get_client_offsets(query.arriveBy_);
 
-    auto const use_radius_start = query.radius_.has_value() &&
-                                  std::holds_alternative<osr::location>(start);
-    auto const use_radius_dest = query.radius_.has_value() &&
-                                 std::holds_alternative<osr::location>(dest);
+    auto const radius = query.radius_.transform(
+        [](double const r) { return std::min(r, kMaxPlanRadius); });
+    auto const use_radius_start =
+        radius.has_value() && std::holds_alternative<osr::location>(start);
+    auto const use_radius_dest =
+        radius.has_value() && std::holds_alternative<osr::location>(dest);
 
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
@@ -1047,8 +1049,7 @@ api::plan_response routing::route(api::plan_params const& query,
                 ? client_offsets(*start_client, *tags_, *tt_)
             : use_radius_start
                 ? radius_offsets(*loc_tree_,
-                                 std::get<osr::location>(start).pos_,
-                                 *query.radius_)
+                                 std::get<osr::location>(start).pos_, *radius)
                 : get_offsets(
                       rtt, start,
                       query.arriveBy_ ? osr::direction::kBackward
@@ -1066,7 +1067,7 @@ api::plan_response routing::route(api::plan_params const& query,
             dest_client != nullptr ? client_offsets(*dest_client, *tags_, *tt_)
             : use_radius_dest
                 ? radius_offsets(*loc_tree_, std::get<osr::location>(dest).pos_,
-                                 *query.radius_)
+                                 *radius)
                 : get_offsets(
                       rtt, dest,
                       query.arriveBy_ ? osr::direction::kForward
@@ -1255,6 +1256,10 @@ api::plan_response routing::route(api::plan_params const& query,
       q_for_alts.flip_dir();
     }
 
+    auto const num_leg_alternatives =
+        std::min(static_cast<std::size_t>(
+                     std::max(query.numLegAlternatives_, std::int64_t{0})),
+                 kMaxLegAlternatives);
     auto fares_time = std::chrono::nanoseconds{0};
     auto itineraries = utl::to_vec(
         journeys, [&, cache = street_routing_cache_t{}](auto&& j) mutable {
@@ -1272,11 +1277,9 @@ api::plan_response routing::route(api::plan_params const& query,
               query.ignorePreTransitRentalReturnConstraints_,
               query.ignorePostTransitRentalReturnConstraints_, query.language_,
               true,
-              query.numLegAlternatives_ > 0
+              num_leg_alternatives > 0
                   ? alternatives_context{query_alternatives{
-                        q_for_alts,
-                        static_cast<std::size_t>(query.numLegAlternatives_),
-                        query.arriveBy_}}
+                        q_for_alts, num_leg_alternatives, query.arriveBy_}}
                   : alternatives_context{},
               &fares_time, one_to_many_view{&otm_searches});
         });
