@@ -150,7 +150,7 @@ const translations: Translations = {
 	},
 	minimize: {
 		title: 'Minimiser',
-		nonTransitTime: 'Temps hors transport en commun',
+		nonTransitTime: 'Trajets par vos propres moyens',
 		modeSwitches: 'Changements de mode'
 	},
 	isochronesOpacity: 'Opacité des isochrones',
