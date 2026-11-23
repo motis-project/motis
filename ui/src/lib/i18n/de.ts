@@ -147,7 +147,7 @@ const translations: Translations = {
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
 	minimize: {
 		title: 'Minimieren',
-		nonTransitTime: 'Nicht-ÖV-Zeit',
+		nonTransitTime: 'Wege zu Haltestellen und beim Umsteigen',
 		modeSwitches: 'Verkehrsmittelwechsel'
 	},
 	isochronesOpacity: 'Deckkraft der Isochronen',

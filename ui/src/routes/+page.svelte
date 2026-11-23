@@ -457,8 +457,8 @@
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
 	let noCompulsoryReservation = $state(urlParams?.get('noCompulsoryReservation') == 'true');
-	let minimizeNonTransit = $state(urlParams?.get('minimizeNonTransit') == 'true');
-	let minimizeModeSwitches = $state(urlParams?.get('minimizeModeSwitches') == 'true');
+	let minimizeNonTransit = $state(urlParams?.get('minimizeNonTransit') != 'false');
+	let minimizeModeSwitches = $state(urlParams?.get('minimizeModeSwitches') != 'false');
 	let minimizeWithoutAir = $state(getUrlArray('minimizeWithout').includes('AIR'));
 	let minimizeWithoutCoach = $state(getUrlArray('minimizeWithout').includes('COACH'));
 	let transitModes = $state<Mode[]>(
