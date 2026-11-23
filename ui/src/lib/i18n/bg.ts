@@ -153,7 +153,8 @@ const translations: Translations = {
 		nonTransitTime: 'Getting to and between stops',
 		modeSwitches: 'Mode switches',
 		useOf: 'Use of',
-		noModes: 'no modes'
+		noModes: 'no modes',
+		nightTransfers: 'Boarding or alighting at night'
 	},
 	isochronesOpacity: 'Непрозрачност на периметъра',
 	isochrones: {

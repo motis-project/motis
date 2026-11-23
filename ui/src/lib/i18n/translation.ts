@@ -151,6 +151,7 @@ export type Translations = {
 		modeSwitches: string;
 		useOf: string;
 		noModes: string;
+		nightTransfers: string;
 	};
 	isochronesOpacity: string;
 	isochrones: {

@@ -75,6 +75,7 @@
 		pedestrianProfile = $bindable(),
 		minimizeNonTransit = $bindable(false),
 		minimizeModeSwitches = $bindable(false),
+		minimizeNightTransfers = $bindable(false),
 		minimizeWithout = $bindable([]),
 		showMinimizeOptions = true,
 		hasDebug = false,
@@ -127,6 +128,7 @@
 		pedestrianProfile: PedestrianProfile;
 		minimizeNonTransit?: boolean;
 		minimizeModeSwitches?: boolean;
+		minimizeNightTransfers?: boolean;
 		minimizeWithout?: TransitMode[];
 		// Only the point-to-point plan search supports the minimize* multicriteria
 		// params; one-to-all isochrones (IsochronesMask) hides this section rather
@@ -264,6 +266,11 @@
 						bind:checked={minimizeModeSwitches}
 						label={t.minimize.modeSwitches}
 						id="minimizeModeSwitches"
+					/>
+					<Switch
+						bind:checked={minimizeNightTransfers}
+						label={t.minimize.nightTransfers}
+						id="minimizeNightTransfers"
 					/>
 				</div>
 				<div class="grid grid-cols-[auto_1fr] items-center gap-x-4">

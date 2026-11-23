@@ -1040,6 +1040,22 @@ paths:
             type: boolean
             default: false
 
+        - name: minimizeNightTransfers
+          in: query
+          required: false
+          description: |
+            Add "boards or alights a trip between 00:00 and 06:00" as an extra
+            Pareto criterion, in the local time of the stop. The first boarding
+            and the last alighting count too. The result keeps the fastest
+            journey and the best one without.
+
+            Runs on the CPU. Setting this (or any other `minimize*` parameter)
+            switches routing to the multicriteria engine, overriding `algorithm`
+            if it was `PONG`.
+          schema:
+            type: boolean
+            default: false
+
         - name: minimizeWithout
           in: query
           required: false
@@ -5921,6 +5937,11 @@ components:
             `minimizeModeSwitches`: vehicle-class switches between consecutive
             trips (suburban, subway, tram and bus count as one class)
           type: integer
+        nightTransfer:
+          description: |
+            `minimizeNightTransfers`: whether the itinerary boards or alights a
+            trip between 00:00 and 06:00 local time
+          type: boolean
         avoidedModes:
           description: |
             `minimizeWithout`: whether the itinerary uses an avoided mode

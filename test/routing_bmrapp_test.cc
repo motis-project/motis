@@ -20,10 +20,12 @@ using namespace motis;
 
 namespace {
 
-// Every trip leaves at 10:00 (Europe/Berlin). One trade-off per criterion:
+// Every trip but N0's leaves at 10:00 (Europe/Berlin). One trade-off per
+// criterion:
 //   W0 -> W9  bus + 10 min walk W1 -> W2 + bus, 11:00 | bus + bus at W3, 11:10
 //   S0 -> S9  rail + bus at S1, 11:00 | bus + bus at S2, 11:10
 //   M0 -> M9  air 10:30 | coach 10:40 | rail 10:50
+//   N0 -> N9  leaves at 23:00: rail 03:00 (in the night) | rail 06:30
 // BMRAPP keeps a journey if it arrives within its anchor's travel time T plus
 // clamp(T / 2, 20 min, 180 min) (relax_arr(), bmrap_bounds.h): for air's 30
 // minutes 50, so all of these. W1 and W2 are 220 m apart, the other stops
@@ -50,6 +52,8 @@ S2,S2,50.04,8.20,,
 S9,S9,50.06,8.20,,
 M0,M0,50.00,8.40,,
 M9,M9,50.02,8.40,,
+N0,N0,50.00,8.60,,
+N9,N9,50.02,8.60,,
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
@@ -71,6 +75,8 @@ BUS,D,S_BUS2,,
 AIR,D,M_AIR,,
 COACH,D,M_COACH,,
 RAIL,D,M_RAIL,,
+RAIL,D,N_FAST,,
+RAIL,D,N_SLOW,,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
@@ -96,6 +102,10 @@ M_COACH,10:00:00,10:00:00,M0,0,0,0
 M_COACH,10:40:00,10:40:00,M9,1,0,0
 M_RAIL,10:00:00,10:00:00,M0,0,0,0
 M_RAIL,10:50:00,10:50:00,M9,1,0,0
+N_FAST,23:00:00,23:00:00,N0,0,0,0
+N_FAST,27:00:00,27:00:00,N9,1,0,0
+N_SLOW,23:00:00,23:00:00,N0,0,0,0
+N_SLOW,30:30:00,30:30:00,N9,1,0,0
 
 # transfers.txt
 from_stop_id,to_stop_id,transfer_type,min_transfer_time
@@ -249,6 +259,22 @@ TEST(motis, bmrapp_criteria_combine) {
   EXPECT_EQ((std::vector<std::string>{"60 t1 nt=10 ms=0 av=false",
                                       "70 t1 nt=0 ms=0 av=false"}),
             rows(res));
+}
+
+// Night is local time: 06:30 is 04:30 UTC, but not in the night.
+TEST(motis, bmrapp_minimize_night_transfers) {
+  auto const routing = utl::init_from<ep::routing>(bmrapp_data()).value();
+  auto const res = routing(
+      "?fromPlace=test_N0&toPlace=test_N9&time=2019-05-01T20:55Z"
+      "&minimizeNightTransfers=true&minimizeNonTransit=true");
+  EXPECT_EQ(kBmrapp, algorithm(res));
+  auto v = std::vector<std::string>{};
+  for (auto const& it : res.itineraries_) {
+    v.push_back(fmt::format("{} night={}", it.duration_ / 60,
+                            value(it.criteria_->nightTransfer_)));
+  }
+  std::sort(begin(v), end(v));
+  EXPECT_EQ((std::vector<std::string>{"240 night=true", "450 night=false"}), v);
 }
 
 // Via stops are beyond the multicriteria engine: the requested algorithm
