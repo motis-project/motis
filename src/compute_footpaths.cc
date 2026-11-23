@@ -22,6 +22,7 @@
 #include "motis/osr/max_distance.h"
 #include "motis/osr/parameters.h"
 #include "motis/point_rtree.h"
+#include "motis/route_coverage.h"
 
 namespace n = nigiri;
 
@@ -55,6 +56,8 @@ void compute_footpaths(
     std::vector<n::location_idx_t> neighbors_;
     std::vector<osr::location> neighbors_loc_;
     osr::match_result neighbor_candidates_;
+    std::vector<std::optional<osr::path>> results_;
+    route_coverage route_coverage_;
   };
 
   auto n_done = 0U;
@@ -76,6 +79,13 @@ void compute_footpaths(
     auto const is_candidate = [&](n::location_idx_t const l) {
       return !mode.is_candidate_ || mode.is_candidate_(l);
     };
+
+    auto const covers_routes =
+        mode.min_reachable_routes_ != 0U &&
+        mode.max_route_covering_duration_ > mode.max_duration_;
+    auto route_covering =
+        n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
+            covers_routes ? tt.n_locations() : 0U);
 
     // The preprocessed candidates are geometric and capped at the
     // preprocessing radius, so they are only usable when that radius covers
@@ -131,45 +141,81 @@ void compute_footpaths(
             return;
           }
 
-          loc_rtree.in_radius(tt.locations_.coordinates_[l],
-                              get_max_distance(mode.profile_, osr_parameters{},
-                                               mode.max_duration_),
-                              [&](n::location_idx_t const x) {
-                                if (x != l && is_candidate(x)) {
-                                  s.neighbors_.emplace_back(x);
-                                }
-                              });
+          auto const route_neighbors = [&](std::chrono::seconds const max) {
+            s.neighbors_.clear();
+            s.neighbors_loc_.clear();
+            loc_rtree.in_radius(
+                tt.locations_.coordinates_[l],
+                get_max_distance(mode.profile_, osr_parameters{}, max),
+                [&](n::location_idx_t const x) {
+                  if (x != l && is_candidate(x)) {
+                    s.neighbors_.emplace_back(x);
+                  }
+                });
+            s.results_ =
+                osr::route_one_to_many(
+                    to_profile_parameters(mode.profile_, {}), w, lookup,
+                    mode.profile_, get_loc(tt, w, pl, matches, l),
+                    utl::transform_to(s.neighbors_, s.neighbors_loc_,
+                                      [&](n::location_idx_t const x) {
+                                        return get_loc(tt, w, pl, matches, x);
+                                      }),
+                    candidates[osr::match_idx_t{to_idx(l)}],
+                    [&]() -> osr::match_result const& {
+                      s.neighbor_candidates_.clear();
+                      for (auto const x : s.neighbors_) {
+                        s.neighbor_candidates_.append(
+                            candidates, osr::match_idx_t{to_idx(x)});
+                      }
+                      return s.neighbor_candidates_;
+                    }(),
+                    max, osr::direction::kForward, nullptr, nullptr, elevations,
+                    [](osr::path const& p) { return p.uses_elevator_; })
+                    ->results();
+          };
 
-          auto const results =
-              osr::route_one_to_many(
-                  to_profile_parameters(mode.profile_, {}), w, lookup,
-                  mode.profile_, get_loc(tt, w, pl, matches, l),
-                  utl::transform_to(s.neighbors_, s.neighbors_loc_,
-                                    [&](n::location_idx_t const x) {
-                                      return get_loc(tt, w, pl, matches, x);
-                                    }),
-                  candidates[osr::match_idx_t{to_idx(l)}],
-                  [&]() -> osr::match_result const& {
-                    s.neighbor_candidates_.clear();
-                    for (auto const x : s.neighbors_) {
-                      s.neighbor_candidates_.append(
-                          candidates, osr::match_idx_t{to_idx(x)});
-                    }
-                    return s.neighbor_candidates_;
-                  }(),
-                  mode.max_duration_, osr::direction::kForward, nullptr,
-                  nullptr, elevations,
-                  [](osr::path const& p) { return p.uses_elevator_; })
-                  ->results();
+          auto const to_minutes = [](osr::path const& p) {
+            return n::duration_t{
+                static_cast<unsigned>(std::ceil(p.duration_.count() / 60.0))};
+          };
+
+          auto& coverage = s.route_coverage_;
+          auto const has_routes = !tt.location_routes_[l].empty();
+          for (auto max = mode.max_duration_;;
+               max = std::min(2 * max, mode.max_route_covering_duration_)) {
+            route_neighbors(max);
+            if (!covers_routes || !has_routes) {
+              break;
+            }
+
+            coverage.reached_.clear();
+            for (auto const [n, r] : utl::zip(s.neighbors_, s.results_)) {
+              if (r.has_value() && !tt.location_routes_[n].empty()) {
+                coverage.reached_.emplace_back(to_minutes(*r), n);
+              }
+            }
+            if (coverage.select(tt, l, mode.min_reachable_routes_) ||
+                max >= mode.max_route_covering_duration_) {
+              break;
+            }
+          }
+          auto const& results = s.results_;
 
           for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
             if (!r.has_value()) {
               continue;
             }
 
-            auto const duration = n::duration_t{
-                static_cast<unsigned>(std::ceil(r->duration_.count() / 60.0))};
-            transfers[l].emplace_back(n::footpath{n, duration});
+            auto const duration = to_minutes(*r);
+            if (duration > mode.max_duration_ && !coverage.is_selected(n)) {
+              continue;
+            }
+            auto const fp =
+                n::footpath{n, std::min(duration, n::footpath::kMax)};
+            transfers[l].push_back(fp);
+            if (covers_routes && coverage.is_selected(n)) {
+              route_covering[l].push_back(fp);
+            }
           }
 
           if (mode.extend_missing_ || is_default_profile) {
@@ -192,12 +238,27 @@ void compute_footpaths(
           }
 
           utl::erase_if(transfers[l], [&](n::footpath fp) {
-            return fp.duration() > mode.max_duration_;
+            return fp.duration() > mode.max_duration_ &&
+                   !coverage.is_selected(fp.target());
           });
           utl::sort(transfers[l]);
 
           pt->update_monotonic(n_done + i);
         });
+
+    // Mirror route covering footpaths (assuming symmetric walking times) so
+    // that stops picked by a remote stop can also walk back to it.
+    for (auto l = n::location_idx_t{0U};
+         l != n::location_idx_t{route_covering.size()}; ++l) {
+      for (auto const fp : route_covering[l]) {
+        auto& back = transfers[fp.target()];
+        if (utl::none_of(
+                back, [&](n::footpath const x) { return x.target() == l; })) {
+          back.push_back(n::footpath{l, fp.duration()});
+          utl::sort(back);
+        }
+      }
+    }
 
     for (auto const& x : transfers) {
       tt.locations_.footpaths_out_[mode.profile_idx_].emplace_back(x);

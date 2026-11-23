@@ -16,6 +16,9 @@ constexpr auto const kMaxWheelchairMatchingDistance = 8.0;
 // max distance from gbfs vehicle/station to way segment [meters]
 constexpr auto const kMaxGbfsMatchingDistance = 100.0;
 
+// transfers always reach the nearest stops serving this many routes
+constexpr auto const kTransferMinReachableRoutes = 50U;
+
 // multiplier for transfer times
 constexpr auto const kTransferTimeMultiplier = 1.5F;
 

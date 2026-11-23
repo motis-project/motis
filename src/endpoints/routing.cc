@@ -73,6 +73,7 @@
 #include "motis/osr/street_routing.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
+#include "motis/route_coverage.h"
 #include "motis/server.h"
 #include "motis/tag_lookup.h"
 #include "motis/td_offsets.h"
@@ -285,7 +286,8 @@ std::vector<n::routing::offset> get_offsets(
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     meta_t& stats,
-    one_to_many_side* const states) {
+    one_to_many_side* const states,
+    unsigned const min_reachable_routes) {
   if (!r.is_osr_loaded()) {
     return {};
   }
@@ -318,12 +320,19 @@ std::vector<n::routing::offset> get_offsets(
       profile = osr::search_profile::kCarSharing;
     }
 
-    auto const max_dist = get_max_distance(profile, osr_params, max);
-    auto const near_stops =
-        get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, max_dist);
-    auto const near_stop_locations = utl::to_vec(
-        near_stops,
-        [&](n::location_idx_t const l) { return stop_to_osr_location(r, l); });
+    auto route_max = max;
+    auto near_stops = std::vector<n::location_idx_t>{};
+    auto near_stop_locations = std::vector<osr::location>{};
+    auto const find_near_stops = [&]() {
+      near_stops = get_stops_with_traffic(
+          *r.tt_, rtt, *r.loc_tree_, pos,
+          get_max_distance(profile, osr_params, route_max));
+      near_stop_locations =
+          utl::to_vec(near_stops, [&](n::location_idx_t const l) {
+            return stop_to_osr_location(r, l);
+          });
+    };
+    find_near_stops();
 
     struct near_stop_match_cache_entry {
       osr::search_profile profile_;
@@ -358,7 +367,7 @@ std::vector<n::routing::offset> get_offsets(
       auto state = osr::route_one_to_many(
           params, *r.w_, *r.l_, p, pos, near_stop_locations,
           pos_match[osr::match_idx_t{0U}], cached_near_stop_matches->matches_,
-          max, dir, nullptr, sharing, elevations);
+          route_max, dir, nullptr, sharing, elevations);
       auto const& paths = state->results();
 
       if (states != nullptr) {
@@ -370,9 +379,15 @@ std::vector<n::routing::offset> get_offsets(
           }
         }
         if (!dest_idx.empty()) {
-          states->by_mode_[mode] = states->searches_.size();
-          states->searches_.emplace_back(
-              one_to_many_search{std::move(state), std::move(dest_idx), {}});
+          auto search =
+              one_to_many_search{std::move(state), std::move(dest_idx), {}};
+          if (auto const it = states->by_mode_.find(mode);
+              it != end(states->by_mode_)) {
+            states->searches_[it->second] = std::move(search);
+          } else {
+            states->by_mode_[mode] = states->searches_.size();
+            states->searches_.emplace_back(std::move(search));
+          }
         }
       }
 
@@ -476,14 +491,42 @@ std::vector<n::routing::offset> get_offsets(
       }
 
     } else {
+      auto const to_minutes = [](osr::path const& p) {
+        return n::duration_t{
+            static_cast<unsigned>(std::ceil(p.duration_.count() / 60.0))};
+      };
+
       auto const mode = transport_mode(profile);
-      auto const paths = route(profile, nullptr, mode);
+      auto paths = route(profile, nullptr, mode);
+
+      auto coverage = route_coverage{};
+      if (min_reachable_routes != 0U) {
+        auto const max_route_covering = std::max(
+            max, std::chrono::seconds{
+                     r.config_.get_limits()
+                         .street_routing_max_prepost_transit_seconds_});
+        while (true) {
+          coverage.reached_.clear();
+          for (auto const [p, l] : utl::zip(paths, near_stops)) {
+            if (p.has_value() && !r.tt_->location_routes_[l].empty()) {
+              coverage.reached_.emplace_back(to_minutes(*p), l);
+            }
+          }
+          if (coverage.select(*r.tt_, n::location_idx_t::invalid(),
+                              min_reachable_routes) ||
+              route_max >= max_route_covering) {
+            break;
+          }
+          route_max = std::min(2 * route_max, max_route_covering);
+          find_near_stops();
+          near_stop_match_cache.clear();
+          paths = route(profile, nullptr, mode);
+        }
+      }
+
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
-        if (p.has_value()) {
-          offsets.emplace_back(l,
-                               n::duration_t{static_cast<unsigned>(
-                                   std::ceil(p->duration_.count() / 60.0))},
-                               mode);
+        if (p.has_value() && (p->duration_ <= max || coverage.is_selected(l))) {
+          offsets.emplace_back(l, to_minutes(*p), mode);
         }
       }
     }
@@ -559,12 +602,13 @@ std::vector<n::routing::offset> routing::get_offsets(
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     meta_t& stats,
-    one_to_many_side* const states) const {
+    one_to_many_side* const states,
+    unsigned const min_reachable_routes) const {
   auto const do_get_offsets = [&](osr::location const pos) {
-    return ::motis::ep::get_offsets(*this, rtt, pos, dir, elevations_, modes,
-                                    ro, osr_params, pedestrian_profile,
-                                    elevation_costs, max, max_matching_distance,
-                                    gbfs_rd, stats, states);
+    return ::motis::ep::get_offsets(
+        *this, rtt, pos, dir, elevations_, modes, ro, osr_params,
+        pedestrian_profile, elevation_costs, max, max_matching_distance,
+        gbfs_rd, stats, states, min_reachable_routes);
   };
   return utl::visit(
       p,
@@ -1067,7 +1111,8 @@ api::plan_response routing::route(api::plan_params const& query,
                       osr_params, query.pedestrianProfile_,
                       query.elevationCosts_,
                       query.arriveBy_ ? post_transit_time : pre_transit_time,
-                      max_matching_distance, gbfs_rd, prepare_stats, otm_start),
+                      max_matching_distance, gbfs_rd, prepare_stats, otm_start,
+                      kTransferMinReachableRoutes),
         .destination_ =
             dest_client != nullptr ? client_offsets(*dest_client, *tags_, *tt_)
             : use_radius_dest
@@ -1085,7 +1130,8 @@ api::plan_response routing::route(api::plan_params const& query,
                       osr_params, query.pedestrianProfile_,
                       query.elevationCosts_,
                       query.arriveBy_ ? pre_transit_time : post_transit_time,
-                      max_matching_distance, gbfs_rd, prepare_stats, otm_dest),
+                      max_matching_distance, gbfs_rd, prepare_stats, otm_dest,
+                      kTransferMinReachableRoutes),
         .td_start_ = get_td_offsets(
             rtt, e, start,
             query.arriveBy_ ? osr::direction::kBackward
