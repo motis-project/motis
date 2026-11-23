@@ -760,7 +760,8 @@ api::Itinerary reconstruct_itinerary(
         is_start ? flm.max_pre_transit_ : flm.max_post_transit_,
         flm.max_matching_distance_, gbfs_rd, stats,
         is_start ? &otm_searches[n::special_station::kStart]
-                 : &otm_searches[n::special_station::kEnd]);
+                 : &otm_searches[n::special_station::kEnd],
+        kTransferMinReachableRoutes);
   };
 
   auto const get_td_offsets = [&](leg_hint const& h, bool const is_start,

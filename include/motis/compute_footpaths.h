@@ -17,6 +17,8 @@ struct routed_transfers_settings {
   double max_matching_distance_;
   bool extend_missing_{false};
   std::chrono::seconds max_duration_;
+  unsigned min_reachable_routes_{0U};
+  std::chrono::seconds max_route_covering_duration_{0};
   std::function<bool(nigiri::location_idx_t)> is_candidate_{};
 };
 

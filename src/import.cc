@@ -52,6 +52,7 @@
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
+#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
 #include "motis/route_shapes.h"
@@ -357,16 +358,22 @@ void import(config const& c,
         auto const [matches, way_matches] = write_matches(c, data_path, tt, d);
 
         utl::get_active_progress_tracker()->status("Route Footpaths");
+        auto const max_route_covering_duration = std::chrono::seconds{
+            c.get_limits().street_routing_max_prepost_transit_seconds_};
         auto const profiles = std::vector<routed_transfers_settings>{
             {.profile_ = osr::search_profile::kFoot,
              .profile_idx_ = n::kFootProfile,
              .max_matching_distance_ = c.timetable_->max_matching_distance_,
              .extend_missing_ = c.timetable_->extend_missing_footpaths_,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min,
+             .min_reachable_routes_ = kTransferMinReachableRoutes,
+             .max_route_covering_duration_ = max_route_covering_duration},
             {.profile_ = osr::search_profile::kWheelchair,
              .profile_idx_ = n::kWheelchairProfile,
              .max_matching_distance_ = 8.0,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min,
+             .min_reachable_routes_ = kTransferMinReachableRoutes,
+             .max_route_covering_duration_ = max_route_covering_duration},
             {.profile_ = osr::search_profile::kCar,
              .profile_idx_ = n::kCarProfile,
              .max_matching_distance_ = 250.0,
@@ -394,9 +401,12 @@ void import(config const& c,
   }
   if (c.osr_footpath_) {
     tt_hashes = join_meta(
-        tt_hashes, meta_t{osr_footpath_version(),
-                          {"extend_missing_footpaths",
-                           c.get_timetable().extend_missing_footpaths_}});
+        tt_hashes,
+        meta_t{osr_footpath_version(),
+               {"extend_missing_footpaths",
+                c.get_timetable().extend_missing_footpaths_},
+               {"street_routing_max_prepost_transit_seconds",
+                c.get_limits().street_routing_max_prepost_transit_seconds_}});
   }
   auto tt = task{
       "tt",
