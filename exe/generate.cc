@@ -21,7 +21,6 @@
 #include "nigiri/common/interval.h"
 #include "nigiri/flex.h"
 #include "nigiri/location_routes.h"
-#include "nigiri/routing/dijkstra.h"
 #include "nigiri/routing/raptor/debug.h"
 #include "nigiri/routing/search.h"
 #include "nigiri/special_stations.h"
@@ -944,14 +943,14 @@ int generate(int ac, char** av) {
         }
 
         if (lb_rank && rank_stop != n::location_idx_t::invalid()) {
-          // the lower bounds directly: raptor no longer computes them when
-          // a search is constructed (kUseLowerBounds = false)
-          auto const q = n::routing::query{
-              .start_time_ = d.tt_->date_range_.from_,
-              .destination_ = {{rank_stop, n::duration_t{0U}, 0}}};
-          n::routing::dijkstra(*d.tt_, q, d.tt_->bwd_search_lb_graph_[q.prf_idx_],
-                               nullptr, nullptr,
-                               s.ss_.travel_time_lower_bound_);
+          auto const search = n::routing::search<
+              n::direction::kBackward,
+              n::routing::raptor<n::direction::kBackward, false, 0,
+                                 n::routing::search_mode::kOneToAll>>{
+              *d.tt_, nullptr, s.ss_, s.rs_,
+              nigiri::routing::query{
+                  .start_time_ = d.tt_->date_range_.from_,
+                  .destination_ = {{rank_stop, n::duration_t{0U}, 0}}}};
           utl::sort(s.stops_, [&](auto const& a, auto const& b) {
             return s.ss_.travel_time_lower_bound_[to_idx(a)] <
                    s.ss_.travel_time_lower_bound_[to_idx(b)];
