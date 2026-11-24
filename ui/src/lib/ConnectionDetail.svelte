@@ -254,6 +254,7 @@
             {#if stepsWithElevation && stepsWithElevation.length > 0}
                 <div class="ml-6 flex items-center gap-2 text-xs">
                     {t.incline}
+                    {#if !(l.elevationProfile?.up && l.elevationProfile.down)}
                     <div class="flex items-center">
                         <ArrowUp class="size-4" />
                         {stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)} m
@@ -265,6 +266,16 @@
                             0
                         )} m
                     </div>
+                    {:else}
+                    <div class="flex items-center">
+                        <ArrowUp class="size-4" />
+                        {l.elevationProfile.up} m
+                    </div>
+                    <div class="flex items-center">
+                        <ArrowDown class="size-4" />
+                        {l.elevationProfile.down} m
+                    </div>
+                    {/if}
                 </div>
             {/if}
             {#if stepsWithToll && stepsWithToll.length > 0}
@@ -285,27 +296,27 @@
             {/if}
         </div>
         {#if l.elevationProfile}
-            <div class="flex items-center justify-end">
-                <Popover.Root> 
-                    <div bind:clientHeight={buttonHeight}>
-                    <Popover.Trigger class={buttonVariants({ variant: "outline", size: "icon" })}>
-                        <ChevronsRight class="size-4" />
-                    </Popover.Trigger>
-            
-                    <Popover.Portal>
-                        <Popover.Content
-                            side="right" 
-                            align="center"
-                            sideOffset={8}
-                            class="z-50 rounded-lg border bg-popover p-4 text-xs text-muted-foreground shadow-xl outline-none flex flex-col justify-between"
-                            style="height: {buttonHeight * 4}px; width: {buttonHeight * 8}px;"
-                        >
-                            <ElevationProfile profile={l.elevationProfile} width={buttonHeight * 8} height={buttonHeight * 4} />
-                        </Popover.Content>
-                    </Popover.Portal>
-                </div>
-                </Popover.Root>
+        <div class="flex items-center justify-end">
+            <Popover.Root> 
+                <div bind:clientHeight={buttonHeight}>
+                <Popover.Trigger class={buttonVariants({ variant: "outline", size: "icon" })}>
+                    <ChevronsRight class="size-4" />
+                </Popover.Trigger>
+        
+                <Popover.Portal>
+                    <Popover.Content
+                        side="right" 
+                        align="center"
+                        sideOffset={8}
+                        class="z-50 rounded-lg border bg-popover p-4 text-xs text-muted-foreground shadow-xl outline-none flex flex-col justify-between"
+                        style="height: {buttonHeight * 4}px; width: {buttonHeight * 8}px;"
+                    >
+                        <ElevationProfile profile={l.elevationProfile} width={buttonHeight * 8} height={buttonHeight * 4} />
+                    </Popover.Content>
+                </Popover.Portal>
             </div>
+            </Popover.Root>
+        </div>
         {/if}
     </div>
 {/snippet}
