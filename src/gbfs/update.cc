@@ -1457,6 +1457,9 @@ struct gbfs_update {
     auto content = std::string{};
     auto source = std::string{url};
     auto is_stale = false;
+    auto const labels = prometheus::Labels{
+        {"provider_id", std::string{feed_id}}, {"file", std::string{name}}};
+    metrics_->gbfs_fetches_total_.Add(labels).Increment();
     if (dir.has_value()) {
       auto const path = *dir / fmt::format("{}.json", name);
       source = path.string();
@@ -1468,7 +1471,11 @@ struct gbfs_update {
           proxy_,
           [&](headers_t& headers) { return get_oauth_token(oauth, headers); });
       is_stale = res.status_ == feed_cache::status::kStale;
+      if (res.status_ == feed_cache::status::kNotModified) {
+        metrics_->gbfs_fetches_not_modified_total_.Add(labels).Increment();
+      }
       if (is_stale) {
+        metrics_->gbfs_fetches_stale_total_.Add(labels).Increment();
         inc_fetch_error(std::string{feed_id}, name);
         std::cerr << "[GBFS] error fetching " << name << " for feed " << feed_id
                   << " (" << url << "): " << res.download_error_

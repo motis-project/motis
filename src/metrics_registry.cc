@@ -169,6 +169,23 @@ metrics_registry::metrics_registry(
               .Name("motis_gbfs_vehicle_count")
               .Help("Current number of GBFS vehicles known to MOTIS")
               .Register(registry_)},
+      gbfs_fetches_total_{
+          prometheus::BuildCounter()
+              .Name("motis_gbfs_fetches_total")
+              .Help("Number of GBFS file fetches (download or local file)")
+              .Register(registry_)},
+      gbfs_fetches_not_modified_total_{
+          prometheus::BuildCounter()
+              .Name("motis_gbfs_fetches_not_modified_total")
+              .Help("Number of GBFS file downloads answered with 304 Not "
+                    "Modified (cached version was used)")
+              .Register(registry_)},
+      gbfs_fetches_stale_total_{
+          prometheus::BuildCounter()
+              .Name("motis_gbfs_fetches_stale_total")
+              .Help("Number of failed GBFS file downloads where the stale "
+                    "cached version was used (also counted as fetch error)")
+              .Register(registry_)},
       gbfs_fetch_errors_total_{
           prometheus::BuildCounter()
               .Name("motis_gbfs_fetch_errors_total")
