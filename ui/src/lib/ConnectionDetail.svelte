@@ -9,7 +9,6 @@
 		Bike,
 		Accessibility,
 		ExternalLink,
-        ChevronsRight,
 	} from '@lucide/svelte';
     import { Popover } from "bits-ui";
 	import type {
@@ -42,8 +41,6 @@
 	}: {
 		itinerary: Itinerary;
 	} = $props();
-
-    let buttonHeight = $state(0);
 
 	const isTransitLeg = (l: Leg) => !!l.displayName;
 	const isRelevantLeg = (l: Leg) => l.duration !== 0 || isTransitLeg(l);
@@ -226,7 +223,7 @@
 	{@const stepsWithToll = l.steps?.filter((s: StepInstruction) => s.toll)}
 	{@const stepsWithAccessRestriction = l.steps?.filter((s: StepInstruction) => s.accessRestriction)}
 
-    <div class="py-12 flex flex-row items-stretch justify-between gap-x-4 text-muted-foreground">
+    <div class="py-12 flex flex-row flex-wrap items-stretch justify-between gap-x-4 text-muted-foreground">
         <div class="flex flex-col gap-y-4 text-left">
             <span class="ml-6">
                 {formatDurationSec(l.duration)}
@@ -251,33 +248,42 @@
                     </Button>
                 </span>
             {/if}
-            {#if stepsWithElevation && stepsWithElevation.length > 0}
-                <div class="ml-6 flex items-center gap-2 text-xs">
-                    {t.incline}
-                    {#if !(l.elevationProfile?.up && l.elevationProfile.down)}
-                    <div class="flex items-center">
-                        <ArrowUp class="size-4" />
-                        {stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)} m
+        </div>
+            {#if l.elevationProfile}
+                <details class="w-full basis-full">
+                    <summary class="cursor-pointer list-none ml-6 flex items-center gap-2 text-xs text-left">
+                        {t.incline}
+                            <div class="flex items-center">
+                                <ArrowUp class="size-4" />
+                                {l.elevationProfile.up} m
+                            </div>
+                            <div class="flex items-center">
+                                <ArrowDown class="size-4" />
+                                {l.elevationProfile.down} m
+                            </div>
+                    </summary>
+
+                    <div class="mt-3 w-full text-xs text-muted-foreground">
+                        <ElevationProfile profile={l.elevationProfile} />
                     </div>
-                    <div class="flex items-center">
-                        <ArrowDown class="size-4" />
-                        {stepsWithElevation.reduce(
-                            (acc: number, s: StepInstruction) => acc + s.elevationDown!,
-                            0
-                        )} m
-                    </div>
-                    {:else}
-                    <div class="flex items-center">
-                        <ArrowUp class="size-4" />
-                        {l.elevationProfile.up} m
-                    </div>
-                    <div class="flex items-center">
-                        <ArrowDown class="size-4" />
-                        {l.elevationProfile.down} m
-                    </div>
-                    {/if}
+                </details>
+            {:else if stepsWithElevation && stepsWithElevation.length > 0}
+            <div class="w-full basis-full ml-6 flex items-center gap-2 text-xs text-left">
+                {t.incline}
+                <div class="flex items-center">
+                    <ArrowUp class="size-4" />
+                    {stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)} m
                 </div>
+                <div class="flex items-center">
+                    <ArrowDown class="size-4" />
+                    {stepsWithElevation.reduce(
+                        (acc: number, s: StepInstruction) => acc + s.elevationDown!,
+                        0
+                    )} m
+                </div>
+            </div>
             {/if}
+        <div class="flex flex-col gap-y-4 text-left">
             {#if stepsWithToll && stepsWithToll.length > 0}
                 <div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
                     <DollarSign class="size-4" />
@@ -295,29 +301,6 @@
                 </div>
             {/if}
         </div>
-        {#if l.elevationProfile}
-        <div class="flex items-center justify-end">
-            <Popover.Root> 
-                <div bind:clientHeight={buttonHeight}>
-                <Popover.Trigger class={buttonVariants({ variant: "outline", size: "icon" })}>
-                    <ChevronsRight class="size-4" />
-                </Popover.Trigger>
-        
-                <Popover.Portal>
-                    <Popover.Content
-                        side="right" 
-                        align="center"
-                        sideOffset={8}
-                        class="z-50 rounded-lg border bg-popover p-4 text-xs text-muted-foreground shadow-xl outline-none flex flex-col justify-between"
-                        style="height: {buttonHeight * 4}px; width: {buttonHeight * 8}px;"
-                    >
-                        <ElevationProfile profile={l.elevationProfile} width={buttonHeight * 8} height={buttonHeight * 4} />
-                    </Popover.Content>
-                </Popover.Portal>
-            </div>
-            </Popover.Root>
-        </div>
-        {/if}
     </div>
 {/snippet}
 

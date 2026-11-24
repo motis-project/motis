@@ -1,17 +1,40 @@
 <script lang="ts">
 	import { type ElevationProfile } from '@motis-project/motis-client';
 
-	let { profile, width, height }: { profile: ElevationProfile, width: number, height: number } = $props();
+	let { profile }: { profile: ElevationProfile } = $props();
     let rootElement: HTMLElement | undefined = $state();
     let fontSize: number = $state(12);
+    let width: number = $state(0);
+    let height: number = $derived(width / 2);
 
     $effect(() => {
         if (!rootElement) return;
-        const computed = window.getComputedStyle(rootElement);
-        const parsed = parseFloat(computed.fontSize);
-        if (!isNaN(parsed)) {
-            fontSize = parsed;
-        }
+
+        const updateSize = () => {
+            if (!rootElement) return;
+
+            const computed = window.getComputedStyle(rootElement);
+            const parsed = parseFloat(computed.fontSize);
+            if (!isNaN(parsed) && parsed > 0) {
+                fontSize = parsed;
+            }
+
+            const newWidth = rootElement.getBoundingClientRect().width;
+            if (newWidth > 0) {
+                width = newWidth;
+            }
+        };
+        updateSize();
+        const observer = new ResizeObserver(() => requestAnimationFrame(updateSize));
+        observer.observe(rootElement);
+
+        const details = rootElement.closest("details");
+        details?.addEventListener("toggle", updateSize);
+
+        return () => {
+            observer.disconnect(); 
+            details?.removeEventListener("toggle", updateSize)
+        };
     });
 
 	interface IResult {
@@ -27,41 +50,48 @@
 		return Math.sqrt(sqrdDist);
 	};
 
-	let maxDistance = 0;
 	const processData = (points: number[]): IResult[] => {
 		let res: IResult[] = [{ distance: 0, elevation: points[2] }];
+        let dist_acc = 0;
 		for (let i = 3; i < points.length - 2; i += 3) {
 			const d = distance(points[i], points[i + 1], points[i - 3], points[i - 2]);
-			maxDistance += d;
-			res.push({ distance: maxDistance, elevation: points[i + 2] });
+			dist_acc += d;
+            res.push({ distance: dist_acc, elevation: points[i + 2] });
 		}
 
 		return res;
 	};
 
-	// const xPadding = Math.max(40, `${profile.max}m`.length * fontSize * 0.6 + 5);
     const xPadding = $derived(`${profile.max}`.length * fontSize * 1.2 + 5);
 	const yPadding = $derived(fontSize * 1.4 + 5);
 	const xScale = (d: number): number => {
-		return (d / maxDistance) * (width - xPadding * 2) + xPadding;
+		return d * (width - xPadding * 2) + xPadding;
 	};
 	const yScale = (d: number): number => {
-		return height - yPadding - (d / profile.max) * (height - yPadding * 2);
+		return height - yPadding - d * (height - yPadding * 2);
 	};
 
-	let linePath = processData(profile.points).reduce(
-		(acc: string, v: IResult, i: number): string => {
-			const x = xScale(v.distance);
-			const y = yScale(v.elevation);
+	let chart = $derived.by(() => {
+        let processed = processData(profile.points);
+        let dist = processed[processed.length - 1].distance;
+        let path = processed.reduce(
+            (acc: string, v: IResult, i: number): string => {
+                const x = xScale(v.distance / dist);
+                const y = yScale(v.elevation / profile.max);
 
-			return i == 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
-		},
-		''
-	);
+                return i == 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
+            },
+            ''
+	    );
+        return {path: path, dist: dist};
+    });
 </script>
 
-<div bind:this={rootElement} class="flex flex-col items-center">
-	<svg viewBox="0 0 {width} {height}" class="w-full h-auto">
+<div bind:this={rootElement} class="block w-full">
+    {#if width > 0 && height > 0}
+    {@const maxDistance = chart.dist}
+    {@const linePath = chart.path}
+	<svg {width} {height} viewBox="0 0 {width} {height}" class="block w-full aspect-[2/1] overflow-visible">
 		<!-- x-Axis -->
 		<path
 			class="axis-line"
@@ -107,21 +137,21 @@
         <!-- Minimum -->
         <path
             class="median-line"
-            d="M {xPadding} {yScale(profile.min)} L {width - xPadding} {yScale(profile.min)}"
+            d="M {xPadding} {yScale(profile.min / profile.max)} L {width - xPadding} {yScale(profile.min / profile.max)}"
         />
         <text
             class="label"
-            x={xPadding - 5} y={yScale(profile.min)}
+            x={xPadding - 5} y={yScale(profile.min / profile.max)}
             text-anchor="end" dominant-baseline="hanging"
         >{profile.min}m</text>
         <!-- Maximum -->
         <path
             class="median-line" 
-            d="M {xPadding} {yScale(profile.max)} L {width - xPadding} {yScale(profile.max)}"
+            d="M {xPadding} {yScale(1.0)} L {width - xPadding} {yScale(1.0)}"
         />
         <text
             class="label"
-			x={xPadding - 5} y={yScale(profile.max)}
+			x={xPadding - 5} y={yScale(1.0)}
 			text-anchor="end" dominant-baseline="alphabetic">{profile.max}m</text
 		>
 		<!-- Profile -->
@@ -131,6 +161,7 @@
 		median={profile.median}m N={profile.size}
 		up={profile.up}m down={profile.down}m
 	</div> -->
+    {/if}
 </div>
 
 <style>
