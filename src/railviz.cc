@@ -261,7 +261,8 @@ void add_rt_transports(n::timetable const& tt,
     auto const box = geo::make_box({from.pos(), to.pos()});
     if (box.overlaps(area)) {
       auto const active =
-          n::interval{from.time(n::event_type::kDep),
+          n::interval{from.time(from.stop_idx_ == 0U ? n::event_type::kDep
+                                                     : n::event_type::kArr),
                       to.time(n::event_type::kArr) + n::i32_minutes{1}};
       if (active.overlaps(time_interval)) {
         utl::verify<net::too_many_exception>(runs.size() < kTripsLimit,
@@ -306,7 +307,6 @@ void add_static_transports(n::timetable const& tt,
          tt.locations_.coordinates_[n::stop{seq[segment + 1]}.location_idx()]});
   };
   for (auto const [from, to] : utl::pairwise(stop_indices)) {
-    // TODO dwell times
     auto const box = get_box(from);
     if (!box.overlaps(area)) {
       continue;
@@ -320,7 +320,10 @@ void add_static_transports(n::timetable const& tt,
       for (auto traffic_day = start_day - day_offset; traffic_day <= end_day;
            ++traffic_day) {
         auto const t = n::transport{t_idx, traffic_day};
-        if (time_interval.overlaps({tt.event_time(t, from, n::event_type::kDep),
+        if (time_interval.overlaps({tt.event_time(t, from,
+                                                  from == 0U
+                                                      ? n::event_type::kDep
+                                                      : n::event_type::kArr),
                                     tt.event_time(t, to, n::event_type::kArr) +
                                         n::unixtime_t::duration{1}}) &&
             is_active(t)) {
