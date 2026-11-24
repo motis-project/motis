@@ -320,12 +320,12 @@ void add_static_transports(n::timetable const& tt,
       for (auto traffic_day = start_day - day_offset; traffic_day <= end_day;
            ++traffic_day) {
         auto const t = n::transport{t_idx, traffic_day};
-        if (time_interval.overlaps({tt.event_time(t, from,
-                                                  from == 0U
-                                                      ? n::event_type::kDep
-                                                      : n::event_type::kArr),
-                                    tt.event_time(t, to, n::event_type::kArr) +
-                                        n::unixtime_t::duration{1}}) &&
+        if (time_interval.overlaps(
+                {tt.event_time(
+                     t, from,
+                     from == 0U ? n::event_type::kDep : n::event_type::kArr),
+                 tt.event_time(t, to, n::event_type::kArr) +
+                     n::unixtime_t::duration{1}}) &&
             is_active(t)) {
           utl::verify<net::too_many_exception>(runs.size() < kTripsLimit,
                                                "too many trips");

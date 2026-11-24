@@ -172,11 +172,12 @@ data import_gtfs(char const* dir,
   auto ec = std::error_code{};
   std::filesystem::remove_all(dir, ec);
 
-  auto c = config{.timetable_ =
-                      config::timetable{.first_day_ = date::format("%F", first_day),
-                                        .num_days_ = 4}};
+  auto c =
+      config{.timetable_ = config::timetable{
+                 .first_day_ = date::format("%F", first_day), .num_days_ = 4}};
   for (auto const& [tag, gtfs] : feeds) {
-    c.timetable_->datasets_.emplace(tag, config::timetable::dataset{.path_ = gtfs});
+    c.timetable_->datasets_.emplace(tag,
+                                    config::timetable::dataset{.path_ = gtfs});
   }
   import(c, dir);
   auto d = data{dir, c};
@@ -203,11 +204,11 @@ std::vector<std::string> segments(data& d,
                                   std::string_view area = kArea,
                                   int const zoom = 18) {
   auto const trips = utl::init_from<ep::trips>(d).value();
-  auto res = utl::to_vec(
-      trips(fmt::format("/api/v5/map/trips?zoom={}&{}&precision=5"
-                        "&startTime={}&endTime={}",
-                        zoom, area, start, end)),
-      to_str);
+  auto res =
+      utl::to_vec(trips(fmt::format("/api/v5/map/trips?zoom={}&{}&precision=5"
+                                    "&startTime={}&endTime={}",
+                                    zoom, area, start, end)),
+                  to_str);
   std::ranges::sort(res);
   return res;
 }
@@ -217,7 +218,8 @@ using strings = std::vector<std::string>;
 }  // namespace
 
 TEST(motis, railviz) {
-  auto d = import_gtfs("test/data_railviz", 2019_y / May / 1, {{"test", kGTFS}});
+  auto d =
+      import_gtfs("test/data_railviz", 2019_y / May / 1, {{"test", kGTFS}});
 
   // Moving between stops.
   EXPECT_EQ(strings{"20190501_10:00_test_T A 01 08:00 -> B 01 08:10"},
@@ -253,40 +255,38 @@ TEST(motis, railviz) {
             segments(d, "2019-05-01T10:02:00Z", "2019-05-01T10:03:00Z"));
   EXPECT_EQ(strings{}, segments(d, "2019-05-01T10:02:00Z",
                                 "2019-05-01T10:03:00Z", kArea, 8));
-  EXPECT_EQ(strings{"20190501_10:00_test_T A 01 08:00 -> B 01 08:10"},
-            segments(d, "2019-05-01T08:05:00Z", "2019-05-01T08:06:00Z", kArea,
-                     4));
+  EXPECT_EQ(
+      strings{"20190501_10:00_test_T A 01 08:00 -> B 01 08:10"},
+      segments(d, "2019-05-01T08:05:00Z", "2019-05-01T08:06:00Z", kArea, 4));
 
   // Real-time: delay.
   {
     auto const stats = gtfsrt_update(
         d, to_feed_msg(
-               {trip_update{.trip_ = {.trip_id_ = "T", .date_ = {"20190501"}},
-                            .stop_updates_ = {{.stop_id_ = "A",
-                                               .delay_minutes_ = 1}}}},
+               {trip_update{
+                   .trip_ = {.trip_id_ = "T", .date_ = {"20190501"}},
+                   .stop_updates_ = {{.stop_id_ = "A", .delay_minutes_ = 1}}}},
                date::sys_days{2019_y / May / 1} + 8h));
     EXPECT_EQ(1U, stats.total_entities_success_);
     d.load_railviz();
 
-    EXPECT_EQ(
-        strings{"20190501_10:00_test_T A 01 08:01 (08:00) -> B 01 08:11 "
-                "(08:10) rt"},
-        segments(d, "2019-05-01T08:05:00Z", "2019-05-01T08:06:00Z"));
-    EXPECT_EQ(
-        strings{"20190501_10:00_test_T B 01 08:21 (08:20) -> C 01 08:31 "
-                "(08:30) rt"},
-        segments(d, "2019-05-01T08:12:00Z", "2019-05-01T08:15:00Z"));
+    EXPECT_EQ(strings{"20190501_10:00_test_T A 01 08:01 (08:00) -> B 01 08:11 "
+                      "(08:10) rt"},
+              segments(d, "2019-05-01T08:05:00Z", "2019-05-01T08:06:00Z"));
+    EXPECT_EQ(strings{"20190501_10:00_test_T B 01 08:21 (08:20) -> C 01 08:31 "
+                      "(08:30) rt"},
+              segments(d, "2019-05-01T08:12:00Z", "2019-05-01T08:15:00Z"));
   }
 
   // Real-time: skipped stop -> one segment across it.
   {
     d.init_rtt(date::sys_days{2019_y / May / 1});
     auto const stats = gtfsrt_update(
-        d, to_feed_msg(
-               {trip_update{.trip_ = {.trip_id_ = "T", .date_ = {"20190501"}},
-                            .stop_updates_ = {{.stop_id_ = "B",
-                                               .skip_ = true}}}},
-               date::sys_days{2019_y / May / 1} + 8h));
+        d,
+        to_feed_msg(
+            {trip_update{.trip_ = {.trip_id_ = "T", .date_ = {"20190501"}},
+                         .stop_updates_ = {{.stop_id_ = "B", .skip_ = true}}}},
+            date::sys_days{2019_y / May / 1} + 8h));
     EXPECT_EQ(1U, stats.total_entities_success_);
     d.load_railviz();
 
@@ -298,11 +298,10 @@ TEST(motis, railviz) {
   {
     d.init_rtt(date::sys_days{2019_y / May / 1});
     auto const stats = gtfsrt_update(
-        d,
-        to_feed_msg({trip_update{
-                        .trip_ = {.trip_id_ = "N", .date_ = {"20190501"}},
-                        .cancelled_ = true}},
-                    date::sys_days{2019_y / May / 1} + 8h));
+        d, to_feed_msg(
+               {trip_update{.trip_ = {.trip_id_ = "N", .date_ = {"20190501"}},
+                            .cancelled_ = true}},
+               date::sys_days{2019_y / May / 1} + 8h));
     EXPECT_EQ(1U, stats.total_entities_success_);
     d.load_railviz();
 
