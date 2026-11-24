@@ -25,7 +25,8 @@ namespace {
 //   W0 -> W9  bus + 10 min walk W1 -> W2 + bus, 11:00 | bus + bus at W3, 11:10
 //   S0 -> S9  rail + bus at S1, 11:00 | bus + bus at S2, 11:10
 //   M0 -> M9  air 10:30 | coach 10:40 | rail 10:50
-//   N0 -> N9  leaves at 23:00: rail 03:00 (in the night) | rail 06:30
+//   N0 -> N9  leaves at 23:00: rail 04:00 (awake in the night) | rail 06:15
+//             (sleeps through it, within 04:00's slack: 23:00 + 1.5 * 5 h)
 // BMRAPP keeps a journey if it arrives within its anchor's travel time T plus
 // clamp(T / 2, 20 min, 180 min) (relax_arr(), bmrap_bounds.h): for air's 30
 // minutes 50, so all of these. W1 and W2 are 220 m apart, the other stops
@@ -103,9 +104,9 @@ M_COACH,10:40:00,10:40:00,M9,1,0,0
 M_RAIL,10:00:00,10:00:00,M0,0,0,0
 M_RAIL,10:50:00,10:50:00,M9,1,0,0
 N_FAST,23:00:00,23:00:00,N0,0,0,0
-N_FAST,27:00:00,27:00:00,N9,1,0,0
+N_FAST,28:00:00,28:00:00,N9,1,0,0
 N_SLOW,23:00:00,23:00:00,N0,0,0,0
-N_SLOW,30:30:00,30:30:00,N9,1,0,0
+N_SLOW,30:15:00,30:15:00,N9,1,0,0
 
 # transfers.txt
 from_stop_id,to_stop_id,transfer_type,min_transfer_time
@@ -261,7 +262,7 @@ TEST(motis, bmrapp_criteria_combine) {
             rows(res));
 }
 
-// Night is local time: 06:30 is 04:30 UTC, but not in the night.
+// Night is in the query's local time: 06:15 is 04:15 UTC, but past the night.
 TEST(motis, bmrapp_minimize_night_transfers) {
   auto const routing = utl::init_from<ep::routing>(bmrapp_data()).value();
   auto const res = routing(
@@ -274,7 +275,7 @@ TEST(motis, bmrapp_minimize_night_transfers) {
                             value(it.criteria_->nightTransfer_)));
   }
   std::sort(begin(v), end(v));
-  EXPECT_EQ((std::vector<std::string>{"240 night=true", "450 night=false"}), v);
+  EXPECT_EQ((std::vector<std::string>{"300 night=true", "435 night=false"}), v);
 }
 
 // Via stops are beyond the multicriteria engine: the requested algorithm

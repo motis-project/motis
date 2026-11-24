@@ -1244,15 +1244,13 @@ api::plan_response routing::route(api::plan_params const& query,
         auto const run = [&]<typename Criteria>() {
           auto mc_state = n::routing::basic_mcraptor_state<Criteria>{};
 #if defined(NIGIRI_CUDA)
-          if constexpr (!Criteria::extras_t::kRideTimes) {  // else CPU only
-            if (gpu_supported && gpu_pool_ != nullptr) {
-              // a failure is answered by the plain GPU raptor, see below
-              auto const lease = gpu_pool_->acquire(/*mc=*/true);
-              gpu_used = true;
-              return n::routing::bmrap_profile_search<Criteria>(
-                  *tt_, rtt, search_state, lease.state_, mc_state, q, dir,
-                  mc_timeout, lease.mc_);
-            }
+          if (gpu_supported && gpu_pool_ != nullptr) {
+            // a failure is answered by the plain GPU raptor, see below
+            auto const lease = gpu_pool_->acquire(/*mc=*/true);
+            gpu_used = true;
+            return n::routing::bmrap_profile_search<Criteria>(
+                *tt_, rtt, search_state, lease.state_, mc_state, q, dir,
+                mc_timeout, lease.mc_);
           }
 #endif
           auto scalar_state = n::routing::raptor_state{};

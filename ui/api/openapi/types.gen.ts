@@ -1772,8 +1772,8 @@ export type ItineraryCriteria = {
      */
     modeSwitches?: number;
     /**
-     * `minimizeNightTransfers`: whether the itinerary boards or alights a
-     * trip between 00:00 and 06:00 local time
+     * `minimizeNightTransfers`: whether the itinerary waits or rides
+     * between 00:00 and 06:00 without sleeping on a train, ferry or coach
      *
      */
     nightTransfer?: boolean;
@@ -2598,12 +2598,14 @@ export type PlanData = {
          */
         minimizeModeSwitches?: boolean;
         /**
-         * Add "boards or alights a trip between 00:00 and 06:00" as an extra
-         * Pareto criterion, in the local time of the stop. The first boarding
-         * and the last alighting count too. The result keeps the fastest
-         * journey and the best one without.
+         * Add "awake at night" as an extra Pareto criterion: waiting at a stop
+         * or riding between 00:00 and 06:00, in the average UTC offset of the
+         * start and the destination. A ride on a train, ferry or coach that
+         * spans the whole night counts as sleep; waiting for the first trip
+         * does not count. The result keeps the fastest journey and the best
+         * one without.
          *
-         * Runs on the CPU. Setting this (or any other `minimize*` parameter)
+         * Setting this (or any other `minimize*` parameter)
          * switches routing to the multicriteria engine, overriding `algorithm`
          * if it was `PONG`.
          *

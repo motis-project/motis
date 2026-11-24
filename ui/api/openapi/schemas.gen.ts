@@ -2227,8 +2227,8 @@ trips (suburban, subway, tram and bus count as one class)
             type: 'integer'
         },
         nightTransfer: {
-            description: `\`minimizeNightTransfers\`: whether the itinerary boards or alights a
-trip between 00:00 and 06:00 local time
+            description: `\`minimizeNightTransfers\`: whether the itinerary waits or rides
+between 00:00 and 06:00 without sleeping on a train, ferry or coach
 `,
             type: 'boolean'
         },
