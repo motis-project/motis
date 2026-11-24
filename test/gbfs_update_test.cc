@@ -1530,6 +1530,11 @@ TEST(motis, gbfs_update_http_conditional_requests_and_stale_cache) {
     ASSERT_EQ(1U, p->vehicle_status_.size());
   };
 
+  auto const count = [](prometheus::Family<prometheus::Counter>& family,
+                        std::string const& file) {
+    return family.Add({{"provider_id", "test"}, {"file", file}}).Value();
+  };
+
   auto cache = feed_cache{};
 
   {
@@ -1538,6 +1543,9 @@ TEST(motis, gbfs_update_http_conditional_requests_and_stale_cache) {
     run_http_update(ioc, c, gbfs, metrics, &cache);
     check_provider(gbfs);
     EXPECT_EQ(0U, server.n_not_modified_);
+    EXPECT_EQ(1.0, count(metrics.gbfs_fetches_total_, "station_status"));
+    EXPECT_EQ(
+        0.0, count(metrics.gbfs_fetches_not_modified_total_, "station_status"));
     EXPECT_TRUE(utl::all_of(server.srv_.requests_, [](auto const& req) {
       return req[boost::beast::http::field::if_none_match].empty();
     }));
@@ -1547,6 +1555,10 @@ TEST(motis, gbfs_update_http_conditional_requests_and_stale_cache) {
     run_http_update(ioc, c, gbfs, metrics, &cache);
     check_provider(gbfs);
     EXPECT_EQ(n_requests, server.n_not_modified_);
+    EXPECT_EQ(2.0, count(metrics.gbfs_fetches_total_, "station_status"));
+    EXPECT_EQ(
+        1.0, count(metrics.gbfs_fetches_not_modified_total_, "station_status"));
+    EXPECT_EQ(0.0, count(metrics.gbfs_fetches_stale_total_, "station_status"));
   }
 
   // server down, no previous gbfs_data
@@ -1556,8 +1568,10 @@ TEST(motis, gbfs_update_http_conditional_requests_and_stale_cache) {
     auto gbfs = std::shared_ptr<gbfs_data>{};
     run_http_update(ioc, c, gbfs, metrics, &cache);
     check_provider(gbfs);
-    EXPECT_TRUE(metrics.gbfs_fetch_errors_total_.Has(
-        {{"provider_id", "test"}, {"file", "gbfs"}}));
+    EXPECT_EQ(1.0, count(metrics.gbfs_fetches_total_, "station_status"));
+    EXPECT_EQ(1.0, count(metrics.gbfs_fetches_stale_total_, "station_status"));
+    EXPECT_EQ(1.0, count(metrics.gbfs_fetch_errors_total_, "station_status"));
+    EXPECT_EQ(1.0, count(metrics.gbfs_fetches_stale_total_, "gbfs"));
     EXPECT_TRUE(has_last_attempted(metrics, "test"));
     EXPECT_FALSE(has_last_successful(metrics, "test"));
     EXPECT_EQ(0.0, last_update(metrics, "test").Value());
@@ -1579,6 +1593,9 @@ TEST(motis, gbfs_update_http_conditional_requests_and_stale_cache) {
     run_http_update(ioc, c_no_stale, gbfs, metrics, &cache);
     ASSERT_NE(nullptr, gbfs);
     EXPECT_FALSE(gbfs->provider_by_id_.contains("test"));
+    EXPECT_EQ(1.0, count(metrics.gbfs_fetches_total_, "gbfs"));
+    EXPECT_EQ(0.0, count(metrics.gbfs_fetches_stale_total_, "gbfs"));
+    EXPECT_EQ(1.0, count(metrics.gbfs_fetch_errors_total_, "gbfs"));
   }
 
   server.srv_.stop();
