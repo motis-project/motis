@@ -2186,6 +2186,10 @@ export type Error = {
      * error message
      */
     error: string;
+    /**
+     * Set if the error was caused by unknown timetable location IDs. Contains all unknown IDs from the request (e.g. fromPlace, toPlace, via, offset stopId).
+     */
+    unknownCodes?: Array<(string)>;
 };
 
 /**

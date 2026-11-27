@@ -17,6 +17,10 @@ api::oneToManyPost_response one_to_many_post::operator()(
 
 api::OneToManyIntermodalResponse one_to_many_intermodal_post::operator()(
     api::OneToManyIntermodalParams const& query) const {
+  auto places = std::vector<std::string_view>{query.one_};
+  places.insert(end(places), begin(query.many_), end(query.many_));
+  verify_locations_exist(&tt_, &tags_, places, {});
+
   auto const one = get_place(&tt_, &tags_, query.one_);
   auto const many =
       utl::to_vec(query.many_, [&](std::string_view place) -> place_t {
