@@ -13,6 +13,7 @@
 #include "cista/hash.h"
 
 #include "utl/helpers/algorithm.h"
+#include "utl/lookup.h"
 #include "utl/parser/arg_parser.h"
 #include "utl/raii.h"
 #include "utl/to_vec.h"
@@ -290,10 +291,10 @@ std::optional<vehicle_type_idx_t> get_vehicle_type(
     return idx;
   };
 
-  if (auto const it =
-          provider.vehicle_types_map_.find({vehicle_type_id, start_type});
-      it != end(provider.vehicle_types_map_)) {
-    return it->second;
+  if (auto const existing =
+          utl::lookup(provider.vehicle_types_map_,
+                      std::pair{vehicle_type_id, start_type})) {
+    return existing;
   } else if (auto const temp_it =
                  provider.temp_vehicle_types_.find(vehicle_type_id);
              temp_it != end(provider.temp_vehicle_types_)) {
@@ -721,15 +722,15 @@ rule parse_rule(gbfs_provider& provider, json::value const& r) {
   }
 
   for (auto const& vt_id : vehicle_type_ids) {
-    if (auto const station_vt_it = provider.vehicle_types_map_.find(
-            {vt_id, vehicle_start_type::kStation});
-        station_vt_it != end(provider.vehicle_types_map_)) {
-      vehicle_type_idxs.emplace_back(station_vt_it->second);
+    if (auto const station_vt =
+            utl::lookup(provider.vehicle_types_map_,
+                        std::pair{vt_id, vehicle_start_type::kStation})) {
+      vehicle_type_idxs.emplace_back(*station_vt);
     }
-    if (auto const free_floating_vt_it = provider.vehicle_types_map_.find(
-            {vt_id, vehicle_start_type::kFreeFloating});
-        free_floating_vt_it != end(provider.vehicle_types_map_)) {
-      vehicle_type_idxs.emplace_back(free_floating_vt_it->second);
+    if (auto const free_floating_vt =
+            utl::lookup(provider.vehicle_types_map_,
+                        std::pair{vt_id, vehicle_start_type::kFreeFloating})) {
+      vehicle_type_idxs.emplace_back(*free_floating_vt);
     }
   }
   if (!vehicle_type_ids.empty() && vehicle_type_idxs.empty()) {

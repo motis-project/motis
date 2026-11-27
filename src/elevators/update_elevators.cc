@@ -1,5 +1,6 @@
 #include "motis/elevators/update_elevators.h"
 
+#include "utl/lookup.h"
 #include "utl/verify.h"
 
 #include "nigiri/logging.h"
@@ -53,17 +54,16 @@ ptr<elevators> update_elevators(config const& c,
   };
 
   for (auto const& [id, e_idx] : old_map) {
-    auto const it = new_map.find(id);
-    if (it == end(new_map)) {
+    if (auto const new_e_idx = utl::lookup(new_map, id)) {
+      // Elevator remained. Update if status or maintenance windows changed.
+      if (new_e->elevators_[*new_e_idx].get_state_changes() !=
+          old_e.elevators_[e_idx].get_state_changes()) {
+        add_tasks(new_e->elevators_[*new_e_idx].pos_);
+      }
+    } else {
       // Elevator got removed. Update if it was not always working before.
       if (!always_working(old_e.elevators_[e_idx])) {
         add_tasks(old_e.elevators_[e_idx].pos_);
-      }
-    } else {
-      // Elevator remained. Update if status or maintenance windows changed.
-      if (new_e->elevators_[it->second].get_state_changes() !=
-          old_e.elevators_[e_idx].get_state_changes()) {
-        add_tasks(new_e->elevators_[it->second].pos_);
       }
     }
   }

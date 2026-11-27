@@ -1,5 +1,7 @@
 #include "motis/gbfs/gbfs_output.h"
 
+#include "utl/visit.h"
+
 #include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
@@ -73,48 +75,46 @@ void gbfs_output::annotate_leg(nigiri::lang_t const&,
   if (w_.is_additional_node(from_node)) {
     auto const& an = prod_rd_->compressed_.additional_nodes_.at(
         get_additional_node_idx(from_node));
-    std::visit(
-        utl::overloaded{
-            [&](additional_node::station const& s) {
-              auto const& st = provider_.stations_.at(s.id_);
-              ret.fromStationName_ = st.info_.name_;
-              ret.stationName_ = st.info_.name_;
-              ret.rentalUriAndroid_ = st.info_.rental_uris_.android_;
-              ret.rentalUriIOS_ = st.info_.rental_uris_.ios_;
-              ret.rentalUriWeb_ = st.info_.rental_uris_.web_;
-            },
-            [&](additional_node::vehicle const& v) {
-              auto const& vs = provider_.vehicle_status_.at(v.idx_);
-              if (auto const st = provider_.stations_.find(vs.station_id_);
-                  st != end(provider_.stations_)) {
-                ret.fromStationName_ = st->second.info_.name_;
-              }
-              ret.rentalUriAndroid_ = vs.rental_uris_.android_;
-              ret.rentalUriIOS_ = vs.rental_uris_.ios_;
-              ret.rentalUriWeb_ = vs.rental_uris_.web_;
-            }},
-        an.data_);
+    utl::visit(
+        an.data_,
+        [&](additional_node::station const& s) {
+          auto const& st = provider_.stations_.at(s.id_);
+          ret.fromStationName_ = st.info_.name_;
+          ret.stationName_ = st.info_.name_;
+          ret.rentalUriAndroid_ = st.info_.rental_uris_.android_;
+          ret.rentalUriIOS_ = st.info_.rental_uris_.ios_;
+          ret.rentalUriWeb_ = st.info_.rental_uris_.web_;
+        },
+        [&](additional_node::vehicle const& v) {
+          auto const& vs = provider_.vehicle_status_.at(v.idx_);
+          if (auto const st = provider_.stations_.find(vs.station_id_);
+              st != end(provider_.stations_)) {
+            ret.fromStationName_ = st->second.info_.name_;
+          }
+          ret.rentalUriAndroid_ = vs.rental_uris_.android_;
+          ret.rentalUriIOS_ = vs.rental_uris_.ios_;
+          ret.rentalUriWeb_ = vs.rental_uris_.web_;
+        });
   }
   if (w_.is_additional_node(to_node)) {
     auto const& an = prod_rd_->compressed_.additional_nodes_.at(
         get_additional_node_idx(to_node));
-    std::visit(
-        utl::overloaded{[&](additional_node::station const& s) {
-                          auto const& st = provider_.stations_.at(s.id_);
-                          ret.toStationName_ = st.info_.name_;
-                          if (!ret.stationName_) {
-                            ret.stationName_ = ret.toStationName_;
-                          }
-                        },
-                        [&](additional_node::vehicle const& v) {
-                          auto const& vs = provider_.vehicle_status_.at(v.idx_);
-                          if (auto const st =
-                                  provider_.stations_.find(vs.station_id_);
-                              st != end(provider_.stations_)) {
-                            ret.toStationName_ = st->second.info_.name_;
-                          }
-                        }},
-        an.data_);
+    utl::visit(
+        an.data_,
+        [&](additional_node::station const& s) {
+          auto const& st = provider_.stations_.at(s.id_);
+          ret.toStationName_ = st.info_.name_;
+          if (!ret.stationName_) {
+            ret.stationName_ = ret.toStationName_;
+          }
+        },
+        [&](additional_node::vehicle const& v) {
+          auto const& vs = provider_.vehicle_status_.at(v.idx_);
+          if (auto const st = provider_.stations_.find(vs.station_id_);
+              st != end(provider_.stations_)) {
+            ret.toStationName_ = st->second.info_.name_;
+          }
+        });
   }
 }
 
@@ -140,19 +140,17 @@ api::Place gbfs_output::get_place(nigiri::lang_t const&,
 std::string gbfs_output::get_node_name(osr::node_idx_t const n) const {
   auto const& an =
       prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n));
-  return std::visit(
-      utl::overloaded{[&](additional_node::station const& s) {
-                        return provider_.stations_.at(s.id_).info_.name_;
-                      },
-                      [&](additional_node::vehicle const& v) {
-                        auto const& vs = provider_.vehicle_status_.at(v.idx_);
-                        auto const it =
-                            provider_.stations_.find(vs.station_id_);
-                        return it == end(provider_.stations_)
-                                   ? provider_.sys_info_.name_
-                                   : it->second.info_.name_;
-                      }},
-      an.data_);
+  return utl::visit(
+      an.data_,
+      [&](additional_node::station const& s) {
+        return provider_.stations_.at(s.id_).info_.name_;
+      },
+      [&](additional_node::vehicle const& v) {
+        auto const& vs = provider_.vehicle_status_.at(v.idx_);
+        auto const it = provider_.stations_.find(vs.station_id_);
+        return it == end(provider_.stations_) ? provider_.sys_info_.name_
+                                              : it->second.info_.name_;
+      });
 }
 
 std::size_t gbfs_output::get_additional_node_idx(

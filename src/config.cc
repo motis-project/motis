@@ -7,9 +7,9 @@
 #include "fmt/std.h"
 
 #include "utl/erase.h"
-#include "utl/overloaded.h"
 #include "utl/read_file.h"
 #include "utl/verify.h"
+#include "utl/visit.h"
 
 #include "nigiri/clasz.h"
 #include "nigiri/footpath.h"
@@ -270,14 +270,13 @@ std::optional<config::elevators> const& config::get_elevators() const {
 }
 
 bool config::has_elevators() const {
-  return std::visit(
-      utl::overloaded{
-          [](std::optional<elevators> const& x) { return x.has_value(); },
-          [](bool const x) {
-            utl::verify(!x, "elevators=true is not supported");
-            return x;
-          }},
-      elevators_);
+  return utl::visit(
+      elevators_,
+      [](std::optional<elevators> const& x) { return x.has_value(); },
+      [](bool const x) {
+        utl::verify(!x, "elevators=true is not supported");
+        return x;
+      });
 }
 
 bool config::has_rt_feeds() const {
@@ -292,23 +291,20 @@ config::timetable const& config::get_timetable() const {
 }
 
 std::optional<config::street_routing> config::get_street_routing() const {
-  return std::visit(
-      utl::overloaded{
-          [](std::optional<config::street_routing> const& x) { return x; },
-          [](bool const street_routing) {
-            return street_routing ? std::optional{config::street_routing{}}
-                                  : std::nullopt;
-          }},
-      street_routing_);
+  return utl::visit(
+      street_routing_,
+      [](std::optional<config::street_routing> const& x) { return x; },
+      [](bool const street_routing) {
+        return street_routing ? std::optional{config::street_routing{}}
+                              : std::nullopt;
+      });
 }
 
 bool config::use_street_routing() const {
-  return std::visit(
-      utl::overloaded{
-          [](std::optional<street_routing> const& o) { return o.has_value(); },
-          [](bool const b) { return b; },
-      },
-      street_routing_);
+  return utl::visit(
+      street_routing_,
+      [](std::optional<street_routing> const& o) { return o.has_value(); },
+      [](bool const b) { return b; });
 }
 
 }  // namespace motis

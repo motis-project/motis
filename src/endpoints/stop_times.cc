@@ -608,10 +608,8 @@ api::stoptimes_response stop_times::operator()(
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
                 .tripId_ = trip_id,
-                .routeType_ =
-                    s.route_type(ev_type).and_then([](n::route_type_t const x) {
-                      return std::optional{to_idx(x)};
-                    }),
+                .routeType_ = s.route_type(ev_type).transform(
+                    [](n::route_type_t const x) { return to_idx(x); }),
                 .routeShortName_ =
                     std::string{api_version < 4
                                     ? s.display_name(ev_type, lang)

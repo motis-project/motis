@@ -333,48 +333,45 @@ awaitable<void> update_rt(config const& c,
 
     //  Print statistics.
     for (auto const [ep, ex, s] : utl::zip(endpoints, exceptions, stats)) {
-      std::visit(
-          utl::overloaded{
-              [&](gtfs_rt_endpoint const& g) {
-                try {
-                  if (ex) {
-                    std::rethrow_exception(ex);
-                  }
+      utl::visit(
+          ep,
+          [&](gtfs_rt_endpoint const& g) {
+            try {
+              if (ex) {
+                std::rethrow_exception(ex);
+              }
 
                   g.metrics_.update(std::get<n::rt::statistics>(s));
 
-                  n::log(n::log_lvl::info, "motis.rt",
-                         "GTFS-RT update stats for tag={}, url={}: {}", g.tag_,
-                         g.ep_.url_,
-                         fmt::streamed(std::get<n::rt::statistics>(s)));
-                } catch (std::exception const& e) {
-                  g.metrics_.updates_error_.Increment();
-                  n::log(n::log_lvl::error, "motis.rt",
-                         "GTFS-RT update failed: tag={}, url={}, error={}",
-                         g.tag_, g.ep_.url_, e.what());
-                }
-              },
-              [&](auser_endpoint const& a) {
-                try {
-                  if (ex) {
-                    std::rethrow_exception(ex);
-                  }
+              n::log(n::log_lvl::info, "motis.rt",
+                     "GTFS-RT update stats for tag={}, url={}: {}", g.tag_,
+                     g.ep_.url_, fmt::streamed(std::get<n::rt::statistics>(s)));
+            } catch (std::exception const& e) {
+              g.metrics_.updates_error_.Increment();
+              n::log(n::log_lvl::error, "motis.rt",
+                     "GTFS-RT update failed: tag={}, url={}, error={}", g.tag_,
+                     g.ep_.url_, e.what());
+            }
+          },
+          [&](auser_endpoint const& a) {
+            try {
+              if (ex) {
+                std::rethrow_exception(ex);
+              }
 
                   a.metrics_.update(std::get<n::rt::vdv_aus::statistics>(s));
 
-                  n::log(
-                      n::log_lvl::info, "motis.rt",
-                      "VDV AUS update stats for tag={}, url={}:\n{}", a.tag_,
-                      a.ep_.url_,
-                      fmt::streamed(std::get<n::rt::vdv_aus::statistics>(s)));
-                } catch (std::exception const& e) {
-                  a.metrics_.updates_error_.Increment();
-                  n::log(n::log_lvl::error, "motis.rt",
-                         "VDV AUS update failed: tag={}, url={}, error={}",
-                         a.tag_, a.ep_.url_, e.what());
-                }
-              }},
-          ep);
+              n::log(n::log_lvl::info, "motis.rt",
+                     "VDV AUS update stats for tag={}, url={}:\n{}", a.tag_,
+                     a.ep_.url_,
+                     fmt::streamed(std::get<n::rt::vdv_aus::statistics>(s)));
+            } catch (std::exception const& e) {
+              a.metrics_.updates_error_.Increment();
+              n::log(n::log_lvl::error, "motis.rt",
+                     "VDV AUS update failed: tag={}, url={}, error={}", a.tag_,
+                     a.ep_.url_, e.what());
+            }
+          });
     }
   }
 

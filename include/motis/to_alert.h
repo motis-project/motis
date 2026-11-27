@@ -14,16 +14,14 @@ inline api::Alert to_alert(
     nigiri::alerts const& al,
     nigiri::alert_idx_t const x,
     std::optional<std::vector<std::string>> const& lang) {
-  auto const convert_to_str = [](std::string_view s) {
-    return std::optional{std::string{s}};
-  };
+  auto const convert_to_str = [](std::string_view s) { return std::string{s}; };
   auto const get_translation =
       [&](auto const& translations) -> std::optional<std::string> {
     if (translations.empty()) {
       return std::nullopt;
     } else if (!lang.has_value()) {
       return al.strings_.try_get(translations.front().text_)
-          .and_then(convert_to_str);
+          .transform(convert_to_str);
     } else {
       for (auto const& req_lang : *lang) {
         auto const it = utl::find_if(
@@ -36,10 +34,10 @@ inline api::Alert to_alert(
         if (it == end(translations)) {
           continue;
         }
-        return al.strings_.try_get(it->text_).and_then(convert_to_str);
+        return al.strings_.try_get(it->text_).transform(convert_to_str);
       }
       return al.strings_.try_get(translations.front().text_)
-          .and_then(convert_to_str);
+          .transform(convert_to_str);
     }
   };
   auto const to_time_range =
@@ -70,12 +68,12 @@ inline api::Alert to_alert(
       .imageUrl_ = al.image_[x].empty()
                        ? std::nullopt
                        : al.strings_.try_get(al.image_[x].front().url_)
-                             .and_then(convert_to_str),
+                             .transform(convert_to_str),
       .imageMediaType_ =
           al.image_[x].empty()
               ? std::nullopt
               : al.strings_.try_get(al.image_[x].front().media_type_)
-                    .and_then(convert_to_str),
+                    .transform(convert_to_str),
       .imageAlternativeText_ = get_translation(al.image_alternative_text_[x])};
 }
 

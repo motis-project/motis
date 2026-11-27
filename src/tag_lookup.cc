@@ -8,6 +8,7 @@
 #include "cista/io.h"
 
 #include "utl/enumerate.h"
+#include "utl/lookup.h"
 #include "utl/parser/split.h"
 #include "utl/verify.h"
 
@@ -67,8 +68,7 @@ void tag_lookup::add(n::source_idx_t const src, std::string_view str) {
 }
 
 n::source_idx_t tag_lookup::get_src(std::string_view tag) const {
-  auto const it = tag_to_src_.find(tag);
-  return it == end(tag_to_src_) ? n::source_idx_t::invalid() : it->second;
+  return utl::lookup(tag_to_src_, tag).value_or(n::source_idx_t::invalid());
 }
 
 std::string_view tag_lookup::get_tag(n::source_idx_t const src) const {

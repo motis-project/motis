@@ -36,11 +36,13 @@
 
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
+#include "utl/lookup.h"
 #include "utl/overloaded.h"
 #include "utl/sorted_diff.h"
 #include "utl/timer.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
+#include "utl/visit.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
@@ -196,9 +198,8 @@ std::chrono::system_clock::time_point get_expiry(
     std::map<std::string, unsigned> const& overwrite_ttl = {},
     std::string_view const name = "") {
   auto const now = std::chrono::system_clock::now();
-  if (auto const it = overwrite_ttl.find(std::string{name});
-      it != end(overwrite_ttl)) {
-    return now + std::chrono::seconds{it->second};
+  if (auto const ttl = utl::lookup(overwrite_ttl, std::string{name})) {
+    return now + std::chrono::seconds{*ttl};
   }
   if (root.contains("ttl")) {
     auto const& ttl_val = root.at("ttl");
@@ -207,9 +208,8 @@ std::chrono::system_clock::time_point get_expiry(
       return now + std::chrono::seconds{static_cast<int>(*ttl)};
     }
   }
-  if (auto const it = default_ttl.find(std::string{name});
-      it != end(default_ttl)) {
-    return now + std::chrono::seconds{it->second};
+  if (auto const ttl = utl::lookup(default_ttl, std::string{name})) {
+    return now + std::chrono::seconds{*ttl};
   }
   return now + def;
 }
@@ -558,9 +558,8 @@ struct gbfs_update {
     std::erase_if(*d_->aggregated_feeds_, changed);
     std::erase_if(*d_->standalone_feeds_, changed);
     for (auto const& id : feeds_with_changed_type_) {
-      if (auto const it = d_->provider_by_id_.find(id);
-          it != end(d_->provider_by_id_)) {
-        d_->providers_[it->second] = nullptr;
+      if (auto const idx = utl::lookup(d_->provider_by_id_, id)) {
+        d_->providers_[*idx] = nullptr;
       }
     }
   }
@@ -697,9 +696,8 @@ struct gbfs_update {
     // check if exists in old data - if so, reuse existing file infos
     gbfs_provider const* prev_provider = nullptr;
     if (prev_d_ != nullptr) {
-      if (auto const it = prev_d_->provider_by_id_.find(pf.id_);
-          it != end(prev_d_->provider_by_id_)) {
-        prev_provider = prev_d_->providers_[it->second].get();
+      if (auto const idx = utl::lookup(prev_d_->provider_by_id_, pf.id_)) {
+        prev_provider = prev_d_->providers_[*idx].get();
         if (prev_provider != nullptr) {
           provider.file_infos_ = prev_provider->file_infos_;
           provider.last_updated_ = prev_provider->last_updated_;
@@ -1679,18 +1677,14 @@ struct gbfs_update {
     auto const& af_config = c_.feeds_.at(af_id.empty() ? system_id : af_id);
     auto const& opt = getter(af_config);
     if (opt.has_value()) {
-      return std::visit(
-          utl::overloaded{
-              [&](T const& value) -> std::optional<T> {
-                return std::optional{value};
-              },
-              [&](std::map<std::string, T> const& m) -> std::optional<T> {
-                if (auto const it = m.find(system_id); it != end(m)) {
-                  return std::optional{it->second};
-                }
-                return {};
-              }},
-          *opt);
+      return utl::visit(
+          *opt,
+          [&](T const& value) -> std::optional<T> {
+            return std::optional{value};
+          },
+          [&](std::map<std::string, T> const& m) -> std::optional<T> {
+            return utl::lookup(m, system_id);
+          });
     }
     return {};
   }

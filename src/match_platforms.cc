@@ -5,6 +5,7 @@
 #include "utl/helpers/algorithm.h"
 #include "utl/parallel_for.h"
 #include "utl/parser/arg_parser.h"
+#include "utl/visit.h"
 
 #include "osr/geojson.h"
 #include "osr/location.h"
@@ -161,13 +162,12 @@ std::optional<geo::latlng> get_platform_center(osr::platforms const& pl,
                                                osr::platform_idx_t const x) {
   auto c = center{};
   for (auto const p : pl.platform_ref_[x]) {
-    std::visit(utl::overloaded{[&](osr::node_idx_t const node) {
-                                 c.add(pl.get_node_pos(node).as_latlng());
-                               },
-                               [&](osr::way_idx_t const way) {
-                                 c.add(w.way_polylines_[way]);
-                               }},
-               osr::to_ref(p));
+    utl::visit(
+        osr::to_ref(p),
+        [&](osr::node_idx_t const node) {
+          c.add(pl.get_node_pos(node).as_latlng());
+        },
+        [&](osr::way_idx_t const way) { c.add(w.way_polylines_[way]); });
   }
   if (c.n_ == 0U) {
     return std::nullopt;
@@ -186,21 +186,20 @@ std::optional<geo::latlng> get_platform_center(osr::platforms const& pl,
     }
   };
   for (auto const p : pl.platform_ref_[x]) {
-    std::visit(
-        utl::overloaded{
-            [&](osr::node_idx_t const node) {
-              auto const candidate = pl.get_node_pos(node).as_latlng();
-              update_closest(candidate, geo::approx_squared_distance(
-                                            candidate, center, lng_dist));
-            },
-            [&](osr::way_idx_t const way) {
-              for (auto const [a, b] : utl::pairwise(w.way_polylines_[way])) {
-                auto const [best, squared_dist] =
-                    geo::approx_closest_on_segment(center, a, b, lng_dist);
-                update_closest(best, squared_dist);
-              }
-            }},
-        osr::to_ref(p));
+    utl::visit(
+        osr::to_ref(p),
+        [&](osr::node_idx_t const node) {
+          auto const candidate = pl.get_node_pos(node).as_latlng();
+          update_closest(candidate, geo::approx_squared_distance(
+                                        candidate, center, lng_dist));
+        },
+        [&](osr::way_idx_t const way) {
+          for (auto const [a, b] : utl::pairwise(w.way_polylines_[way])) {
+            auto const [best, squared_dist] =
+                geo::approx_closest_on_segment(center, a, b, lng_dist);
+            update_closest(best, squared_dist);
+          }
+        });
   }
   return closest;
 }

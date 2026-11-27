@@ -39,11 +39,11 @@ void direct_filter(std::vector<api::Itinerary> const& direct,
         [&](n::routing::offset const& o) { return std::optional{o}; });
 
     auto const longer_than_direct = [&](n::routing::offset const& o) {
-      return std::optional{o.duration_ >= get_direct_duration(o.mode())};
+      return o.duration_ >= get_direct_duration(o.mode());
     };
 
-    return first_leg_offset.and_then(longer_than_direct).value_or(false) ||
-           last_leg_offset.and_then(longer_than_direct).value_or(false) ||
+    return first_leg_offset.transform(longer_than_direct).value_or(false) ||
+           last_leg_offset.transform(longer_than_direct).value_or(false) ||
            (first_leg_offset && last_leg_offset &&
             first_leg_offset->mode() == last_leg_offset->mode() &&
             first_leg_offset->duration_ + last_leg_offset->duration_ >=
