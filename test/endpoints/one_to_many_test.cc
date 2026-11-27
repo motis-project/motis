@@ -584,6 +584,27 @@ TEST(one_to_many, transfer_time_settings_min_transfer_time) {
             durations);
 }
 
+TEST(one_to_many, excessive_max_transfers_and_travel_time_are_capped) {
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
+
+  auto const durations = one_to_many_get(d)(
+      "/api/experimental/one-to-many-intermodal"
+      "?one=49.872710;8.631168"  // Near DA
+      "&many=50.113487;8.678913"  // Near FFM_HAUPT
+      "&time=2019-04-30T22:30:00.00Z"
+      "&useRoutedTransfers=true"
+      "&minTransferTime=21"
+      "&maxTransfers=255"
+      "&maxTravelTime=100000000");
+
+  EXPECT_EQ((api::OneToManyIntermodalResponse{
+                .street_durations_ = {{api::Duration{}}},
+                .transit_durations_ = {{
+                    {{.duration_ = 3120.0, .transfers_ = 1}},
+                }}}),
+            durations);
+}
+
 TEST(one_to_many, transfer_time_settings_additional_transfer_time) {
   auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 

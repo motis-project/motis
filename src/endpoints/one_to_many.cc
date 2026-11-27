@@ -147,7 +147,8 @@ std::vector<api::ParetoSet> transit_durations(
                                     elevation_costs, max_matching_distance,
                                     one_max_seconds, time, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
-          query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
+          std::min(query.maxTransfers_.value_or(n::routing::kMaxTransfers),
+                   std::int64_t{n::routing::kMaxTransfers})),
       .max_travel_time_ =
           std::chrono::duration_cast<n::duration_t>(max_travel_time),
       .prf_idx_ = get_profile_idx(ep.tt_, query),
@@ -237,11 +238,20 @@ api::OneToManyIntermodalResponse run_one_to_many_intermodal(
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
 
+  utl::verify<net::bad_request_exception>(query.maxTransfers_.value_or(0) >= 0,
+                                          "maxTransfers < 0: {}",
+                                          query.maxTransfers_.value_or(0));
+  utl::verify<net::bad_request_exception>(query.maxTravelTime_.value_or(0) >= 0,
+                                          "maxTravelTime < 0: {}",
+                                          query.maxTravelTime_.value_or(0));
+
   auto const max_travel_time =
       query.maxTravelTime_
           .transform([](std::int64_t const dur) {
             using namespace std::chrono;
-            return duration_cast<seconds>(minutes{dur});
+            return duration_cast<seconds>(
+                std::min(minutes{dur},
+                         duration_cast<minutes>(n::routing::kMaxTravelTime)));
           })
           .value_or(n::routing::kMaxTravelTime);
 

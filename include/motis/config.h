@@ -272,6 +272,11 @@ struct config {
     unsigned geocode_max_suggestions_{512U};
     unsigned reverse_geocode_max_results_{512U};
     double max_max_matching_distance_{250.0};
+    unsigned stoptimes_max_radius_meters_{10000U};
+    unsigned stop_max_radius_meters_{10000U};
+    unsigned plan_max_radius_meters_{500000U};
+    unsigned plan_max_leg_alternatives_{5U};
+    unsigned levels_max_box_diagonal_meters_{20000U};
   };
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};

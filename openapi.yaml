@@ -81,6 +81,7 @@ paths:
             for each of them is estimated from the crow-fly distance to the coordinate
             at walking speed (1.5 m/s), rounded down to whole minutes.
             Works without OSM/street routing data loaded.
+            Is limited by server config variable `plan_max_radius_meters`, larger values are capped to this limit.
           schema:
             type: number
             format: double
@@ -945,6 +946,7 @@ paths:
             for the next transit leg / departing after the previous transit
             leg's arrival). Each alternative is a 3-leg sequence
             `[ingress footpath, transit, egress footpath]`.
+            Is limited by server config variable `plan_max_leg_alternatives`, larger values are capped to this limit.
           schema:
             type: integer
             default: 0
@@ -1388,6 +1390,7 @@ paths:
             The maximum travel time in minutes.
             If not provided, the routing uses the value
             hardcoded in the server which is usually quite high.
+            Larger values are capped to this hardcoded value.
 
             *Warning*: Use with care. Setting this too low can lead to
             optimal (e.g. the least transfers) journeys not being found.
@@ -1395,6 +1398,7 @@ paths:
             it can lead to slow routing performance.
           schema:
             type: integer
+            minimum: 0
 
         - name: maxMatchingDistance
           in: query
@@ -1431,6 +1435,7 @@ paths:
 
             If not provided, the routing uses the server-side default value
             which is hardcoded and very high to cover all use cases.
+            Larger values are capped to this hardcoded value.
 
             *Warning*: Use with care. Setting this too low can lead to
             optimal (e.g. the fastest) journeys not being found.
@@ -1438,6 +1443,7 @@ paths:
             it can lead to slow routing performance.
           schema:
             type: integer
+            minimum: 0
 
         - name: minTransferTime
           in: query
@@ -2531,6 +2537,9 @@ paths:
         - name: numLegAlternatives
           in: query
           required: false
+          description: |
+            Maximum number of alternatives to return per transit leg, see `/plan`.
+            Is limited by server config variable `plan_max_leg_alternatives`, larger values are capped to this limit.
           schema:
             type: integer
             default: 0
@@ -2643,7 +2652,9 @@ paths:
         - name: maxPreTransitTime
           in: query
           required: false
-          description: Maximum time in seconds for the first (access) street leg.
+          description: |
+            Maximum time in seconds for the first (access) street leg.
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
           schema:
             type: integer
             default: 900
@@ -2651,7 +2662,9 @@ paths:
         - name: maxPostTransitTime
           in: query
           required: false
-          description: Maximum time in seconds for the last (egress) street leg.
+          description: |
+            Maximum time in seconds for the last (egress) street leg.
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
           schema:
             type: integer
             default: 900
@@ -2921,6 +2934,8 @@ paths:
             
             If set, all stops at parent stations and their child stops in the specified radius
             are returned.
+
+            Is limited by server config variable `stoptimes_max_radius_meters`, larger values are capped to this limit.
 
         - name: exactRadius
           in: query
@@ -3312,6 +3327,8 @@ paths:
             If set, all stops at parent stations and their child stops in the
             specified radius are returned. Required if stopId is not given.
 
+            Is limited by server config variable `stop_max_radius_meters`, larger values are capped to this limit.
+
         - name: exactRadius
           in: query
           schema:
@@ -3385,6 +3402,8 @@ paths:
       tags:
         - map
       summary: Get all available levels for a map section
+      description: |
+        The diagonal of the bounding box given by `min` and `max` must not exceed server config variable `levels_max_box_diagonal_meters`.
       operationId: levels
       parameters:
         - name: min
@@ -6036,6 +6055,7 @@ components:
             The maximum travel time in minutes.
             If not provided, the routing uses the value
             hardcoded in the server which is usually quite high.
+            Larger values are capped to this hardcoded value.
 
             *Warning*: Use with care. Setting this too low can lead to
             optimal (e.g. the least transfers) journeys not being found.
@@ -6067,6 +6087,7 @@ components:
 
             If not provided, the routing uses the server-side default value
             which is hardcoded and very high to cover all use cases.
+            Larger values are capped to this hardcoded value.
 
             *Warning*: Use with care. Setting this too low can lead to
             optimal (e.g. the fastest) journeys not being found.
