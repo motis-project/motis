@@ -483,7 +483,9 @@
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
-    let withElevationProfile = $state(urlParams?.get('elevationProfile') == 'true' || defaultQuery.withElevationProfile);
+	let withElevationProfile = $state(
+		urlParams?.get('elevationProfile') == 'true' || defaultQuery.withElevationProfile
+	);
 	let maxTransfers = $state<number>(
 		parseIntOr(urlParams?.get('maxTransfers'), defaultQuery.maxTransfers)
 	);
@@ -648,7 +650,7 @@
 						requireCarTransport,
 						noCompulsoryReservation,
 						elevationCosts,
-                        elevationProfile: withElevationProfile,
+						elevationProfile: withElevationProfile,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
 						additionalTransferTime,
