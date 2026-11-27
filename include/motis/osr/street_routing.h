@@ -1,21 +1,15 @@
 #pragma once
 
-#include <array>
 #include <cassert>
-#include <memory>
 #include <optional>
-#include <vector>
 
 #include "osr/location.h"
 #include "osr/routing/profile.h"
 #include "osr/routing/route.h"
 
-#include "nigiri/special_stations.h"
 #include "motis-api/motis-api.h"
-
 #include "motis/flex/flex_routing_data.h"
 #include "motis/fwd.h"
-
 #include "motis/match_platforms.h"
 #include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/parameters.h"

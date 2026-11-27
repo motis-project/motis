@@ -10,8 +10,6 @@
 #include "cista/free_self_allocated.h"
 #include "cista/io.h"
 
-#include "adr/area_database.h"
-
 #include "utl/erase_if.h"
 #include "utl/to_vec.h"
 
@@ -40,6 +38,7 @@
 #include "osr/preprocessing/elevation/shared.h"
 
 #include "adr/adr.h"
+#include "adr/area_database.h"
 #include "adr/formatter.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"

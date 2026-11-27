@@ -1,6 +1,7 @@
 #include "motis/osr/street_routing.h"
 
 #include <optional>
+#include <vector>
 
 #include "cista/strong.h"
 
@@ -105,7 +106,6 @@ api::ElevationProfile get_elevation_profile(
 
   return {.points_ = points,
           .size_ = static_cast<int64_t>(profile.elevation_.size()),
-          .resolution_ = 0,
           .median_ = to_idx(profile.median()),
           .min_ = static_cast<int64_t>(to_idx(profile.min_)),
           .max_ = static_cast<int64_t>(to_idx(profile.max_)),
