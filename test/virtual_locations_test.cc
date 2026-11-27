@@ -350,8 +350,8 @@ TEST(virtual_locations, stop_times_list_the_stops_of_the_station) {
     EXPECT_TRUE(st.place_.stopId_ == "test_S1" ||
                 st.place_.stopId_ == "test_S2")
         << *st.place_.stopId_;
-    EXPECT_FALSE(st.tripFrom_.stopId_->ends_with('_'));
-    EXPECT_FALSE(st.tripTo_.stopId_->ends_with('_'));
+    EXPECT_FALSE(st.tripFrom_->stopId_->ends_with('_'));
+    EXPECT_FALSE(st.tripTo_->stopId_->ends_with('_'));
   }
 }
 

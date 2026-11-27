@@ -843,7 +843,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'tripFrom', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'bikesAllowed', 'wheelchairAccessible', 'reservation', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'bikesAllowed', 'wheelchairAccessible', 'reservation', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -864,11 +864,11 @@ For non-transit legs, null
             type: 'string'
         },
         tripFrom: {
-            description: 'first stop of this trip',
+            description: 'first stop of this trip (omitted if `withTripInfo=false`)',
             '$ref': '#/components/schemas/Place'
         },
         tripTo: {
-            description: 'final stop of this trip',
+            description: 'final stop of this trip (omitted if `withTripInfo=false`)',
             '$ref': '#/components/schemas/Place'
         },
         agencyId: {

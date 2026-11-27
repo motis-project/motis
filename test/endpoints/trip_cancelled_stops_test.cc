@@ -135,8 +135,8 @@ TEST(motis, trip_cancelled_first_and_last_stop) {
   // the *middle* trip T_MID (S0 / S4), not of the whole block run (P / Q).
   {
     auto const ice = s2_stoptime(stop_times);
-    EXPECT_EQ("test_S0", ice.tripFrom_.stopId_);
-    EXPECT_EQ("test_S4", ice.tripTo_.stopId_);
+    EXPECT_EQ("test_S0", ice.tripFrom_->stopId_);
+    EXPECT_EQ("test_S4", ice.tripTo_->stopId_);
   }
 
   // Skip the first (S0) and the last (S4) stop of the middle trip T_MID.
@@ -151,8 +151,8 @@ TEST(motis, trip_cancelled_first_and_last_stop) {
   // Now the first served stop of T_MID is S1 and the last served stop is S3.
   {
     auto const ice = s2_stoptime(stop_times);
-    EXPECT_EQ("test_S1", ice.tripFrom_.stopId_);
-    EXPECT_EQ("test_S3", ice.tripTo_.stopId_);
+    EXPECT_EQ("test_S1", ice.tripFrom_->stopId_);
+    EXPECT_EQ("test_S3", ice.tripTo_->stopId_);
   }
 }
 
@@ -179,8 +179,8 @@ TEST(motis, trip_all_stops_cancelled) {
   auto const ice = s2_stoptime(stop_times, /*trip_id_suffix=*/{},
                                /*with_skipped=*/true);
   EXPECT_TRUE(ice.cancelled_);
-  EXPECT_EQ("test_S4", ice.tripFrom_.stopId_);
-  EXPECT_EQ("test_S0", ice.tripTo_.stopId_);
+  EXPECT_EQ("test_S4", ice.tripFrom_->stopId_);
+  EXPECT_EQ("test_S0", ice.tripTo_->stopId_);
 }
 
 TEST(motis, trip_added_cancelled_first_and_last_stop) {
@@ -215,6 +215,6 @@ TEST(motis, trip_added_cancelled_first_and_last_stop) {
   // and the last served stop is S3.
   auto const ice = s2_stoptime(stop_times, /*trip_id_suffix=*/"ADDED_ICE");
   EXPECT_TRUE(ice.realTime_);
-  EXPECT_EQ("test_S1", ice.tripFrom_.stopId_);
-  EXPECT_EQ("test_S3", ice.tripTo_.stopId_);
+  EXPECT_EQ("test_S1", ice.tripFrom_->stopId_);
+  EXPECT_EQ("test_S3", ice.tripTo_->stopId_);
 }
