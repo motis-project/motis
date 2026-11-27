@@ -51,6 +51,7 @@
 		exactRadius: exactRadius ? true : undefined,
 		n: 10,
 		language: [language]
+		// withTripInfo is never set to false here, so tripFrom/tripTo are always present
 	});
 	/* eslint-disable svelte/prefer-writable-derived */
 	let responses = $state<Array<Promise<StoptimesResponse>>>([]);
