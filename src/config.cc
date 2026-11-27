@@ -307,4 +307,8 @@ bool config::use_street_routing() const {
       [](bool const b) { return b; });
 }
 
+bool config::use_otlp() const {
+  return otlp_.has_value() && otlp_->http_.has_value();
+}
+
 }  // namespace motis
