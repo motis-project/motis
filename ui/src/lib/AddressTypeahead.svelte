@@ -218,6 +218,7 @@
 
 						<button
 							class="rounded p-1 hover:bg-accent"
+							onpointerdown={(e) => e.preventDefault()}
 							onclick={() => {
 								clearHistoryLocations();
 								items = historyForType();
