@@ -1177,10 +1177,6 @@ export const ElevationProfileSchema = {
             description: 'Number of coordinate triplets.',
             type: 'integer'
         },
-        resolution: {
-            description: 'Resolution used to extract elevation data. Does not correspond to distance between points.',
-            type: 'number'
-        },
         median: {
             type: 'integer'
         },

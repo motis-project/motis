@@ -978,10 +978,6 @@ export type ElevationProfile = {
      * Number of coordinate triplets.
      */
     size: number;
-    /**
-     * Resolution used to extract elevation data. Does not correspond to distance between points.
-     */
-    resolution?: number;
     median?: number;
     min: number;
     max: number;
