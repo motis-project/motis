@@ -341,7 +341,7 @@ awaitable<void> update_rt(config const& c,
                 std::rethrow_exception(ex);
               }
 
-                  g.metrics_.update(std::get<n::rt::statistics>(s));
+              g.metrics_.update(std::get<n::rt::statistics>(s));
 
               n::log(n::log_lvl::info, "motis.rt",
                      "GTFS-RT update stats for tag={}, url={}: {}", g.tag_,
@@ -359,7 +359,7 @@ awaitable<void> update_rt(config const& c,
                 std::rethrow_exception(ex);
               }
 
-                  a.metrics_.update(std::get<n::rt::vdv_aus::statistics>(s));
+              a.metrics_.update(std::get<n::rt::vdv_aus::statistics>(s));
 
               n::log(n::log_lvl::info, "motis.rt",
                      "VDV AUS update stats for tag={}, url={}:\n{}", a.tag_,
