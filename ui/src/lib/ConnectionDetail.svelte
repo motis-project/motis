@@ -10,7 +10,6 @@
 		Accessibility,
 		ExternalLink
 	} from '@lucide/svelte';
-	import { Popover } from 'bits-ui';
 	import type {
 		FareProduct,
 		Itinerary,
@@ -24,7 +23,7 @@
 	import ReservationRequired from '$lib/ReservationRequired.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
-	import { Button, buttonVariants } from '$lib/components/ui/button';
+	import { Button } from '$lib/components/ui/button';
 	import Route from '$lib/Route.svelte';
 	import ElevationProfile from './ElevationProfile.svelte';
 	import Alerts from '$lib/Alerts.svelte';
