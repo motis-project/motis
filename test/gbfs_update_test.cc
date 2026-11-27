@@ -28,9 +28,9 @@
 
 #include "motis/config.h"
 #include "motis/data.h"
-#include "motis/feed_cache.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/update.h"
+#include "motis/http_cache.h"
 #include "motis/import.h"
 #include "motis/metrics_registry.h"
 
@@ -1494,7 +1494,7 @@ void run_http_update(boost::asio::io_context& ioc,
                      config const& c,
                      std::shared_ptr<gbfs_data>& gbfs,
                      metrics_registry& metrics,
-                     feed_cache* cache) {
+                     http_cache* cache) {
   auto& d = street_data();
   boost::asio::co_spawn(
       ioc,
@@ -1535,7 +1535,7 @@ TEST(motis, gbfs_update_http_conditional_requests_and_stale_cache) {
     return family.Add({{"provider_id", "test"}, {"file", file}}).Value();
   };
 
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
 
   {
     auto metrics = metrics_registry{};
@@ -1615,7 +1615,7 @@ TEST(motis, gbfs_update_http_stale_data_keeps_ttl) {
     ttl = 3600U;
   }
 
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
   {
     auto metrics = metrics_registry{};
     auto gbfs = std::shared_ptr<gbfs_data>{};

@@ -44,8 +44,8 @@
 
 #include "motis/config.h"
 #include "motis/data.h"
-#include "motis/feed_cache.h"
 #include "motis/gbfs/data.h"
+#include "motis/http_cache.h"
 #include "motis/http_req.h"
 #include "motis/repeat.h"
 
@@ -90,9 +90,9 @@ std::string normalize_gbfs_url(std::string_view const url) {
       std::regex{R"(/gbfs/v?\d+([.-]\d+)*(?=/|$))"};
   static auto const kTrailingGbfs = std::regex{R"((/gbfs(\.json)?)?/*$)"};
 
-  auto normalized = std::string{url};
-  std::transform(begin(normalized), end(normalized), begin(normalized),
-                 [](unsigned char const c) { return std::tolower(c); });
+  auto normalized = utl::transform_to<std::string>(
+      url,
+      [](unsigned char const c) { return static_cast<char>(std::tolower(c)); });
   normalized = std::regex_replace(normalized, kScheme, "");
   normalized = std::regex_replace(normalized, kVersionAfterGbfs, "/gbfs");
   return std::regex_replace(normalized, kTrailingGbfs, "");
@@ -301,7 +301,7 @@ struct gbfs_update {
               gbfs_data* d,
               gbfs_data const* prev_d,
               metrics_registry const* metrics,
-              feed_cache* cache)
+              http_cache* cache)
       : metrics_{metrics},
         cache_{cache},
         c_{c},
@@ -1470,8 +1470,8 @@ struct gbfs_update {
           base_headers, timeout_, std::chrono::seconds{c_.max_stale_age_},
           proxy_,
           [&](headers_t& headers) { return get_oauth_token(oauth, headers); });
-      is_stale = res.status_ == feed_cache::status::kStale;
-      if (res.status_ == feed_cache::status::kNotModified) {
+      is_stale = res.status_ == http_cache::status::kStale;
+      if (res.status_ == http_cache::status::kNotModified) {
         metrics_->gbfs_fetches_not_modified_total_.Add(labels).Increment();
       }
       if (is_stale) {
@@ -1731,7 +1731,7 @@ struct gbfs_update {
   };
 
   metrics_registry const* metrics_{};
-  feed_cache* cache_{};
+  http_cache* cache_{};
 
   config::gbfs const& c_;
   osr::ways const& w_;
@@ -1753,7 +1753,7 @@ awaitable<void> update(config const& c,
                        osr::lookup const& l,
                        std::shared_ptr<gbfs_data>& data_ptr,
                        metrics_registry const* metrics,
-                       feed_cache* cache) {
+                       http_cache* cache) {
   auto const t = utl::scoped_timer{"gbfs::update"};
 
   if (!c.gbfs_.has_value()) {
@@ -1804,7 +1804,7 @@ void run_gbfs_update(boost::asio::io_context& ioc,
       ioc,
       [&, metrics]() -> awaitable<void> {
         auto cc = c;
-        auto cache = feed_cache{};
+        auto cache = http_cache{};
         co_await repeat(
             std::chrono::seconds{cc.gbfs_->update_interval_}, "gbfs update",
             [&] { return update(cc, w, l, data_ptr, metrics, &cache); });

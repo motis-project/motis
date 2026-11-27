@@ -30,7 +30,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/elevators/update_elevators.h"
-#include "motis/feed_cache.h"
+#include "motis/http_cache.h"
 #include "motis/http_req.h"
 #include "motis/railviz.h"
 #include "motis/repeat.h"
@@ -48,7 +48,7 @@ namespace motis {
 asio::awaitable<ptr<elevators>> update_elevators(config const& c,
                                                  data const& d,
                                                  n::rt_timetable& new_rtt,
-                                                 feed_cache* cache) {
+                                                 http_cache* cache) {
   utl::verify(c.has_elevators() && c.get_elevators()->url_ && c.timetable_,
               "elevator update requires settings for timetable + elevators");
   auto const& url = *c.get_elevators()->url_;
@@ -57,7 +57,7 @@ asio::awaitable<ptr<elevators>> update_elevators(config const& c,
       c.get_elevators()->headers_.value_or(headers_t{}),
       std::chrono::seconds{c.get_elevators()->http_timeout_},
       std::chrono::seconds{c.get_elevators()->max_stale_age_});
-  if (res.status_ == feed_cache::status::kStale) {
+  if (res.status_ == http_cache::status::kStale) {
     n::log(n::log_lvl::error, "motis.rt",
            "elevator fetch failed, using cached version: url={}, error={}", url,
            res.download_error_);
@@ -71,13 +71,13 @@ std::string get_cache_key(auto&& ep) {
 
 void count_and_log_fetch(auto const& ep,
                          std::string_view const protocol,
-                         feed_cache::result const& res) {
+                         http_cache::result const& res) {
   switch (res.status_) {
-    case feed_cache::status::kDownloaded: break;
-    case feed_cache::status::kNotModified:
+    case http_cache::status::kDownloaded: break;
+    case http_cache::status::kNotModified:
       ep.metrics_.updates_not_modified_.Increment();
       break;
-    case feed_cache::status::kStale:
+    case http_cache::status::kStale:
       ep.metrics_.updates_error_.Increment();
       ep.metrics_.updates_stale_.Increment();
       n::log(n::log_lvl::error, "motis.rt",
@@ -90,8 +90,8 @@ void count_and_log_fetch(auto const& ep,
 }
 
 // Stale data counts as error (see count_and_log_fetch).
-void count_applied_update(auto const& ep, feed_cache::result const& res) {
-  if (res.status_ != feed_cache::status::kStale) {
+void count_applied_update(auto const& ep, http_cache::result const& res) {
+  if (res.status_ != http_cache::status::kStale) {
     ep.metrics_.updates_successful_.Increment();
     ep.metrics_.last_update_timestamp_.SetToCurrentTime();
   }
@@ -230,7 +230,7 @@ awaitable<void> update_rt(config const& c,
                           data& d,
                           bool const dump_rt,
                           endpoints_t const& endpoints,
-                          feed_cache* cache) {
+                          http_cache* cache) {
   auto executor = co_await asio::this_coro::executor;
   // Create new real-time timetable.
   auto const today = std::chrono::time_point_cast<date::days>(
@@ -429,7 +429,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
         auto executor = co_await asio::this_coro::executor;
 
         auto const endpoints = make_endpoints(c, d);
-        auto cache = feed_cache{};
+        auto cache = http_cache{};
 
         co_await repeat(
             std::chrono::seconds{c.timetable_->update_interval_}, "rt update",

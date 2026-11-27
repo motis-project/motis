@@ -12,7 +12,7 @@
 #include "boost/iostreams/filter/gzip.hpp"
 #include "boost/iostreams/filtering_stream.hpp"
 
-#include "motis/feed_cache.h"
+#include "motis/http_cache.h"
 
 #include "./http_test_server.h"
 
@@ -102,12 +102,12 @@ struct fixture {
     ioc_.run();
   }
 
-  feed_cache::result fetch(feed_cache* cache,
+  http_cache::result fetch(http_cache* cache,
                            std::chrono::seconds const max_age = 3600s,
                            std::optional<std::string> url = std::nullopt,
                            headers_t headers = {},
                            prepare_headers_fn const& prepare_headers = {}) {
-    auto ret = feed_cache::result{};
+    auto ret = http_cache::result{};
     run_until_client_done(ioc_, [&]() -> boost::asio::awaitable<void> {
       ret = co_await cached_http_GET(
           cache, kKey, boost::urls::url{url.value_or(server_.srv_.url("rt"))},
@@ -122,18 +122,18 @@ struct fixture {
 
 }  // namespace
 
-TEST(motis, feed_cache_sends_conditional_request_and_uses_cache_on_304) {
+TEST(motis, http_cache_sends_conditional_request_and_uses_cache_on_304) {
   auto f = fixture{};
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
 
   auto const r1 = f.fetch(&cache);
-  EXPECT_EQ(feed_cache::status::kDownloaded, r1.status_);
+  EXPECT_EQ(http_cache::status::kDownloaded, r1.status_);
   EXPECT_EQ("content v1", r1.decoded_body_);
   EXPECT_TRUE(f.server_.last_request()[http::field::if_none_match].empty());
   EXPECT_TRUE(f.server_.last_request()[http::field::if_modified_since].empty());
 
   auto const r2 = f.fetch(&cache);
-  EXPECT_EQ(feed_cache::status::kNotModified, r2.status_);
+  EXPECT_EQ(http_cache::status::kNotModified, r2.status_);
   EXPECT_EQ("content v1", r2.decoded_body_);
   EXPECT_EQ("\"v1\"", f.server_.last_request()[http::field::if_none_match]);
   EXPECT_EQ(kLastModified,
@@ -141,63 +141,63 @@ TEST(motis, feed_cache_sends_conditional_request_and_uses_cache_on_304) {
 
   f.server_.version_ = 2U;
   auto const r3 = f.fetch(&cache);
-  EXPECT_EQ(feed_cache::status::kDownloaded, r3.status_);
+  EXPECT_EQ(http_cache::status::kDownloaded, r3.status_);
   EXPECT_EQ("content v2", r3.decoded_body_);
   EXPECT_EQ("\"v1\"", f.server_.last_request()[http::field::if_none_match]);
 
   auto const r4 = f.fetch(&cache);
-  EXPECT_EQ(feed_cache::status::kNotModified, r4.status_);
+  EXPECT_EQ(http_cache::status::kNotModified, r4.status_);
   EXPECT_EQ("content v2", r4.decoded_body_);
   EXPECT_EQ("\"v2\"", f.server_.last_request()[http::field::if_none_match]);
 }
 
-TEST(motis, feed_cache_server_without_conditional_support) {
+TEST(motis, http_cache_server_without_conditional_support) {
   auto f = fixture{};
   f.server_.support_conditional_ = false;
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
 
-  EXPECT_EQ(feed_cache::status::kDownloaded, f.fetch(&cache).status_);
+  EXPECT_EQ(http_cache::status::kDownloaded, f.fetch(&cache).status_);
   auto const r = f.fetch(&cache);
-  EXPECT_EQ(feed_cache::status::kDownloaded, r.status_);
+  EXPECT_EQ(http_cache::status::kDownloaded, r.status_);
   EXPECT_EQ("content v1", r.decoded_body_);
 }
 
-TEST(motis, feed_cache_does_not_override_user_headers) {
+TEST(motis, http_cache_does_not_override_user_headers) {
   auto f = fixture{};
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
   f.fetch(&cache);
   auto const r = f.fetch(&cache, 3600s, std::nullopt,
                          headers_t{{"if-none-match", "\"custom\""}});
-  EXPECT_EQ(feed_cache::status::kDownloaded, r.status_);
+  EXPECT_EQ(http_cache::status::kDownloaded, r.status_);
   EXPECT_EQ("\"custom\"", f.server_.last_request()[http::field::if_none_match]);
 }
 
-TEST(motis, feed_cache_stale_on_http_error) {
+TEST(motis, http_cache_stale_on_http_error) {
   auto f = fixture{};
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
   f.fetch(&cache);
 
   f.server_.status_ = http::status::internal_server_error;
   auto const r = f.fetch(&cache);
-  EXPECT_EQ(feed_cache::status::kStale, r.status_);
+  EXPECT_EQ(http_cache::status::kStale, r.status_);
   EXPECT_EQ("content v1", r.decoded_body_);
   EXPECT_NE(std::string::npos, r.download_error_.find("HTTP 500"));
 
   // recovered
   f.server_.status_ = http::status::ok;
-  EXPECT_EQ(feed_cache::status::kNotModified, f.fetch(&cache).status_);
+  EXPECT_EQ(http_cache::status::kNotModified, f.fetch(&cache).status_);
 }
 
-TEST(motis, feed_cache_stale_on_connection_error) {
+TEST(motis, http_cache_stale_on_connection_error) {
   auto f = fixture{};
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
   f.fetch(&cache);
 
   // connection refused
   f.server_.srv_.stop();
   auto const url = f.server_.srv_.url("rt");
   auto ioc = boost::asio::io_context{};
-  auto ret = feed_cache::result{};
+  auto ret = http_cache::result{};
   boost::asio::co_spawn(
       ioc,
       [&]() -> boost::asio::awaitable<void> {
@@ -207,14 +207,14 @@ TEST(motis, feed_cache_stale_on_connection_error) {
       boost::asio::detached);
   ioc.run();
 
-  EXPECT_EQ(feed_cache::status::kStale, ret.status_);
+  EXPECT_EQ(http_cache::status::kStale, ret.status_);
   EXPECT_EQ("content v1", ret.decoded_body_);
   EXPECT_FALSE(ret.download_error_.empty());
 }
 
-TEST(motis, feed_cache_not_stale_if_too_old_or_disabled_or_missing) {
+TEST(motis, http_cache_not_stale_if_too_old_or_disabled_or_missing) {
   auto f = fixture{};
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
 
   f.server_.status_ = http::status::service_unavailable;
   EXPECT_THROW(f.fetch(&cache), std::exception);
@@ -225,50 +225,50 @@ TEST(motis, feed_cache_not_stale_if_too_old_or_disabled_or_missing) {
 
   EXPECT_THROW(f.fetch(&cache, 0s), std::exception);
 
-  auto const now = feed_cache::clock::now();
+  auto const now = http_cache::clock::now();
   cache.now_ = [&]() { return now + 2h; };
   EXPECT_THROW(f.fetch(&cache, 1h), std::exception);
-  EXPECT_EQ(feed_cache::status::kStale, f.fetch(&cache, 3h).status_);
+  EXPECT_EQ(http_cache::status::kStale, f.fetch(&cache, 3h).status_);
 }
 
-TEST(motis, feed_cache_304_refreshes_stale_age) {
+TEST(motis, http_cache_304_refreshes_stale_age) {
   auto f = fixture{};
-  auto cache = feed_cache{};
-  auto now = feed_cache::clock::now();
+  auto cache = http_cache{};
+  auto now = http_cache::clock::now();
   cache.now_ = [&]() { return now; };
 
   f.fetch(&cache);
   now += 50min;
-  EXPECT_EQ(feed_cache::status::kNotModified, f.fetch(&cache).status_);
+  EXPECT_EQ(http_cache::status::kNotModified, f.fetch(&cache).status_);
   now += 50min;  // 50min since last 304
   f.server_.status_ = http::status::bad_gateway;
-  EXPECT_EQ(feed_cache::status::kStale, f.fetch(&cache, 1h).status_);
+  EXPECT_EQ(http_cache::status::kStale, f.fetch(&cache, 1h).status_);
 }
 
-TEST(motis, feed_cache_without_cache_throws_on_http_error) {
+TEST(motis, http_cache_without_cache_throws_on_http_error) {
   auto f = fixture{};
   EXPECT_EQ("content v1", f.fetch(nullptr).decoded_body_);
   f.server_.status_ = http::status::not_found;
   EXPECT_THROW(f.fetch(nullptr), std::exception);
 }
 
-TEST(motis, feed_cache_url_change_disables_conditional_request) {
+TEST(motis, http_cache_url_change_disables_conditional_request) {
   auto f = fixture{};
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
   f.fetch(&cache);
 
   auto const r = f.fetch(&cache, 3600s, f.server_.srv_.url("rt?token=2"));
-  EXPECT_EQ(feed_cache::status::kDownloaded, r.status_);
+  EXPECT_EQ(http_cache::status::kDownloaded, r.status_);
   EXPECT_TRUE(f.server_.last_request()[http::field::if_none_match].empty());
 }
 
-TEST(motis, feed_cache_gzip_body_is_decoded_on_every_use) {
+TEST(motis, http_cache_gzip_body_is_decoded_on_every_use) {
   auto f = fixture{};
   f.server_.gzip_ = true;
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
 
   auto const r1 = f.fetch(&cache);
-  EXPECT_EQ(feed_cache::status::kDownloaded, r1.status_);
+  EXPECT_EQ(http_cache::status::kDownloaded, r1.status_);
   EXPECT_EQ("content v1", r1.decoded_body_);
 
   auto const* e = cache.get(kKey);
@@ -279,18 +279,18 @@ TEST(motis, feed_cache_gzip_body_is_decoded_on_every_use) {
   EXPECT_EQ('\x8b', e->raw_body_[1]);
 
   auto const r2 = f.fetch(&cache);
-  EXPECT_EQ(feed_cache::status::kNotModified, r2.status_);
+  EXPECT_EQ(http_cache::status::kNotModified, r2.status_);
   EXPECT_EQ("content v1", r2.decoded_body_);
 
   f.server_.status_ = http::status::internal_server_error;
   auto const r3 = f.fetch(&cache);
-  EXPECT_EQ(feed_cache::status::kStale, r3.status_);
+  EXPECT_EQ(http_cache::status::kStale, r3.status_);
   EXPECT_EQ("content v1", r3.decoded_body_);
 }
 
-TEST(motis, feed_cache_prepare_headers_error_uses_stale) {
+TEST(motis, http_cache_prepare_headers_error_uses_stale) {
   auto f = fixture{};
-  auto cache = feed_cache{};
+  auto cache = http_cache{};
   auto const add_token =
       [](headers_t& headers) -> boost::asio::awaitable<void> {
     headers["Authorization"] = "Bearer token";
@@ -307,7 +307,7 @@ TEST(motis, feed_cache_prepare_headers_error_uses_stale) {
 
   auto const n_requests = f.server_.srv_.requests_.size();
   auto const r = f.fetch(&cache, 3600s, std::nullopt, {}, fail_token);
-  EXPECT_EQ(feed_cache::status::kStale, r.status_);
+  EXPECT_EQ(http_cache::status::kStale, r.status_);
   EXPECT_EQ("content v1", r.decoded_body_);
   EXPECT_EQ("oauth token request failed", r.download_error_);
   EXPECT_EQ(n_requests, f.server_.srv_.requests_.size());

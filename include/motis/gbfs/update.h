@@ -19,7 +19,7 @@ boost::asio::awaitable<void> update(config const&,
                                     osr::lookup const&,
                                     std::shared_ptr<gbfs_data>&,
                                     metrics_registry const*,
-                                    feed_cache* = nullptr);
+                                    http_cache* = nullptr);
 
 void apply_canned_gbfs_update(config const&, data&);
 

@@ -16,7 +16,7 @@
 
 namespace motis {
 
-struct feed_cache {
+struct http_cache {
   using clock = std::chrono::system_clock;
 
   struct entry {
@@ -24,8 +24,7 @@ struct feed_cache {
     std::string etag_;
     std::string last_modified_;
     std::string content_encoding_;
-    std::int64_t downloaded_at_unix_{0};
-    std::int64_t confirmed_at_unix_{0};
+    clock::time_point confirmed_at_{};
     std::string raw_body_;
   };
 
@@ -55,16 +54,14 @@ struct feed_cache {
   std::function<clock::time_point()> now_{[]() { return clock::now(); }};
 
 private:
-  std::int64_t now_unix() const;
-
   hash_map<std::string, entry> entries_;
 };
 
 using prepare_headers_fn =
     std::function<boost::asio::awaitable<void>(headers_t&)>;
 
-boost::asio::awaitable<feed_cache::result> cached_http_GET(
-    feed_cache* cache,
+boost::asio::awaitable<http_cache::result> cached_http_GET(
+    http_cache* cache,
     std::string const& key,
     boost::urls::url const& url,
     headers_t headers,
