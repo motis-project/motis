@@ -744,13 +744,13 @@ export type StopTime = {
      */
     headsign: string;
     /**
-     * first stop of this trip
+     * first stop of this trip (omitted if `withTripInfo=false`)
      */
-    tripFrom: Place;
+    tripFrom?: Place;
     /**
-     * final stop of this trip
+     * final stop of this trip (omitted if `withTripInfo=false`)
      */
-    tripTo: Place;
+    tripTo?: Place;
     agencyId: string;
     agencyName: string;
     agencyUrl: string;
@@ -3906,6 +3906,10 @@ export type StoptimesData = {
          * Optional. Include stoptimes where passengers can not alight/board according to schedule.
          */
         withScheduledSkippedStops?: boolean;
+        /**
+         * Optional. Default is `true`. If set to `false`, `tripFrom` and `tripTo` are omitted for all stopTimes.
+         */
+        withTripInfo?: boolean;
     };
 };
 

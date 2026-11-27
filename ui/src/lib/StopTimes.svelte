@@ -174,8 +174,8 @@
 							<span class="leading-none">
 								{stopTime.headsign}
 								{#if !stopTime.headsign}
-									{stopTime.tripTo.name}
-								{:else if !normalizedContains(stopTime.headsign, stopTime.tripTo.name)}
+									{stopTime.tripTo?.name}
+								{:else if stopTime.tripTo && !normalizedContains(stopTime.headsign, stopTime.tripTo.name)}
 									<span class="stroke-muted-foreground">({stopTime.tripTo.name})</span>
 								{/if}
 							</span>
