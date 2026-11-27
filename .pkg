@@ -47,9 +47,9 @@
   branch=main
   commit=f2240dc890f3bf68fe6fa5a80450e93aab09578e
 [osr]
-  url=git@github.com:motis-project/osr.git
-  branch=master
-  commit=4bc8b62e8cdc816c15010058674d4ec239475919
+  url=git@github.com:aff3npirat/osr.git
+  branch=height-profile
+  commit=68ea7ca3d6ec3aa225441732fdaaad4260689cfe
 [prometheus-cpp]
   url=git@github.com:motis-project/prometheus-cpp.git
   branch=master
