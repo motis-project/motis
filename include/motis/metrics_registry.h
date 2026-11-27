@@ -73,6 +73,9 @@ struct metrics_registry {
       gbfs_last_successful_update_timestamp_seconds_;
   prometheus::Family<prometheus::Gauge>& gbfs_feed_timestamp_seconds_;
   prometheus::Family<prometheus::Gauge>& gbfs_vehicle_count_;
+  prometheus::Family<prometheus::Counter>& gbfs_fetches_total_;
+  prometheus::Family<prometheus::Counter>& gbfs_fetches_not_modified_total_;
+  prometheus::Family<prometheus::Counter>& gbfs_fetches_stale_total_;
   prometheus::Family<prometheus::Counter>& gbfs_fetch_errors_total_;
   prometheus::Family<prometheus::Counter>& gbfs_skipped_entries_total_;
   prometheus::Gauge& gpu_rt_timetable_;

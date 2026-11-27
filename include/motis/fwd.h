@@ -60,6 +60,7 @@ struct railviz_static_index;
 struct railviz_rt_index;
 struct elevators;
 struct metrics_registry;
+struct http_cache;
 struct way_matches_storage;
 struct data;
 struct adr_ext;
