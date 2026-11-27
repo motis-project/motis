@@ -130,6 +130,11 @@ limits:
   geocode_max_suggestions: 512    # maximum requestable results for /geocode
   reverse_geocode_max_results: 512 # maximum requestable results for /reverse-geocode
   max_max_matching_distance: 250  # upper bound (meters) for the maxMatchingDistance API param, larger values are capped to this limit
+  stoptimes_max_radius_meters: 10000 # upper bound for the /stoptimes radius API param, larger values are capped to this limit
+  stop_max_radius_meters: 10000   # upper bound for the /stop radius API param, larger values are capped to this limit
+  plan_max_radius_meters: 500000  # upper bound for the /plan radius API param, larger values are capped to this limit
+  plan_max_leg_alternatives: 5    # upper bound for the numLegAlternatives API param (/plan, /refresh-itinerary), larger values are capped to this limit
+  levels_max_box_diagonal_meters: 20000 # maximum bounding box diagonal for /map/levels, larger boxes are rejected
 logging:
   log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
 osr_footpath: true                # compute footpaths by street routing (for `useRoutedTransfers`; without it, they replace the beeline walks), `transfers.txt` stays authoritative

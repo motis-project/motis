@@ -1025,8 +1025,10 @@ api::plan_response routing::route(api::plan_params const& query,
     auto const* start_client = get_client_offsets(!query.arriveBy_);
     auto const* dest_client = get_client_offsets(query.arriveBy_);
 
+    auto const max_radius =
+        static_cast<double>(config_.get_limits().plan_max_radius_meters_);
     auto const radius = query.radius_.transform(
-        [](double const r) { return std::min(r, kMaxPlanRadius); });
+        [&](double const r) { return std::min(r, max_radius); });
     auto const use_radius_start =
         radius.has_value() && std::holds_alternative<osr::location>(start);
     auto const use_radius_dest =
@@ -1259,7 +1261,7 @@ api::plan_response routing::route(api::plan_params const& query,
     auto const num_leg_alternatives =
         std::min(static_cast<std::size_t>(
                      std::max(query.numLegAlternatives_, std::int64_t{0})),
-                 kMaxLegAlternatives);
+                 std::size_t{config_.get_limits().plan_max_leg_alternatives_});
     auto fares_time = std::chrono::nanoseconds{0};
     auto itineraries = utl::to_vec(
         journeys, [&, cache = street_routing_cache_t{}](auto&& j) mutable {

@@ -113,6 +113,11 @@ limits:
   geocode_max_suggestions: 512
   reverse_geocode_max_results: 512
   max_max_matching_distance: 250.000000
+  stoptimes_max_radius_meters: 10000
+  stop_max_radius_meters: 10000
+  plan_max_radius_meters: 500000
+  plan_max_leg_alternatives: 5
+  levels_max_box_diagonal_meters: 20000
 osr_footpath: true
 geocoding: true
 reverse_geocoding: false

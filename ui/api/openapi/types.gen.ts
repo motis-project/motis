@@ -2577,7 +2577,7 @@ export type PlanData = {
          * for the next transit leg / departing after the previous transit
          * leg's arrival). Each alternative is a 3-leg sequence
          * `[ingress footpath, transit, egress footpath]`.
-         * Values above 5 are capped to 5.
+         * Is limited by server config variable `plan_max_leg_alternatives`, larger values are capped to this limit.
          *
          */
         numLegAlternatives?: number;
@@ -2712,7 +2712,7 @@ export type PlanData = {
          * for each of them is estimated from the crow-fly distance to the coordinate
          * at walking speed (1.5 m/s), rounded down to whole minutes.
          * Works without OSM/street routing data loaded.
-         * Values above 500000 are capped to 500000.
+         * Is limited by server config variable `plan_max_radius_meters`, larger values are capped to this limit.
          *
          */
         radius?: number;
@@ -3713,7 +3713,7 @@ export type RefreshItineraryData = {
         noCompulsoryReservation?: boolean;
         /**
          * Maximum number of alternatives to return per transit leg, see `/plan`.
-         * Values above 5 are capped to 5.
+         * Is limited by server config variable `plan_max_leg_alternatives`, larger values are capped to this limit.
          *
          */
         numLegAlternatives?: number;
@@ -3881,7 +3881,7 @@ export type StoptimesData = {
          * If set, all stops at parent stations and their child stops in the specified radius
          * are returned.
          *
-         * Values above 10000 are capped to 10000.
+         * Is limited by server config variable `stoptimes_max_radius_meters`, larger values are capped to this limit.
          *
          */
         radius?: number;
@@ -4071,7 +4071,7 @@ export type StopInfoData = {
          * If set, all stops at parent stations and their child stops in the
          * specified radius are returned. Required if stopId is not given.
          *
-         * Values above 10000 are capped to 10000.
+         * Is limited by server config variable `stop_max_radius_meters`, larger values are capped to this limit.
          *
          */
         radius?: number;

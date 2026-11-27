@@ -10,14 +10,13 @@
 
 #include "osr/lookup.h"
 
+#include "motis/config.h"
 #include "motis/parse_location.h"
 #include "motis/types.h"
 
 namespace json = boost::json;
 
 namespace motis::ep {
-
-constexpr auto const kMaxBoxDiagonal = 20'000.0;  // [meters]
 
 api::levels_response levels::operator()(
     boost::urls::url_view const& url) const {
@@ -28,9 +27,11 @@ api::levels_response levels::operator()(
       min.has_value(), "min not a coordinate: {}", query.min_);
   utl::verify<net::bad_request_exception>(
       max.has_value(), "max not a coordinate: {}", query.max_);
+  auto const max_diagonal =
+      config_.get_limits().levels_max_box_diagonal_meters_;
   utl::verify<net::bad_request_exception>(
-      geo::distance(min->pos_, max->pos_) <= kMaxBoxDiagonal,
-      "bounding box too large (diagonal > {}m)", kMaxBoxDiagonal);
+      geo::distance(min->pos_, max->pos_) <= max_diagonal,
+      "bounding box too large (diagonal > {}m)", max_diagonal);
   auto levels = hash_set<float>{};
   l_.find({min->pos_, max->pos_}, [&](osr::way_idx_t const x) {
     auto const p = w_.r_->way_properties_[x];

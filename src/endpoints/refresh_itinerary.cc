@@ -14,7 +14,7 @@
 
 #include "nigiri/types.h"
 
-#include "motis/constants.h"
+#include "motis/config.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/itinerary_id.h"
@@ -64,10 +64,10 @@ first_last_mile_options make_capped_first_last_mile_options(
 }
 
 std::size_t get_capped_num_leg_alternatives(
-    api::refreshItinerary_params const& query) {
+    config const& c, api::refreshItinerary_params const& query) {
   return std::min(static_cast<std::size_t>(
                       std::max(query.numLegAlternatives_, std::int64_t{0})),
-                  kMaxLegAlternatives);
+                  std::size_t{c.get_limits().plan_max_leg_alternatives_});
 }
 
 template <typename Endpoint>
@@ -88,7 +88,7 @@ api::Itinerary refresh_itinerary::operator()(
       query.requireDisplayNameMatch_, query.joinInterlinedLegs_,
       query.detailedTransfers_.value_or(query.detailedLegs_),
       query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
-      get_capped_num_leg_alternatives(query),
+      get_capped_num_leg_alternatives(config_, query),
       to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
       query.requireCarTransport_, query.noCompulsoryReservation_,
       get_profile_idx(query.useRoutedTransfers_, query.requireCarTransport_,
@@ -119,7 +119,7 @@ api::Itinerary refresh_itinerary_post::operator()(
       query.joinInterlinedLegs_,
       query.detailedTransfers_.value_or(query.detailedLegs_),
       query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
-      get_capped_num_leg_alternatives(query),
+      get_capped_num_leg_alternatives(config_, query),
       to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
       query.requireCarTransport_, query.noCompulsoryReservation_,
       get_profile_idx(query.useRoutedTransfers_, query.requireCarTransport_,

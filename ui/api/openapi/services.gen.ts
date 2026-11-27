@@ -212,7 +212,7 @@ export const stopInfo = <ThrowOnError extends boolean = false>(options?: Options
 
 /**
  * Get all available levels for a map section
- * The diagonal of the bounding box given by `min` and `max` must not exceed 20km.
+ * The diagonal of the bounding box given by `min` and `max` must not exceed server config variable `levels_max_box_diagonal_meters`.
  *
  */
 export const levels = <ThrowOnError extends boolean = false>(options: Options<LevelsData, ThrowOnError>) => {
