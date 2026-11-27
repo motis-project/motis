@@ -151,10 +151,10 @@ TEST(motis, stop_times) {
     auto const& ice = res.stopTimes_[0];
     EXPECT_EQ(api::ModeEnum::HIGHSPEED_RAIL, ice.mode_);
     EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
-    EXPECT_EQ("test_DA_10", ice.tripFrom_.stopId_);
-    EXPECT_EQ("DA-10-CODE", ice.tripFrom_.stopCode_);
-    EXPECT_FALSE(ice.tripTo_.stopCode_.has_value());
-    EXPECT_EQ("test_FFM_12", ice.tripTo_.stopId_);
+    EXPECT_EQ("test_DA_10", ice.tripFrom_->stopId_);
+    EXPECT_EQ("DA-10-CODE", ice.tripFrom_->stopCode_);
+    EXPECT_FALSE(ice.tripTo_->stopCode_.has_value());
+    EXPECT_EQ("test_FFM_12", ice.tripTo_->stopId_);
     EXPECT_EQ("ICE", ice.displayName_);
     EXPECT_EQ("FFM Hbf", ice.headsign_);
     EXPECT_EQ("test_ICE", ice.routeId_);
@@ -176,8 +176,8 @@ TEST(motis, stop_times) {
         api::ModeEnum::SUBWAY,
         sbahn.mode_);  // mode can't change with block_id so sticks from U4
     EXPECT_EQ("20190501_01:15_test_S3", sbahn.tripId_);
-    EXPECT_EQ("test_FFM_101", sbahn.tripFrom_.stopId_);
-    EXPECT_EQ("test_FFM_10", sbahn.tripTo_.stopId_);
+    EXPECT_EQ("test_FFM_101", sbahn.tripFrom_->stopId_);
+    EXPECT_EQ("test_FFM_10", sbahn.tripTo_->stopId_);
     EXPECT_EQ("S3", sbahn.displayName_);
     EXPECT_EQ("FFM Hbf", sbahn.headsign_);
     EXPECT_EQ("test_S3", sbahn.routeId_);
@@ -203,6 +203,50 @@ TEST(motis, stop_times) {
     EXPECT_EQ(3, res2.stopTimes_.size());
     for (auto const& stopTime : res2.stopTimes_) {
       EXPECT_FALSE(stopTime.place_.alerts_.has_value());
+    }
+  }
+
+  {
+    // same test with trip info off
+    auto const res3 = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_10"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&language=de"
+        "&withTripInfo=false");
+    EXPECT_EQ(3, res3.stopTimes_.size());
+    for (auto const& stopTime : res3.stopTimes_) {
+      EXPECT_FALSE(stopTime.tripFrom_.has_value());
+      EXPECT_FALSE(stopTime.tripTo_.has_value());
+    }
+    // tripFrom/tripTo are omitted in the JSON response
+    auto const jv = json::value_from(res3).as_object();
+    for (auto const& st : jv.at("stopTimes").as_array()) {
+      auto const& o = st.as_object();
+      EXPECT_FALSE(o.contains("tripFrom"));
+      EXPECT_FALSE(o.contains("tripTo"));
+    }
+  }
+
+  {
+    // default: trip info is included
+    auto const res4 = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_10"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&language=de");
+    EXPECT_EQ(3, res4.stopTimes_.size());
+    for (auto const& stopTime : res4.stopTimes_) {
+      EXPECT_TRUE(stopTime.tripFrom_.has_value());
+      EXPECT_TRUE(stopTime.tripTo_.has_value());
+    }
+    auto const jv = json::value_from(res4).as_object();
+    for (auto const& st : jv.at("stopTimes").as_array()) {
+      auto const& o = st.as_object();
+      EXPECT_TRUE(o.contains("tripFrom"));
+      EXPECT_TRUE(o.contains("tripTo"));
     }
   }
 
@@ -366,7 +410,7 @@ TEST(motis, stop_times) {
     auto const& ice = res.stopTimes_[0];
     EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
     // No realtime:
-    EXPECT_EQ("test_FFM_10", ice.tripTo_.stopId_);
+    EXPECT_EQ("test_FFM_10", ice.tripTo_->stopId_);
     EXPECT_EQ(false, ice.realTime_);
     EXPECT_EQ("2019-04-30 22:45", format_time(ice.place_.arrival_.value()));
     EXPECT_EQ("2019-04-30 22:45",
@@ -514,8 +558,8 @@ TEST(motis, stop_times_reservation) {
     auto const& t1 = res.stopTimes_[0];
     EXPECT_EQ("20190501_08:00_test_T1", t1.tripId_);
     EXPECT_EQ(api::ReservationEnum::COMPULSORY, t1.reservation_);
-    EXPECT_EQ("test_A", t1.tripFrom_.stopId_);
-    EXPECT_EQ("test_B", t1.tripTo_.stopId_);  // T1's own destination
+    EXPECT_EQ("test_A", t1.tripFrom_->stopId_);
+    EXPECT_EQ("test_B", t1.tripTo_->stopId_);  // T1's own destination
     ASSERT_EQ(2, t1.nextStops_->size());
     EXPECT_EQ("test_B", (*t1.nextStops_)[0].stopId_);
     EXPECT_EQ("test_C", (*t1.nextStops_)[1].stopId_);  // reaches into T2's leg
@@ -538,8 +582,8 @@ TEST(motis, stop_times_reservation) {
     auto const& t2 = res.stopTimes_[0];
     EXPECT_EQ("20190501_08:10_test_T2", t2.tripId_);
     EXPECT_EQ(api::ReservationEnum::NONE, t2.reservation_);
-    EXPECT_EQ("test_B", t2.tripFrom_.stopId_);  // T2's own origin
-    EXPECT_EQ("test_C", t2.tripTo_.stopId_);
+    EXPECT_EQ("test_B", t2.tripFrom_->stopId_);  // T2's own origin
+    EXPECT_EQ("test_C", t2.tripTo_->stopId_);
     ASSERT_EQ(2, t2.previousStops_->size());
     EXPECT_EQ("test_A",
               (*t2.previousStops_)[0].stopId_);  // reaches into T1's leg

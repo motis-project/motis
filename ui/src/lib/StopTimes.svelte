@@ -51,6 +51,7 @@
 		exactRadius: exactRadius ? true : undefined,
 		n: 10,
 		language: [language]
+		// withTripInfo is never set to false here, so tripFrom/tripTo are always present
 	});
 	/* eslint-disable svelte/prefer-writable-derived */
 	let responses = $state<Array<Promise<StoptimesResponse>>>([]);
@@ -174,8 +175,8 @@
 							<span class="leading-none">
 								{stopTime.headsign}
 								{#if !stopTime.headsign}
-									{stopTime.tripTo.name}
-								{:else if !normalizedContains(stopTime.headsign, stopTime.tripTo.name)}
+									{stopTime.tripTo?.name}
+								{:else if stopTime.tripTo && !normalizedContains(stopTime.headsign, stopTime.tripTo.name)}
 									<span class="stroke-muted-foreground">({stopTime.tripTo.name})</span>
 								{/if}
 							</span>

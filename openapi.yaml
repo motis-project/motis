@@ -3001,6 +3001,14 @@ paths:
             type: boolean
             default: true
 
+        - name: withTripInfo
+          in: query
+          required: false
+          description: Optional. Default is `true`. If set to `false`, `tripFrom` and `tripTo` are omitted for all stopTimes.
+          schema:
+            type: boolean
+            default: true
+
       responses:
         '422':
           description: Unprocessable Entity
@@ -4634,8 +4642,6 @@ components:
         - mode
         - realTime
         - headsign
-        - tripFrom
-        - tripTo
         - agencyId
         - agencyName
         - agencyUrl
@@ -4669,10 +4675,10 @@ components:
             For non-transit legs, null
           type: string
         tripFrom:
-          description: first stop of this trip
+          description: first stop of this trip (omitted if `withTripInfo=false`)
           $ref: '#/components/schemas/Place'
         tripTo:
-          description: final stop of this trip
+          description: final stop of this trip (omitted if `withTripInfo=false`)
           $ref: '#/components/schemas/Place'
         agencyId:
           type: string

@@ -589,14 +589,20 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = s.has_rt_data(ev_type),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
-                .tripFrom_ = bwd_compat_lvl_adjust(
-                    to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
-                             s.get_first_trip_stop(ev_type)),
-                    api_version),
-                .tripTo_ = bwd_compat_lvl_adjust(
-                    to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
-                             s.get_last_trip_stop(ev_type)),
-                    api_version),
+                .tripFrom_ = query.withTripInfo_
+                                 ? std::optional{bwd_compat_lvl_adjust(
+                                       to_place(&tt_, &tags_, w_, pl_, matches_,
+                                                ae_, tz_, lang,
+                                                s.get_first_trip_stop(ev_type)),
+                                       api_version)}
+                                 : std::nullopt,
+                .tripTo_ = query.withTripInfo_
+                               ? std::optional{bwd_compat_lvl_adjust(
+                                     to_place(&tt_, &tags_, w_, pl_, matches_,
+                                              ae_, tz_, lang,
+                                              s.get_last_trip_stop(ev_type)),
+                                     api_version)}
+                               : std::nullopt,
                 .agencyId_ =
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                 .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
