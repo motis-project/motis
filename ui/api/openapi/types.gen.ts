@@ -968,6 +968,29 @@ export type StepInstruction = {
     elevationDown?: number;
 };
 
+export type ElevationProfile = {
+    /**
+     * Array of coordinates with elevation [latitude, longitude, z, latitude, ...].
+     *
+     */
+    points: Array<(number)>;
+    /**
+     * Number of coordinate triplets.
+     */
+    size: number;
+    median?: number;
+    min: number;
+    max: number;
+    /**
+     * incline in meters
+     */
+    up?: number;
+    /**
+     * decline in meters
+     */
+    down?: number;
+};
+
 export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
 
 export type RentalPropulsionType = 'HUMAN' | 'ELECTRIC_ASSIST' | 'ELECTRIC' | 'COMBUSTION' | 'COMBUSTION_DIESEL' | 'HYBRID' | 'PLUG_IN_HYBRID' | 'HYDROGEN_FUEL_CELL';
@@ -1477,6 +1500,10 @@ export type Leg = {
      *
      */
     legGeometry: EncodedPolyline;
+    /**
+     * Elevation profile for footpath leg.
+     */
+    elevationProfile?: ElevationProfile;
     /**
      * A series of turn by turn instructions
      * used for walking, biking and driving.
@@ -2389,6 +2416,11 @@ export type PlanData = {
          *
          */
         elevationCosts?: ElevationCosts;
+        /**
+         * Optional. Compute elevation profiles of footpaths. Requires `detailedLegs`.
+         *
+         */
+        elevationProfile?: boolean;
         /**
          * Optional. Experimental. Default is `10`.
          * Factor with which the duration of the fastest direct non-public-transit connection is multiplied.

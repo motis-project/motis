@@ -1,18 +1,13 @@
 #pragma once
 
-#include <array>
 #include <cassert>
-#include <memory>
 #include <optional>
-#include <vector>
 
 #include "osr/location.h"
 #include "osr/routing/profile.h"
 #include "osr/routing/route.h"
 
-#include "nigiri/special_stations.h"
 #include "motis-api/motis-api.h"
-
 #include "motis/flex/flex_routing_data.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
@@ -81,6 +76,7 @@ api::Itinerary street_routing(
     osr::bitvec<osr::node_idx_t>& blocked_mem,
     unsigned api_version,
     bool detailed_leg = true,
+    bool with_elevation_profile = false,
     std::chrono::seconds max = std::chrono::seconds{3600},
     precomputed_route const& precomputed = {});
 

@@ -7,15 +7,10 @@
 #include <tuple>
 #include <vector>
 
-#include "fmt/ranges.h"
-
 #include "cista/free_self_allocated.h"
 #include "cista/io.h"
 
-#include "adr/area_database.h"
-
 #include "utl/erase_if.h"
-#include "utl/read_file.h"
 #include "utl/to_vec.h"
 
 #include "tiles/db/clear_database.h"
@@ -35,16 +30,15 @@
 #include "nigiri/common/parse_date.h"
 #include "nigiri/location_routes.h"
 #include "nigiri/routing/tb/preprocess.h"
-#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
 #include "nigiri/timetable_metrics.h"
 
 #include "osr/extract/extract.h"
-#include "osr/lookup.h"
-#include "osr/ways.h"
+#include "osr/preprocessing/elevation/shared.h"
 
 #include "adr/adr.h"
+#include "adr/area_database.h"
 #include "adr/formatter.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
@@ -56,7 +50,6 @@
 #include "motis/hashes.h"
 #include "motis/route_shapes.h"
 #include "motis/tag_lookup.h"
-#include "motis/tt_location_rtree.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -325,14 +318,22 @@ void import(config const& c,
   }
 
   auto const osr_hashes = meta_t{osm_hash, osr_version(), elevation_dir_hash};
-  auto osr = task{"osr",
-                  {},
-                  c.use_street_routing(),
-                  [&]() {
-                    osr::extract(true, fs::path{*c.osm_}, data_path / "osr",
-                                 elevation_dir);
-                  },
-                  osr_hashes};
+  auto osr =
+      task{"osr",
+           {},
+           c.use_street_routing(),
+           [&]() {
+             osr::extract(
+                 true, fs::path{*c.osm_}, data_path / "osr", elevation_dir,
+                 {.max_points_ = c.get_street_routing()->max_elevation_samples_,
+                  .stats_file_ = {data_path / "osr" / "elevation_stats.txt"},
+                  .min_elevation_ =
+                      osr::preprocessing::elevation::elevation_meters_t{
+                          c.get_street_routing()->min_elevation_},
+                  .min_incline_ = c.get_street_routing()->min_incline_,
+                  .max_incline_ = c.get_street_routing()->max_incline_});
+           },
+           osr_hashes};
 
   auto adr = task{"adr",
                   {},

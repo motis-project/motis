@@ -1,5 +1,6 @@
 #pragma once
 
+#include "motis/adr_extend_tt.h"
 #include "motis/flex/flex_routing_data.h"
 #include "motis/flex/mode_payload.h"
 #include "motis/osr/street_routing.h"

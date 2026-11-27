@@ -1,29 +1,24 @@
 #include "motis/osr/street_routing.h"
 
-#include <cassert>
+#include <optional>
+#include <vector>
 
-#include "geo/polyline_format.h"
+#include "cista/strong.h"
 
 #include "utl/concat.h"
 #include "utl/get_or_create.h"
 #include "utl/raii.h"
+#include "utl/verify.h"
 
 #include "osr/routing/algorithms.h"
-#include "osr/routing/parameters.h"
+#include "osr/routing/elevation_profile.h"
+#include "osr/routing/path.h"
 #include "osr/routing/route.h"
-#include "osr/routing/sharing_data.h"
 
-#include "nigiri/special_stations.h"
-#include "nigiri/timetable.h"
-
-#include "motis/constants.h"
-#include "motis/flex/mode_payload.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
-#include "motis/transport_mode.h"
 #include "motis/update_rtt_td_footpaths.h"
-#include "utl/verify.h"
 
 namespace n = nigiri;
 
@@ -97,6 +92,27 @@ std::vector<api::StepInstruction> get_step_instructions(
   return steps;
 }
 
+api::ElevationProfile get_elevation_profile(
+    osr::ways const& w, std::span<osr::path::segment const> segments) {
+  auto const profile =
+      osr::elevation_profile{w, segments.subspan(1, segments.size() - 2)};
+  auto points = std::vector<double>{};
+  points.resize(profile.elevation_.size() * 3);
+  for (auto i = std::size_t{0}; i < profile.elevation_.size(); ++i) {
+    points[i * 3] = profile.points_[i].lat();
+    points[i * 3 + 1] = profile.points_[i].lng();
+    points[i * 3 + 2] = to_idx(profile.elevation_[i]);
+  }
+
+  return {.points_ = points,
+          .size_ = static_cast<int64_t>(profile.elevation_.size()),
+          .median_ = to_idx(profile.median()),
+          .min_ = static_cast<int64_t>(to_idx(profile.min_)),
+          .max_ = static_cast<int64_t>(to_idx(profile.max_)),
+          .up_ = static_cast<int64_t>(to_idx(profile.up_)),
+          .down_ = static_cast<int64_t>(to_idx(profile.down_))};
+}
+
 api::Itinerary dummy_itinerary(api::Place const& from,
                                api::Place const& to,
                                api::ModeEnum const mode,
@@ -152,6 +168,7 @@ api::Itinerary street_routing(osr::ways const& w,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
                               bool const detailed_leg,
+                              bool const with_elevation_profile,
                               std::chrono::seconds const max,
                               precomputed_route const& precomputed) {
   utl::verify(start_time.has_value() || end_time.has_value(),
@@ -207,8 +224,8 @@ api::Itinerary street_routing(osr::ways const& w,
       return {};
     }
     // No street path between the endpoints (e.g. the only wheelchair
-    // connection is an out-of-service elevator) -> emit a cancelled leg so the
-    // broken access/transfer is visible in the journey.
+    // connection is an out-of-service elevator) -> emit a cancelled leg so
+    // the broken access/transfer is visible in the journey.
     return dummy_itinerary(from_place, to_place, out.get_mode(), *start_time,
                            *end_time, api_version, /*cancelled=*/true);
   }
@@ -286,6 +303,13 @@ api::Itinerary street_routing(osr::ways const& w,
         if (detailed_leg) {
           leg.steps_ = get_step_instructions(w, elevations, from, to, range,
                                              api_version);
+
+          if (with_elevation_profile) {
+            leg.elevationProfile_ = get_elevation_profile(w, range);
+            // currently to imprecise
+            // leg.elevationProfile_->down_ = path->elevation_.down_.v_;
+            // leg.elevationProfile_->up_ = path->elevation_.up_.v_;
+          }
         }
 
         out.annotate_leg(lang, from_node, to_node, leg);

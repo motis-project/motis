@@ -632,6 +632,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     double const max_matching_distance,
     double const fastest_direct_factor,
     bool const detailed_legs,
+    bool const with_elevation_profile,
     unsigned const api_version) const {
   if (!w_ || !l_) {
     return {};
@@ -645,11 +646,12 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   auto itineraries = std::vector<api::Itinerary>{};
 
   auto const route_with_profile = [&](output const& out) {
-    auto itinerary = street_routing(
-        *w_, *l_, e, elevations_, lang, from, to, out,
-        arrive_by ? std::nullopt : std::optional{time},
-        arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
-        osr_params, cache, *blocked, api_version, detailed_legs, max);
+    auto itinerary =
+        street_routing(*w_, *l_, e, elevations_, lang, from, to, out,
+                       arrive_by ? std::nullopt : std::optional{time},
+                       arrive_by ? std::optional{time} : std::nullopt,
+                       max_matching_distance, osr_params, cache, *blocked,
+                       api_version, detailed_legs, with_elevation_profile, max);
     if (itinerary.legs_.empty()) {
       return false;
     }
@@ -918,6 +920,8 @@ api::plan_response routing::route(api::plan_params const& query,
   auto const osr_params = get_osr_parameters(query);
   auto const detailed_transfers =
       query.detailedTransfers_.value_or(query.detailedLegs_);
+  auto const with_elevation_profile =
+      query.detailedLegs_ && query.elevationProfile_;
 
   auto const [start_time, t] = get_start_time(query, tt_);
 
@@ -936,7 +940,7 @@ api::plan_response routing::route(api::plan_params const& query,
                              config_.get_limits()
                                  .street_routing_max_direct_seconds_}),
                 max_matching_distance, query.fastestDirectFactor_,
-                query.detailedLegs_, api_version)
+                query.detailedLegs_, with_elevation_profile, api_version)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
@@ -1265,7 +1269,7 @@ api::plan_response routing::route(api::plan_params const& query,
               query.requireCarTransport_ && use_routed_transfers(query),
               osr_params, query.pedestrianProfile_, query.elevationCosts_,
               query.joinInterlinedLegs_, detailed_transfers,
-              query.detailedLegs_, query.withFares_,
+              query.detailedLegs_, with_elevation_profile, query.withFares_,
               query.withScheduledSkippedStops_,
               config_.timetable_.value().max_matching_distance_,
               max_matching_distance, api_version,

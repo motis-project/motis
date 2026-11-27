@@ -25,6 +25,7 @@
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
 	import { Button } from '$lib/components/ui/button';
 	import Route from '$lib/Route.svelte';
+	import ElevationProfile from './ElevationProfile.svelte';
 	import Alerts from '$lib/Alerts.svelte';
 	import { getModeName } from '$lib/getModeName';
 	import { language, t } from '$lib/i18n/translation';
@@ -221,32 +222,54 @@
 	{@const stepsWithToll = l.steps?.filter((s: StepInstruction) => s.toll)}
 	{@const stepsWithAccessRestriction = l.steps?.filter((s: StepInstruction) => s.accessRestriction)}
 
-	<div class="py-12 flex flex-col gap-y-4 text-muted-foreground">
-		<span class="ml-6">
-			{formatDurationSec(l.duration)}
-			{getModeName(l)}
-			{formatDistanceMeters(l.distance)}
-		</span>
-		{#if l.rental && l.rental.systemName}
+	<div
+		class="py-12 flex flex-row flex-wrap items-stretch justify-between gap-x-4 text-muted-foreground"
+	>
+		<div class="flex flex-col gap-y-4 text-left">
 			<span class="ml-6">
-				{t.sharingProvider}:
-				<a href={l.rental.url} target="_blank" class="hover:underline">{l.rental.systemName}</a>
+				{formatDurationSec(l.duration)}
+				{getModeName(l)}
+				{formatDistanceMeters(l.distance)}
 			</span>
-		{/if}
-		{#if l.rental?.returnConstraint == 'ROUNDTRIP_STATION'}
-			<span class="ml-6">
-				{t.roundtripStationReturnConstraint}
-			</span>
-		{/if}
-		{#if l.rental?.rentalUriWeb}
-			<span class="ml-6">
-				<Button class="font-bold" variant="outline" href={l.rental.rentalUriWeb} target="_blank">
-					{t.rent}
-				</Button>
-			</span>
-		{/if}
-		{#if stepsWithElevation && stepsWithElevation.length > 0}
-			<div class="ml-6 flex items-center gap-2 text-xs">
+			{#if l.rental && l.rental.systemName}
+				<span class="ml-6">
+					{t.sharingProvider}:
+					<a href={l.rental.url} target="_blank" class="hover:underline">{l.rental.systemName}</a>
+				</span>
+			{/if}
+			{#if l.rental?.returnConstraint == 'ROUNDTRIP_STATION'}
+				<span class="ml-6">
+					{t.roundtripStationReturnConstraint}
+				</span>
+			{/if}
+			{#if l.rental?.rentalUriWeb}
+				<span class="ml-6">
+					<Button class="font-bold" variant="outline" href={l.rental.rentalUriWeb} target="_blank">
+						{t.rent}
+					</Button>
+				</span>
+			{/if}
+		</div>
+		{#if l.elevationProfile}
+			<details class="w-full basis-full">
+				<summary class="cursor-pointer list-none ml-6 flex items-center gap-2 text-xs text-left">
+					{t.incline}
+					<div class="flex items-center">
+						<ArrowUp class="size-4" />
+						{l.elevationProfile.up} m
+					</div>
+					<div class="flex items-center">
+						<ArrowDown class="size-4" />
+						{l.elevationProfile.down} m
+					</div>
+				</summary>
+
+				<div class="mt-3 w-full text-xs text-muted-foreground">
+					<ElevationProfile profile={l.elevationProfile} />
+				</div>
+			</details>
+		{:else if stepsWithElevation && stepsWithElevation.length > 0}
+			<div class="w-full basis-full ml-6 flex items-center gap-2 text-xs text-left">
 				{t.incline}
 				<div class="flex items-center">
 					<ArrowUp class="size-4" />
@@ -261,22 +284,24 @@
 				</div>
 			</div>
 		{/if}
-		{#if stepsWithToll && stepsWithToll.length > 0}
-			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
-				<DollarSign class="size-4" />
-				{t.toll}
-			</div>
-		{/if}
-		{#if stepsWithAccessRestriction && stepsWithAccessRestriction.length > 0}
-			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
-				<CircleX class="size-4" />
-				{t.accessRestriction}
-				({stepsWithAccessRestriction
-					.map((s) => s.accessRestriction)
-					.filter((value, index, array) => array.indexOf(value) === index)
-					.join(', ')})
-			</div>
-		{/if}
+		<div class="flex flex-col gap-y-4 text-left">
+			{#if stepsWithToll && stepsWithToll.length > 0}
+				<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
+					<DollarSign class="size-4" />
+					{t.toll}
+				</div>
+			{/if}
+			{#if stepsWithAccessRestriction && stepsWithAccessRestriction.length > 0}
+				<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
+					<CircleX class="size-4" />
+					{t.accessRestriction}
+					({stepsWithAccessRestriction
+						.map((s) => s.accessRestriction)
+						.filter((value, index, array) => array.indexOf(value) === index)
+						.join(', ')})
+				</div>
+			{/if}
+		</div>
 	</div>
 {/snippet}
 

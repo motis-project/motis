@@ -1161,6 +1161,42 @@ See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
     }
 } as const;
 
+export const ElevationProfileSchema = {
+    type: 'object',
+    required: ['points', 'min', 'max', 'size'],
+    properties: {
+        points: {
+            description: `Array of coordinates with elevation [latitude, longitude, z, latitude, ...].
+`,
+            type: 'array',
+            items: {
+                type: 'number'
+            }
+        },
+        size: {
+            description: 'Number of coordinate triplets.',
+            type: 'integer'
+        },
+        median: {
+            type: 'integer'
+        },
+        min: {
+            type: 'integer'
+        },
+        max: {
+            type: 'integer'
+        },
+        up: {
+            description: 'incline in meters',
+            type: 'integer'
+        },
+        down: {
+            description: 'decline in meters',
+            type: 'integer'
+        }
+    }
+} as const;
+
 export const RentalFormFactorSchema = {
     type: 'string',
     enum: ['BICYCLE', 'CARGO_BICYCLE', 'CAR', 'MOPED', 'SCOOTER_STANDING', 'SCOOTER_SEATED', 'OTHER']
@@ -1833,6 +1869,10 @@ If detailed leg output is disabled, this is returned as an empty
 polyline.
 `,
             '$ref': '#/components/schemas/EncodedPolyline'
+        },
+        elevationProfile: {
+            description: 'Elevation profile for footpath leg.',
+            '$ref': '#/components/schemas/ElevationProfile'
         },
         steps: {
             description: `A series of turn by turn instructions
