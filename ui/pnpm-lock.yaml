@@ -5,7 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  bits-ui: 564d024ee4e6e5e9477c216dbfc6497ac730186278435a2b6ad291a1cad3797f
+  bits-ui:
+    hash: 564d024ee4e6e5e9477c216dbfc6497ac730186278435a2b6ad291a1cad3797f
+    path: patches/bits-ui.patch
 
 importers:
 
