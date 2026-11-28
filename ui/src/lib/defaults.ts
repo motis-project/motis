@@ -62,12 +62,20 @@ export const defaultQuery = {
 	luggage: 0,
 	slowDirect: false,
 	isochronesOpacity: 600,
-	algorithm: 'PONG'
+	algorithm: 'PONG',
+	minimizeNonTransit: false,
+	minimizeModeSwitches: false,
+	minimizeWithout: []
 };
+
+const alwaysSent = ['minimizeNonTransit', 'minimizeModeSwitches'];
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {
 	const queryCopy: PlanData['query'] = { ...query };
 	Object.keys(queryCopy).forEach((key) => {
+		if (alwaysSent.includes(key)) {
+			return;
+		}
 		if (key in defaultQuery) {
 			const value = queryCopy[key as keyof PlanData['query']];
 			const defaultValue = defaultQuery[key as keyof typeof defaultQuery];

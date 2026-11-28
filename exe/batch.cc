@@ -132,14 +132,17 @@ int batch(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto queries_path = fs::path{"queries.txt"};
   auto responses_path = fs::path{"responses.txt"};
-  auto n_threads = std::thread::hardware_concurrency();
   auto rt = false;
+  auto n_threads = 0U;  // 0 = hardware_concurrency
   auto rt_day = std::string{};
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
-      ("n_threads,nt", po::value(&n_threads)->default_value(n_threads))  //
+      ("threads,j", po::value(&n_threads)->default_value(n_threads),
+       "worker threads (0 = all cores); fewer bound the memory of the "
+       "per-thread search states and of the responses buffered behind a slow "
+       "query")  //
       ("queries,q", po::value(&queries_path)->default_value(queries_path),
        "queries file")  //
       ("responses,r", po::value(&responses_path)->default_value(responses_path),

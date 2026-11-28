@@ -1752,6 +1752,32 @@ export type PlanPostBody = {
     toOffsets?: Array<PlanOffset>;
 };
 
+/**
+ * Experimental. Debug output: the values of the extra Pareto criteria the
+ * multicriteria engine (algorithm BMRAPP) optimized for
+ * this itinerary. Only present if that engine ran; each value only if its
+ * criterion was requested.
+ *
+ */
+export type ItineraryCriteria = {
+    /**
+     * `minimizeNonTransit`: approximate minutes on foot or other selected pre/postTransit/transfer
+     *
+     */
+    nonTransit?: number;
+    /**
+     * `minimizeModeSwitches`: vehicle-class switches between consecutive
+     * trips (suburban, subway, tram and bus count as one class)
+     *
+     */
+    modeSwitches?: number;
+    /**
+     * `minimizeWithout`: whether the itinerary uses an avoided mode
+     *
+     */
+    avoidedModes?: boolean;
+};
+
 export type Itinerary = {
     /**
      * journey duration in seconds
@@ -1783,6 +1809,7 @@ export type Itinerary = {
      * Fare information
      */
     fareTransfers?: Array<FareTransfer>;
+    criteria?: ItineraryCriteria;
 };
 
 /**
@@ -2277,7 +2304,7 @@ export type PlanData = {
         /**
          * algorithm to use
          */
-        algorithm?: 'RAPTOR' | 'PONG' | 'TB';
+        algorithm?: 'RAPTOR' | 'PONG' | 'TB' | 'BMRAPP';
         /**
          * Optional. Default is `false`.
          *
@@ -2309,6 +2336,15 @@ export type PlanData = {
          *
          */
         detailedTransfers?: boolean;
+        /**
+         * Optional. Experimental. Default is `true`.
+         * Removes transit itineraries whose first or last mile (or both
+         * together) takes at least as long as the direct connection with the
+         * same mode. `false` keeps them, e.g. to compare routing algorithms
+         * on their raw results.
+         *
+         */
+        directFilter?: boolean;
         /**
          * Optional. Default is `WALK` which will compute walking routes as direct connections.
          *
@@ -2545,6 +2581,38 @@ export type PlanData = {
          *
          */
         maxTravelTime?: number;
+        /**
+         * Add "number of vehicle-class switches between consecutive trips" as an
+         * extra Pareto criterion (`BUS -> SUBWAY` counts, `SUBWAY -> SUBWAY`
+         * does not), rewarding journeys that stay within one mode.
+         *
+         * Setting this (or any other `minimize*` parameter) switches routing to
+         * the multicriteria engine, overriding `algorithm` if it was `PONG`.
+         *
+         */
+        minimizeModeSwitches?: boolean;
+        /**
+         * Add "minutes not on transit" (pre-/post-transit legs and transfer
+         * footpaths) as an extra Pareto criterion, so the result also keeps
+         * journeys that trade a little arrival time for less walking.
+         *
+         * Setting this (or any other `minimize*` parameter) switches routing to
+         * the multicriteria engine, overriding `algorithm` if it was `PONG`.
+         *
+         */
+        minimizeNonTransit?: boolean;
+        /**
+         * Transit modes (as in `transitModes`) to add as an "avoid" Pareto
+         * criterion: the result keeps both the fastest journey and the best one
+         * that uses none of these modes, instead of filtering them out. Several
+         * modes form one criterion - the result adds the best journey that uses
+         * none of them, not one trade-off per mode. Street modes are ignored.
+         *
+         * Setting this (or any other `minimize*` parameter) switches routing to
+         * the multicriteria engine, overriding `algorithm` if it was `PONG`.
+         *
+         */
+        minimizeWithout?: Array<Mode>;
         /**
          * Optional. Default is 0 minutes.
          *

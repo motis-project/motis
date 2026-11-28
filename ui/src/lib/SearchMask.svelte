@@ -64,6 +64,9 @@
 		pedestrianSpeed = $bindable(),
 		cyclingSpeed = $bindable(),
 		additionalTransferTime = $bindable(),
+		minimizeNonTransit = $bindable(),
+		minimizeModeSwitches = $bindable(),
+		minimizeWithout = $bindable(),
 		hasDebug = false
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
@@ -111,6 +114,9 @@
 		pedestrianSpeed: PedestrianSpeed;
 		cyclingSpeed: CyclingSpeed;
 		additionalTransferTime: number | undefined;
+		minimizeNonTransit: boolean;
+		minimizeModeSwitches: boolean;
+		minimizeWithout: Mode[];
 		hasDebug: boolean;
 	} = $props();
 
@@ -223,6 +229,9 @@
 			bind:cyclingSpeed
 			bind:additionalTransferTime
 			bind:pedestrianProfile
+			bind:minimizeNonTransit
+			bind:minimizeModeSwitches
+			bind:minimizeWithout
 			{hasDebug}
 		/>
 	</div>

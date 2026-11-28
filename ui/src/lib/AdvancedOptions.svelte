@@ -73,6 +73,10 @@
 		cyclingSpeed = $bindable(),
 		additionalTransferTime = $bindable(),
 		pedestrianProfile = $bindable(),
+		minimizeNonTransit = $bindable(false),
+		minimizeModeSwitches = $bindable(false),
+		minimizeWithout = $bindable([]),
+		showMinimizeOptions = true,
 		hasDebug = false,
 		additionalComponents
 	}: {
@@ -121,6 +125,13 @@
 		hasDebug: boolean;
 		additionalComponents?: Snippet;
 		pedestrianProfile: PedestrianProfile;
+		minimizeNonTransit?: boolean;
+		minimizeModeSwitches?: boolean;
+		minimizeWithout?: TransitMode[];
+		// Only the point-to-point plan search supports the minimize* multicriteria
+		// params; one-to-all isochrones (IsochronesMask) hides this section rather
+		// than binding local state nothing ever reads.
+		showMinimizeOptions?: boolean;
 	} = $props();
 	const possibleMaxTransfers = [...Array(defaultQuery.maxTransfers + 1).keys()].map((i) => ({
 		value: i.toString(),
@@ -239,6 +250,32 @@
 			/>
 		</div>
 		<ViaStopOptions bind:via bind:viaMinimumStay bind:viaLabels />
+
+		{#if showMinimizeOptions}
+			<div class="space-y-2">
+				<div class="text-sm font-medium">{t.minimize.title}</div>
+				<div class="grid grid-cols-2 items-center">
+					<Switch
+						bind:checked={minimizeNonTransit}
+						label={t.minimize.nonTransitTime}
+						id="minimizeNonTransit"
+					/>
+					<Switch
+						bind:checked={minimizeModeSwitches}
+						label={t.minimize.modeSwitches}
+						id="minimizeModeSwitches"
+					/>
+				</div>
+				<div class="grid grid-cols-[auto_1fr] items-center gap-x-4">
+					<div class="text-sm">{t.minimize.useOf}</div>
+					<TransitModeSelect
+						bind:transitModes={minimizeWithout}
+						ariaLabel={t.minimize.useOf}
+						emptyLabel={t.minimize.noModes}
+					/>
+				</div>
+			</div>
+		{/if}
 
 		<div
 			class="grid grid-cols-4

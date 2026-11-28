@@ -44,6 +44,7 @@ struct config {
     std::string web_folder_{"ui"};
     unsigned n_threads_{0U};
     unsigned gpu_states_{2U};
+    unsigned gpu_mc_states_{0U};
     std::optional<std::string> data_attribution_link_{};
     std::optional<std::vector<std::string>> lbs_{};
     bool when_unhealthy_return_error_{false};

@@ -213,6 +213,7 @@
 			bind:advancedOptionsOpen
 			bind:useRoutedTransfers
 			{serverConfig}
+			showMinimizeOptions={false}
 			bind:wheelchair={
 				() => pedestrianProfile === 'WHEELCHAIR',
 				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')

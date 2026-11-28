@@ -456,6 +456,9 @@
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
 	let noCompulsoryReservation = $state(urlParams?.get('noCompulsoryReservation') == 'true');
+	let minimizeNonTransit = $state(urlParams?.get('minimizeNonTransit') != 'false');
+	let minimizeModeSwitches = $state(urlParams?.get('minimizeModeSwitches') != 'false');
+	let minimizeWithout = $state<Mode[]>(getUrlArray('minimizeWithout') as Mode[]);
 	let transitModes = $state<Mode[]>(
 		getUrlArray('transitModes', defaultQuery.transitModes) as Mode[]
 	);
@@ -646,6 +649,9 @@
 						requireBikeTransport,
 						requireCarTransport,
 						noCompulsoryReservation,
+						minimizeNonTransit,
+						minimizeModeSwitches,
+						minimizeWithout,
 						elevationCosts,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
@@ -1107,6 +1113,9 @@
 						bind:requireCarTransport
 						bind:requireBikeTransport
 						bind:noCompulsoryReservation
+						bind:minimizeNonTransit
+						bind:minimizeModeSwitches
+						bind:minimizeWithout
 						bind:transitModes
 						bind:preTransitModes
 						bind:postTransitModes

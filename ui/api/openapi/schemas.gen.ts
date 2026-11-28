@@ -2207,6 +2207,33 @@ computation.
     }
 } as const;
 
+export const ItineraryCriteriaSchema = {
+    description: `Experimental. Debug output: the values of the extra Pareto criteria the
+multicriteria engine (algorithm BMRAPP) optimized for
+this itinerary. Only present if that engine ran; each value only if its
+criterion was requested.
+`,
+    type: 'object',
+    properties: {
+        nonTransit: {
+            description: `\`minimizeNonTransit\`: approximate minutes on foot or other selected pre/postTransit/transfer
+`,
+            type: 'integer'
+        },
+        modeSwitches: {
+            description: `\`minimizeModeSwitches\`: vehicle-class switches between consecutive
+trips (suburban, subway, tram and bus count as one class)
+`,
+            type: 'integer'
+        },
+        avoidedModes: {
+            description: `\`minimizeWithout\`: whether the itinerary uses an avoided mode
+`,
+            type: 'boolean'
+        }
+    }
+} as const;
+
 export const ItinerarySchema = {
     type: 'object',
     required: ['duration', 'startTime', 'endTime', 'transfers', 'id', 'legs'],
@@ -2248,6 +2275,9 @@ Pass it as \`itineraryId\` to \`refresh-itinerary\` endpoint for reconstruction 
             items: {
                 '$ref': '#/components/schemas/FareTransfer'
             }
+        },
+        criteria: {
+            '$ref': '#/components/schemas/ItineraryCriteria'
         }
     }
 } as const;

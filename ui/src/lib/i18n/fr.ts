@@ -148,6 +148,13 @@ const translations: Translations = {
 		LOW: 'Petits détours',
 		HIGH: 'Grands détours'
 	},
+	minimize: {
+		title: 'Minimiser',
+		nonTransitTime: 'Trajets par vos propres moyens',
+		modeSwitches: 'Changements de mode',
+		useOf: 'Utilisation de',
+		noModes: 'aucun mode'
+	},
 	isochronesOpacity: 'Opacité des isochrones',
 	isochrones: {
 		title: 'Isochrones',

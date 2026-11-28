@@ -148,6 +148,13 @@ const translations: Translations = {
 		LOW: 'Лек наклон',
 		HIGH: 'Голям наклон'
 	},
+	minimize: {
+		title: 'Minimize',
+		nonTransitTime: 'Getting to and between stops',
+		modeSwitches: 'Mode switches',
+		useOf: 'Use of',
+		noModes: 'no modes'
+	},
 	isochronesOpacity: 'Непрозрачност на периметъра',
 	isochrones: {
 		title: 'Достъпен периметър',
