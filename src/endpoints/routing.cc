@@ -740,13 +740,12 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   }
   utl::erase_duplicates(itineraries);
   // a large factor must not overflow the 16 bit minutes of n::duration_t
-  return {itineraries,
-          fastest_direct != kInfinityDuration
-              ? std::chrono::round<n::duration_t>(
-                    std::min(fastest_direct * fastest_direct_factor,
-                             std::chrono::duration<double, std::ratio<60>>{
-                                 kInfinityDuration}))
-              : fastest_direct};
+  return {itineraries, fastest_direct != kInfinityDuration
+                           ? std::chrono::round<n::duration_t>(std::min(
+                                 fastest_direct * fastest_direct_factor,
+                                 std::chrono::duration<double, std::ratio<60>>{
+                                     kInfinityDuration}))
+                           : fastest_direct};
 }
 
 void remove_slower_than_fastest_direct(n::routing::query& q) {
