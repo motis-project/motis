@@ -65,6 +65,7 @@ export const defaultQuery = {
 	algorithm: 'PONG',
 	minimizeNonTransit: false,
 	minimizeModeSwitches: false,
+	minimizeNightTransfers: false,
 	minimizeWithout: []
 };
 

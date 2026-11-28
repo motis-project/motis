@@ -66,6 +66,7 @@
 		additionalTransferTime = $bindable(),
 		minimizeNonTransit = $bindable(),
 		minimizeModeSwitches = $bindable(),
+		minimizeNightTransfers = $bindable(),
 		minimizeWithout = $bindable(),
 		hasDebug = false
 	}: {
@@ -116,6 +117,7 @@
 		additionalTransferTime: number | undefined;
 		minimizeNonTransit: boolean;
 		minimizeModeSwitches: boolean;
+		minimizeNightTransfers: boolean;
 		minimizeWithout: Mode[];
 		hasDebug: boolean;
 	} = $props();
@@ -231,6 +233,7 @@
 			bind:pedestrianProfile
 			bind:minimizeNonTransit
 			bind:minimizeModeSwitches
+			bind:minimizeNightTransfers
 			bind:minimizeWithout
 			{hasDebug}
 		/>

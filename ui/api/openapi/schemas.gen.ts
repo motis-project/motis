@@ -2254,6 +2254,12 @@ trips (suburban, subway, tram and bus count as one class)
 `,
             type: 'integer'
         },
+        nightTransfer: {
+            description: `\`minimizeNightTransfers\`: whether the itinerary waits or rides
+between 00:00 and 06:00 without sleeping on a train, ferry or coach
+`,
+            type: 'boolean'
+        },
         avoidedModes: {
             description: `\`minimizeWithout\`: whether the itinerary uses an avoided mode
 `,

@@ -68,6 +68,25 @@ using std::chrono_literals::operator""h;
 
 namespace motis {
 
+// coordinates of all accommodation places (hotels, hostels, ...) in the
+// geocoder data
+static std::vector<geo::latlng> read_hotels(fs::path const& adr_file) {
+  auto const t = adr::read(adr_file);
+  auto hotels = std::vector<geo::latlng>{};
+  for (auto p = adr::place_idx_t{0U}; p != t->place_type_.size(); ++p) {
+    switch (t->place_type_[p]) {
+      case adr::amenity_category::kHotel16:
+      case adr::amenity_category::kTourismGuestHouse:
+      case adr::amenity_category::kHostel16:
+      case adr::amenity_category::kMotel16:
+        hotels.push_back(t->place_coordinates_[p].as_latlng());
+        break;
+      default: break;
+    }
+  }
+  return hotels;
+}
+
 struct task {
   friend std::ostream& operator<<(std::ostream& out, task const& t) {
     out << t.name_ << " ";
@@ -224,12 +243,19 @@ void import(config const& c,
         t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
         t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
         t.max_footpath_length_, t.default_transfer_time_, t.default_timezone_,
-        t.assistance_times_);
+        t.assistance_times_, t.hotel_night_trains_);
   }
 
   auto osm_hash = std::pair{"osm"s, cista::BASE_HASH};
   if (c.osm_.has_value()) {
     osm_hash.second = hash_file(*c.osm_);
+  }
+
+  auto const hotels = c.timetable_.has_value() &&
+                      c.timetable_->hotel_night_trains_ && c.osm_.has_value();
+  if (hotels) {
+    tt_hash.second = cista::build_seeded_hash(tt_hash.second, osm_hash.second,
+                                              adr_version().second);
   }
 
   auto const elevation_dir =
@@ -337,7 +363,7 @@ void import(config const& c,
 
   auto adr = task{"adr",
                   {},
-                  c.geocoding_ || c.reverse_geocoding_,
+                  c.geocoding_ || c.reverse_geocoding_ || hotels,
                   [&]() {
                     if (!c.osm_) {
                       return;
@@ -410,7 +436,16 @@ void import(config const& c,
   }
   auto tt = task{
       "tt",
-      c.use_street_routing() ? std::vector<task*>{&osr} : std::vector<task*>{},
+      [&]() {
+        auto deps = std::vector<task*>{};
+        if (c.use_street_routing()) {
+          deps.push_back(&osr);
+        }
+        if (hotels) {
+          deps.push_back(&adr);
+        }
+        return deps;
+      }(),
       c.timetable_.has_value(),
       [&]() {
         auto const& t = *c.timetable_;
@@ -437,6 +472,18 @@ void import(config const& c,
         }
 
         auto tags = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
+        auto finalize_opt = nl::finalize_options{
+            .merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
+            .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
+            .max_footpath_length_ = t.max_footpath_length_,
+            .merge_stats_dir_ = data_path,
+            .compute_walks_ = c.osr_footpath_
+                                  ? decltype(n::loader::finalize_options::
+                                                 compute_walks_){compute_walks}
+                                  : nullptr};
+        if (hotels) {
+          finalize_opt.hotels_ = read_hotels(data_path / "adr" / "t.bin");
+        }
         auto tt = cista::wrapped{cista::raw::make_unique<n::timetable>(nl::load(
             utl::to_vec(
                 t.datasets_,
@@ -476,15 +523,11 @@ void import(config const& c,
                                })
                                .value_or("")}};
                 }),
-            {.merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
-             .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
-             .max_footpath_length_ = t.max_footpath_length_,
-             .merge_stats_dir_ = data_path,
-             .compute_walks_ = c.osr_footpath_
-                                   ? decltype(n::loader::finalize_options::
-                                                  compute_walks_){compute_walks}
-                                   : nullptr},
-            interval, assistance.get(), shapes.get(), false))};
+            finalize_opt, interval, assistance.get(), shapes.get(), false))};
+
+        if (hotels && tt->n_sources() > t.datasets_.size()) {
+          tags->add(n::source_idx_t{t.datasets_.size()}, "hotel");
+        }
 
         tt->write(data_path / "tt.bin");
         tags->write(data_path / "tags.bin");

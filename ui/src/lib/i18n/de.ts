@@ -150,7 +150,8 @@ const translations: Translations = {
 		nonTransitTime: 'Wege zu Haltestellen und beim Umsteigen',
 		modeSwitches: 'Verkehrsmittelwechsel',
 		useOf: 'Nutzung von',
-		noModes: 'keinen Verkehrsmitteln'
+		noModes: 'keinen Verkehrsmitteln',
+		nightTransfers: 'Ein- oder Aussteigen nachts'
 	},
 	isochronesOpacity: 'Deckkraft der Isochronen',
 	isochrones: {

@@ -1,12 +1,14 @@
 #include "motis/endpoints/routing.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <tuple>
 #include <utility>
 #include <variant>
 
@@ -89,6 +91,26 @@ namespace motis::ep {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
+
+// nigiri's multicriteria dimensions, in the order of its instantiated
+// combinations (arr_with<...> in mcraptor.h)
+using mc_dims = std::tuple<n::routing::non_transit_dim,
+                           n::routing::avoided_modes_dim,
+                           n::routing::mode_switches_dim,
+                           n::routing::night_transfer_dim>;
+
+// f.operator()<arr_with<D...>>() with the dimensions switched on
+template <std::size_t I = 0U, typename... D, typename F>
+auto with_criteria(F const& f,
+                   std::array<bool, std::tuple_size_v<mc_dims>> const& on) {
+  if constexpr (I == std::tuple_size_v<mc_dims>) {
+    return f.template operator()<n::routing::arr_with<D...>>();
+  } else {
+    using dim = std::tuple_element_t<I, mc_dims>;
+    return on[I] ? with_criteria<I + 1U, D..., dim>(f, on)
+                 : with_criteria<I + 1U, D...>(f, on);
+  }
+}
 
 std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
@@ -1225,6 +1247,7 @@ api::plan_response routing::route(api::plan_params const& query,
     // algorithm, PONG for BMRAPP (rRAPTOR where PONG does not apply).
     auto const min_non_transit = query.minimizeNonTransit_;
     auto const min_mode_switches = query.minimizeModeSwitches_;
+    auto const min_night_transfers = query.minimizeNightTransfers_;
     auto const avoided = to_clasz_mask(query.minimizeWithout_);
     auto const min_avoided_modes = avoided != 0U;
     if (min_avoided_modes) {
@@ -1232,7 +1255,7 @@ api::plan_response routing::route(api::plan_params const& query,
     }
     auto const mc_requested = algorithm == api::algorithmEnum::BMRAPP ||
                               min_non_transit || min_mode_switches ||
-                              min_avoided_modes;
+                              min_avoided_modes || min_night_transfers;
     auto const mc_supported = n::routing::mcraptor_supported(q, rtt);
     auto mc_applicable = mc_requested && mc_supported;
     auto const mc_fallback = algorithm == api::algorithmEnum::BMRAPP
@@ -1264,7 +1287,7 @@ api::plan_response routing::route(api::plan_params const& query,
         // The 2-criteria phases take the scalar state, on a GPU pool slot if
         // there is one; the mc phases run there too if the slot holds a device
         // mc state (server.gpu_mc_states), else on the CPU.
-        auto const run = [&]<typename Criteria>(std::type_identity<Criteria>) {
+        auto const run = [&]<typename Criteria>() {
           auto mc_state = n::routing::basic_mcraptor_state<Criteria>{};
 #if defined(NIGIRI_CUDA)
           if (gpu_supported && gpu_pool_ != nullptr) {
@@ -1282,36 +1305,8 @@ api::plan_response routing::route(api::plan_params const& query,
               mc_timeout);
         };
         try {
-          using namespace n::routing;
-          switch ((min_non_transit ? 4 : 0) | (min_avoided_modes ? 2 : 0) |
-                  (min_mode_switches ? 1 : 0)) {
-            case 0: r = run(std::type_identity<arr_criteria>{}); break;
-            case 1:
-              r = run(std::type_identity<arr_mode_switches_criteria>{});
-              break;
-            case 2:
-              r = run(std::type_identity<arr_avoided_modes_criteria>{});
-              break;
-            case 3:
-              r = run(std::type_identity<
-                      arr_avoided_modes_mode_switches_criteria>{});
-              break;
-            case 4:
-              r = run(std::type_identity<arr_non_transit_criteria>{});
-              break;
-            case 5:
-              r = run(
-                  std::type_identity<arr_non_transit_mode_switches_criteria>{});
-              break;
-            case 6:
-              r = run(
-                  std::type_identity<arr_non_transit_avoided_modes_criteria>{});
-              break;
-            default:
-              r = run(std::type_identity<
-                      arr_non_transit_avoided_modes_mode_switches_criteria>{});
-              break;
-          }
+          r = with_criteria(run, {min_non_transit, min_avoided_modes,
+                                  min_mode_switches, min_night_transfers});
         } catch (std::exception const& e) {
           std::cout << "BMRAPP EXCEPTION: " << e.what() << "\n";
           mc_applicable = false;
@@ -1371,6 +1366,7 @@ api::plan_response routing::route(api::plan_params const& query,
         {"mc_min_non_transit", min_non_transit},
         {"mc_min_avoided_modes", min_avoided_modes},
         {"mc_min_mode_switches", min_mode_switches},
+        {"mc_min_night_transfers", min_night_transfers},
 #if defined(NIGIRI_CUDA)
         {"gpu_used", gpu_used},
         {"gpu_supported", gpu_supported},
@@ -1445,6 +1441,9 @@ api::plan_response routing::route(api::plan_params const& query,
                                  ? std::optional{static_cast<std::int64_t>(
                                        j.criteria_mode_switches_)}
                                  : std::nullopt,
+            .nightTransfer_ = min_night_transfers
+                                  ? std::optional{j.criteria_night_transfer_}
+                                  : std::nullopt,
             .avoidedModes_ =
                 min_avoided_modes
                     ? std::optional{j.criteria_avoided_modes_ != 0U}
