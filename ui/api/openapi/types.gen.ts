@@ -2601,9 +2601,9 @@ export type PlanData = {
          * Add "awake at night" as an extra Pareto criterion: waiting at a stop
          * or riding between 00:00 and 06:00, in the average UTC offset of the
          * start and the destination. A ride on a train, ferry or coach that
-         * spans the whole night counts as sleep; waiting for the first trip
-         * does not count. The result keeps the fastest journey and the best
-         * one without.
+         * spans the whole night counts as sleep. An itinerary begins with its
+         * first trip, so the time before it does not count. The result keeps
+         * the fastest journey and the best one without.
          *
          * Setting this (or any other `minimize*` parameter)
          * switches routing to the multicriteria engine, overriding `algorithm`
