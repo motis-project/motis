@@ -75,8 +75,7 @@
 		pedestrianProfile = $bindable(),
 		minimizeNonTransit = $bindable(false),
 		minimizeModeSwitches = $bindable(false),
-		minimizeWithoutAir = $bindable(false),
-		minimizeWithoutCoach = $bindable(false),
+		minimizeWithout = $bindable([]),
 		showMinimizeOptions = true,
 		hasDebug = false,
 		additionalComponents
@@ -128,8 +127,7 @@
 		pedestrianProfile: PedestrianProfile;
 		minimizeNonTransit?: boolean;
 		minimizeModeSwitches?: boolean;
-		minimizeWithoutAir?: boolean;
-		minimizeWithoutCoach?: boolean;
+		minimizeWithout?: TransitMode[];
 		// Only the point-to-point plan search supports the minimize* multicriteria
 		// params; one-to-all isochrones (IsochronesMask) hides this section rather
 		// than binding local state nothing ever reads.
@@ -267,8 +265,14 @@
 						label={t.minimize.modeSwitches}
 						id="minimizeModeSwitches"
 					/>
-					<Switch bind:checked={minimizeWithoutAir} label={t.AIRPLANE} id="minimizeWithoutAir" />
-					<Switch bind:checked={minimizeWithoutCoach} label={t.COACH} id="minimizeWithoutCoach" />
+				</div>
+				<div class="grid grid-cols-[auto_1fr] items-center gap-x-4">
+					<div class="text-sm">{t.minimize.useOf}</div>
+					<TransitModeSelect
+						bind:transitModes={minimizeWithout}
+						ariaLabel={t.minimize.useOf}
+						emptyLabel={t.minimize.noModes}
+					/>
 				</div>
 			</div>
 		{/if}

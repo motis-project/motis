@@ -149,6 +149,8 @@ export type Translations = {
 		title: string;
 		nonTransitTime: string;
 		modeSwitches: string;
+		useOf: string;
+		noModes: string;
 	};
 	isochronesOpacity: string;
 	isochrones: {

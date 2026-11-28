@@ -572,7 +572,7 @@ int generate(int ac, char** av) {
     arr_weight.assign(d.tt_->n_locations(), 0.0);
 
     auto const day_from = d.tt_->day_idx(*first_day);
-    auto const day_to = d.tt_->day_idx(*last_day);
+    auto const day_to = d.tt_->day_idx(last_day);
 
     for (auto i = 0U; i != d.tt_->n_routes(); ++i) {
       auto const route = n::route_idx_t{i};
@@ -781,7 +781,7 @@ int generate(int ac, char** av) {
   };
   auto const event_desc = [&](char const* what) {
     return fmt::format("weighted by {} count within [{}, {})", what, *first_day,
-                       *last_day);
+                       last_day);
   };
   auto const from_desc =
       population_from  ? std::string{weight_desc(*population_from)}

@@ -5,9 +5,13 @@
 	import { possibleTransitModes, type TransitMode } from '$lib/Modes';
 
 	let {
-		transitModes = $bindable()
+		transitModes = $bindable(),
+		ariaLabel = t.selectTransitModes,
+		emptyLabel = ''
 	}: {
 		transitModes: TransitMode[];
+		ariaLabel?: string;
+		emptyLabel?: string;
 	} = $props();
 
 	type TranslationKey = keyof typeof t;
@@ -18,20 +22,19 @@
 	}));
 
 	const selectTransitModesLabel = $derived(
-		transitModes.length == possibleTransitModes.length || transitModes.includes('TRANSIT')
-			? t.defaultSelectedModes
-			: availableTransitModes
-					.filter((m) => transitModes?.includes(m.value))
-					.map((m) => m.label)
-					.join(', ')
+		transitModes.length == 0
+			? emptyLabel
+			: transitModes.length == possibleTransitModes.length || transitModes.includes('TRANSIT')
+				? t.defaultSelectedModes
+				: availableTransitModes
+						.filter((m) => transitModes?.includes(m.value))
+						.map((m) => m.label)
+						.join(', ')
 	);
 </script>
 
 <Select.Root type="multiple" bind:value={transitModes}>
-	<Select.Trigger
-		class="flex items-center w-full overflow-hidden"
-		aria-label={t.selectTransitModes}
-	>
+	<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label={ariaLabel}>
 		<BusFront class="mr-[9px] size-6 text-muted-foreground shrink-0" />
 		{selectTransitModesLabel}
 	</Select.Trigger>

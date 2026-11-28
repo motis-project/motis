@@ -148,7 +148,9 @@ const translations: Translations = {
 	minimize: {
 		title: 'Minimieren',
 		nonTransitTime: 'Wege zu Haltestellen und beim Umsteigen',
-		modeSwitches: 'Verkehrsmittelwechsel'
+		modeSwitches: 'Verkehrsmittelwechsel',
+		useOf: 'Nutzung von',
+		noModes: 'keinen Verkehrsmitteln'
 	},
 	isochronesOpacity: 'Deckkraft der Isochronen',
 	isochrones: {
