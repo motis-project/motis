@@ -25,7 +25,7 @@ namespace {
 //   S0 -> S9  rail + bus at S1, 11:00 | bus + bus at S2, 11:10
 //   M0 -> M9  air 10:30 | coach 10:40 | rail 10:50
 // BMRAPP keeps a journey if it arrives within its anchor's travel time T plus
-// clamp(T / 2, 20 min, 180 min) (slack_cfg, bmrap_common.h): for air's 30
+// clamp(T / 2, 20 min, 180 min) (relax_arr(), bmrap_bounds.h): for air's 30
 // minutes 50, so all of these. W1 and W2 are 220 m apart, the other stops
 // kilometres: the only footpath is W1 -> W2.
 constexpr auto const kGTFS = R"(
@@ -205,23 +205,37 @@ TEST(motis, bmrapp_minimize_mode_switches) {
   }
 }
 
-// Each avoided set keeps the fastest journey and the best one without any
-// class of the set; several classes are one criterion.
+// Each avoided set of transit modes keeps the fastest journey and the best one
+// without any mode of the set; several modes are one criterion. Street modes
+// avoid nothing: no criterion, PONG answers.
 TEST(motis, bmrapp_minimize_without) {
   auto const routing = utl::init_from<ep::routing>(bmrapp_data()).value();
   for (auto const arrive_by : {false, true}) {
     auto const p = plan{routing, arrive_by};
     EXPECT_EQ((std::vector<std::string>{"30 t0 nt=- ms=- av=true",
                                         "40 t0 nt=- ms=- av=false"}),
-              rows(p("M0", "M9", "&minimizeWithout=AIR")))
+              rows(p("M0", "M9", "&minimizeWithout=AIRPLANE")))
         << arrive_by;
     EXPECT_EQ((std::vector<std::string>{"30 t0 nt=- ms=- av=false"}),
               rows(p("M0", "M9", "&minimizeWithout=COACH")))
         << arrive_by;
     EXPECT_EQ((std::vector<std::string>{"30 t0 nt=- ms=- av=true",
                                         "50 t0 nt=- ms=- av=false"}),
-              rows(p("M0", "M9", "&minimizeWithout=AIR,COACH")))
+              rows(p("M0", "M9", "&minimizeWithout=AIRPLANE,COACH")))
         << arrive_by;
+    EXPECT_EQ((std::vector<std::string>{"30 t0 nt=- ms=- av=true",
+                                        "40 t0 nt=- ms=- av=false"}),
+              rows(p("M0", "M9", "&minimizeWithout=AIRPLANE,RAIL")))
+        << arrive_by;
+    EXPECT_EQ((std::vector<std::string>{"60 t1 nt=- ms=- av=true"}),
+              rows(p("S0", "S9", "&minimizeWithout=BUS")))
+        << arrive_by;
+
+    auto const walk = p("M0", "M9", "&minimizeWithout=WALK");
+    EXPECT_EQ(static_cast<std::uint64_t>(api::algorithmEnum::PONG),
+              algorithm(walk))
+        << arrive_by;
+    EXPECT_EQ((std::vector<std::string>{"30 t0"}), rows(walk)) << arrive_by;
   }
 }
 
@@ -230,20 +244,25 @@ TEST(motis, bmrapp_criteria_combine) {
   auto const res =
       plan{routing, false}("W0", "W9",
                            "&minimizeNonTransit=true&minimizeModeSwitches=true"
-                           "&minimizeWithout=AIR");
+                           "&minimizeWithout=AIRPLANE");
   EXPECT_EQ(kBmrapp, algorithm(res));
   EXPECT_EQ((std::vector<std::string>{"60 t1 nt=10 ms=0 av=false",
                                       "70 t1 nt=0 ms=0 av=false"}),
             rows(res));
 }
 
-// Via stops are beyond the multicriteria engine: RAPTOR answers, without
-// criteria.
-TEST(motis, bmrapp_falls_back_to_raptor) {
+// Via stops are beyond the multicriteria engine: the requested algorithm
+// answers (PONG by default and for BMRAPP), without criteria.
+TEST(motis, bmrapp_falls_back_to_requested_algorithm) {
   auto const routing = utl::init_from<ep::routing>(bmrapp_data()).value();
-  auto const res =
-      plan{routing, false}("W0", "W9", "&minimizeNonTransit=true&via=test_W3");
-  EXPECT_EQ(static_cast<std::uint64_t>(api::algorithmEnum::RAPTOR),
-            algorithm(res));
-  EXPECT_EQ((std::vector<std::string>{"70 t1"}), rows(res));
+  for (auto const& [params, expected] :
+       {std::pair{"&minimizeNonTransit=true", api::algorithmEnum::PONG},
+        std::pair{"&algorithm=BMRAPP", api::algorithmEnum::PONG},
+        std::pair{"&algorithm=RAPTOR&minimizeNonTransit=true",
+                  api::algorithmEnum::RAPTOR}}) {
+    auto const res =
+        plan{routing, false}("W0", "W9", fmt::format("{}&via=test_W3", params));
+    EXPECT_EQ(static_cast<std::uint64_t>(expected), algorithm(res)) << params;
+    EXPECT_EQ((std::vector<std::string>{"70 t1"}), rows(res)) << params;
+  }
 }

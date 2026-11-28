@@ -161,7 +161,9 @@ const translations: Translations = {
 	minimize: {
 		title: 'Minimize',
 		nonTransitTime: 'Getting to and between stops',
-		modeSwitches: 'Mode switches'
+		modeSwitches: 'Mode switches',
+		useOf: 'Use of',
+		noModes: 'no modes'
 	},
 	isochronesOpacity: 'Isochrones Opacity',
 	isochrones: {

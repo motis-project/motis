@@ -66,8 +66,7 @@
 		additionalTransferTime = $bindable(),
 		minimizeNonTransit = $bindable(),
 		minimizeModeSwitches = $bindable(),
-		minimizeWithoutAir = $bindable(),
-		minimizeWithoutCoach = $bindable(),
+		minimizeWithout = $bindable(),
 		hasDebug = false
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
@@ -117,8 +116,7 @@
 		additionalTransferTime: number | undefined;
 		minimizeNonTransit: boolean;
 		minimizeModeSwitches: boolean;
-		minimizeWithoutAir: boolean;
-		minimizeWithoutCoach: boolean;
+		minimizeWithout: Mode[];
 		hasDebug: boolean;
 	} = $props();
 
@@ -233,8 +231,7 @@
 			bind:pedestrianProfile
 			bind:minimizeNonTransit
 			bind:minimizeModeSwitches
-			bind:minimizeWithoutAir
-			bind:minimizeWithoutCoach
+			bind:minimizeWithout
 			{hasDebug}
 		/>
 	</div>
